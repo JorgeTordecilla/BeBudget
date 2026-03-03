@@ -22,6 +22,7 @@ describe("ProblemDetailsToast", () => {
 
     expect(await screen.findByText("Rate limited. Try again later.")).toBeInTheDocument();
     expect(screen.getByText("Retry-After: 30s")).toBeInTheDocument();
+    expect(screen.getByText("Support code: REQTOAST")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));
     expect(writeText).toHaveBeenCalledWith("req-toast");
   });

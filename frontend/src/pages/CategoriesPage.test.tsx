@@ -138,7 +138,7 @@ describe("CategoriesPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[0]!);
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[1]!);
 
-    expect(await screen.findByText(/Unexpected client error\.|request_failed/)).toBeInTheDocument();
+    expect(await screen.findByText("Conflict detected. Review your input and try again.")).toBeInTheDocument();
   });
 
   it("shows archive fallback for unexpected archive failure", async () => {
@@ -149,7 +149,7 @@ describe("CategoriesPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[0]!);
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[1]!);
 
-    expect(await screen.findByText(/Unexpected client error\.|request_failed/)).toBeInTheDocument();
+    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
   });
 
   it("resets request params when type filter changes", async () => {
@@ -196,6 +196,25 @@ describe("CategoriesPage", () => {
         expect.objectContaining({ name: "Food" })
       )
     );
+  });
+
+  it("shows backend conflict detail for duplicate category names", async () => {
+    vi.mocked(createCategory).mockRejectedValueOnce(
+      new ApiProblemError(409, {
+        type: "about:blank",
+        title: "Conflict",
+        status: 409,
+        detail: "Category name already exists for this type"
+      })
+    );
+    renderPage();
+    await screen.findByText("Groceries");
+
+    fireEvent.click(screen.getByRole("button", { name: "New category" }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Groceries" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create category" }));
+
+    expect(await screen.findByText("Category name already exists for this type")).toBeInTheDocument();
   });
 
   it("appends second page on load more", async () => {
@@ -245,7 +264,7 @@ describe("CategoriesPage", () => {
       })
     );
     renderPage();
-    expect(await screen.findByText("Forbidden")).toBeInTheDocument();
+    expect(await screen.findByText("You do not have access to this resource.")).toBeInTheDocument();
   });
 
   it("shows client contract error banner for 406 responses", async () => {
@@ -258,14 +277,13 @@ describe("CategoriesPage", () => {
       })
     );
     renderPage();
-    expect(await screen.findByText("Client contract error")).toBeInTheDocument();
-    expect(screen.getByText("Invalid Accept header")).toBeInTheDocument();
+    expect(await screen.findByText("Client contract error. Please refresh.")).toBeInTheDocument();
   });
 
   it("shows fallback list banner when ApiProblemError has no problem payload", async () => {
     vi.mocked(listCategories).mockRejectedValueOnce(new ApiProblemError(406, null));
     renderPage();
-    expect(await screen.findByText(/Failed to load categories|request_failed/)).toBeInTheDocument();
+    expect(await screen.findByText("Client contract error. Please refresh.")).toBeInTheDocument();
   });
 
   it("shows fallback restore banner for unexpected restore failures", async () => {
@@ -274,7 +292,7 @@ describe("CategoriesPage", () => {
     await screen.findByText("Groceries");
 
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
-    expect(await screen.findByText(/Unexpected client error\.|request_failed/)).toBeInTheDocument();
+    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
   });
 
   it("shows restore fallback when api error has no problem payload", async () => {
@@ -283,7 +301,7 @@ describe("CategoriesPage", () => {
     await screen.findByText("Groceries");
 
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
-    expect(await screen.findByText(/Unexpected client error\.|request_failed/)).toBeInTheDocument();
+    expect(await screen.findByText("Conflict detected. Review your input and try again.")).toBeInTheDocument();
   });
 
   it("allows changing type/note fields and closing modal", async () => {
@@ -308,18 +326,18 @@ describe("CategoriesPage", () => {
       })
     );
     renderPage();
-    expect(await screen.findByText("Forbidden")).toBeInTheDocument();
+    expect(await screen.findByText("You do not have access to this resource.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    await waitFor(() => expect(screen.queryByText("Forbidden")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("You do not have access to this resource.")).not.toBeInTheDocument());
 
     vi.mocked(createCategory).mockRejectedValueOnce(new ApiProblemError(409, null));
     fireEvent.click(screen.getByRole("button", { name: "New category" }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Duplicate" } });
     fireEvent.click(screen.getByRole("button", { name: "Create category" }));
-    expect(await screen.findByText(/Unexpected client error\.|request_failed/)).toBeInTheDocument();
+    expect(await screen.findByText("Conflict detected. Review your input and try again.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     await waitFor(() =>
-      expect(screen.queryByText(/Unexpected client error\.|request_failed/)).not.toBeInTheDocument(),
+      expect(screen.queryByText("Conflict detected. Review your input and try again.")).not.toBeInTheDocument(),
     );
   });
 
@@ -334,5 +352,3 @@ describe("CategoriesPage", () => {
     expect(archiveCategory).not.toHaveBeenCalled();
   });
 });
-
-

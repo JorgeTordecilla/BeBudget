@@ -2,13 +2,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { archiveAccount, createAccount, listAccounts, updateAccount } from "@/api/accounts";
-import { ApiProblemError } from "@/api/problem";
+import { ApiProblemError } from "@/api/errors";
 import type { Account, AccountCreate, AccountType, ProblemDetails } from "@/api/types";
 import { useAuth } from "@/auth/useAuth";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ModalForm from "@/components/ModalForm";
 import PageHeader from "@/components/PageHeader";
+import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
 import ProblemBanner from "@/components/ProblemBanner";
+import { publishSuccessToast } from "@/components/feedback/successToastStore";
 import { appendCursorPage } from "@/lib/pagination";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { Button } from "@/ui/button";
@@ -28,6 +30,14 @@ const EMPTY_FORM: AccountFormState = {
   note: ""
 };
 
+function toLocalProblem(problem: ProblemDetails): ApiProblemError {
+  return new ApiProblemError(problem, {
+    httpStatus: problem.status,
+    requestId: null,
+    retryAfter: null
+  });
+}
+
 function dedupeById(items: Account[]): Account[] {
   const map = new Map<string, Account>();
   items.forEach((item) => map.set(item.id, item));
@@ -40,8 +50,8 @@ export default function AccountsPage() {
   const [includeArchived, setIncludeArchived] = useState(false);
   const [items, setItems] = useState<Account[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [pageProblem, setPageProblem] = useState<ProblemDetails | null>(null);
-  const [formProblem, setFormProblem] = useState<ProblemDetails | null>(null);
+  const [pageProblem, setPageProblem] = useState<unknown | null>(null);
+  const [formProblem, setFormProblem] = useState<unknown | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Account | null>(null);
@@ -51,28 +61,11 @@ export default function AccountsPage() {
   const hasMore = Boolean(nextCursor);
   const isEditing = Boolean(editing);
 
-  function toProblemDetails(error: unknown, title: string): ProblemDetails {
-    if (error instanceof ApiProblemError) {
-      return (
-        error.problem ?? {
-          type: "about:blank",
-          title,
-          status: error.status
-        }
-      );
-    }
-    return {
-      type: "about:blank",
-      title,
-      status: 500,
-      detail: "Unexpected client error."
-    };
-  }
-
   const baseQueryKey = ["accounts", includeArchived] as const;
 
   const accountsQuery = useQuery({
     queryKey: baseQueryKey,
+    meta: { skipGlobalErrorToast: true },
     queryFn: () =>
       listAccounts(apiClient, {
         includeArchived,
@@ -81,6 +74,7 @@ export default function AccountsPage() {
   });
 
   const loadMoreMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (cursor: string) =>
       listAccounts(apiClient, {
         includeArchived,
@@ -93,11 +87,12 @@ export default function AccountsPage() {
       setNextCursor(response.next_cursor);
     },
     onError: (error) => {
-      setPageProblem(toProblemDetails(error, "Failed to load accounts"));
+      setPageProblem(error);
     }
   });
 
   const saveMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: async (payload: AccountCreate) => {
       if (editing) {
         await updateAccount(apiClient, editing.id, payload);
@@ -106,22 +101,25 @@ export default function AccountsPage() {
       await createAccount(apiClient, payload);
     },
     onSuccess: async () => {
+      publishSuccessToast(editing ? "Account updated successfully." : "Account created successfully.");
       setFormOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
     onError: (error) => {
-      setFormProblem(toProblemDetails(error, "Failed to save account"));
+      setFormProblem(error);
     }
   });
 
   const archiveMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (accountId: string) => archiveAccount(apiClient, accountId),
     onSuccess: async () => {
+      publishSuccessToast("Account archived successfully.");
       setArchiveTarget(null);
       await queryClient.invalidateQueries({ queryKey: ["accounts"] });
     },
     onError: (error) => {
-      setPageProblem(toProblemDetails(error, "Failed to archive account"));
+      setPageProblem(error);
     }
   });
 
@@ -135,7 +133,7 @@ export default function AccountsPage() {
 
   useEffect(() => {
     if (accountsQuery.error) {
-      setPageProblem(toProblemDetails(accountsQuery.error, "Failed to load accounts"));
+      setPageProblem(accountsQuery.error);
     }
   }, [accountsQuery.error]);
 
@@ -165,12 +163,12 @@ export default function AccountsPage() {
   function parseFormPayload(): AccountCreate | null {
     const parsed = Number(formState.initialBalanceCents);
     if (!Number.isInteger(parsed)) {
-      setFormProblem({
+      setFormProblem(toLocalProblem({
         type: "about:blank",
         title: "Invalid amount",
         status: 400,
         detail: "initial_balance_cents must be an integer."
-      });
+      }));
       return null;
     }
     return {
@@ -373,7 +371,7 @@ export default function AccountsPage() {
               rows={3}
             />
           </label>
-          <ProblemBanner problem={formProblem} onClose={() => setFormProblem(null)} />
+          {formProblem ? <ProblemDetailsInline error={formProblem} onDismiss={() => setFormProblem(null)} /> : null}
         </div>
       </ModalForm>
 

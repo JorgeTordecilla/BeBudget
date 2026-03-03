@@ -258,7 +258,9 @@ describe("Register route", () => {
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "secret123" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Validation failed. Check your input and try again. Payload did not pass validation.")
+    ).toBeInTheDocument();
   });
 
   it("renders mapped api problem message", async () => {
@@ -304,6 +306,101 @@ describe("Register route", () => {
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "secret123" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText("Your session expired. Please sign in again.")).toBeInTheDocument();
+    expect(await screen.findByText("Invalid credentials. Please try again.")).toBeInTheDocument();
+  });
+
+  it("does not expose raw detail for non-validation unknown failures", async () => {
+    const register = vi.fn(async () => {
+      throw new ApiProblemError(
+        {
+          type: "https://api.budgetbuddy.dev/problems/unknown",
+          title: "Server failure",
+          status: 500,
+          detail: "Traceback: ValueError: secret stack trace"
+        },
+        {
+          httpStatus: 500,
+          requestId: "req-500",
+          retryAfter: null
+        }
+      );
+    });
+
+    render(
+      <AuthContext.Provider
+        value={{
+          apiClient: apiClientStub,
+          user: null,
+          accessToken: null,
+          isAuthenticated: false,
+          isBootstrapping: false,
+          login: async () => undefined,
+          register,
+          logout: async () => undefined,
+          bootstrapSession: async () => false
+        }}
+      >
+        <MemoryRouter initialEntries={["/register"]}>
+          <Routes>
+            <Route path="/register" element={<Register />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "secret123" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "secret123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(screen.queryByText(/Traceback/)).not.toBeInTheDocument();
+  });
+
+  it("shows friendly message when username already exists on 409 conflict", async () => {
+    const register = vi.fn(async () => {
+      throw new ApiProblemError(
+        {
+          type: "about:blank",
+          title: "Conflict",
+          status: 409,
+          detail: "Username already exists"
+        },
+        {
+          httpStatus: 409,
+          requestId: "req-register-409",
+          retryAfter: null
+        }
+      );
+    });
+
+    render(
+      <AuthContext.Provider
+        value={{
+          apiClient: apiClientStub,
+          user: null,
+          accessToken: null,
+          isAuthenticated: false,
+          isBootstrapping: false,
+          login: async () => undefined,
+          register,
+          logout: async () => undefined,
+          bootstrapSession: async () => false
+        }}
+      >
+        <MemoryRouter initialEntries={["/register"]}>
+          <Routes>
+            <Route path="/register" element={<Register />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Username"), { target: { value: "JorgeT" } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "secret123456" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "secret123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("Username already exists. Try another one.")).toBeInTheDocument();
   });
 });

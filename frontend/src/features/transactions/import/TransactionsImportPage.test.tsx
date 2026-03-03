@@ -148,7 +148,8 @@ describe("TransactionsImportPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Validate" }));
     fireEvent.click(screen.getByRole("button", { name: "Import" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
+    expect(screen.getByText("Reduce batch size and retry.")).toBeInTheDocument();
   });
 
   it("shows fallback request-level error for non-problem exceptions", async () => {
@@ -258,5 +259,4 @@ describe("TransactionsImportPage", () => {
     expect(screen.getByRole("link", { name: "Back to transactions" })).toHaveAttribute("href", "/app/transactions");
   });
 });
-
 

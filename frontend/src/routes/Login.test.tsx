@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ApiClient } from "@/api/client";
+import { ApiProblemError } from "@/api/errors";
 import { AuthContext } from "@/auth/AuthContext";
 
 vi.mock("@/config", () => ({
@@ -200,5 +201,98 @@ describe("Login route", () => {
 
     expect(await screen.findByText("Welcome to BudgetBuddy")).toBeInTheDocument();
     expect(screen.queryByText(/API base:/)).not.toBeInTheDocument();
+  });
+
+  it("shows validation guidance for 400 invalid request errors", async () => {
+    const login = vi.fn(async () => {
+      throw new ApiProblemError(
+        {
+          type: "about:blank",
+          title: "Invalid request",
+          status: 400,
+          detail: "[{'type': 'string_too_short', 'loc': ('body', 'password'), 'msg': 'String should have at least 12 characters.'}]"
+        },
+        {
+          httpStatus: 400,
+          requestId: "req-login-400",
+          retryAfter: null
+        }
+      );
+    });
+
+    render(
+      <AuthContext.Provider
+        value={{
+          apiClient: apiClientStub,
+          user: null,
+          accessToken: null,
+          isAuthenticated: false,
+          isBootstrapping: false,
+          login,
+          register: async () => undefined,
+          logout: async () => undefined,
+          bootstrapSession: async () => false
+        }}
+      >
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(await screen.findByPlaceholderText("Password"), { target: { value: "short" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(
+      await screen.findByText("Validation failed. Check your input and try again. Password must have at least 12 characters.")
+    ).toBeInTheDocument();
+  });
+
+  it("shows canonical credential message for 401 auth failures", async () => {
+    const login = vi.fn(async () => {
+      throw new ApiProblemError(
+        {
+          type: "https://api.budgetbuddy.dev/problems/unauthorized",
+          title: "Unauthorized",
+          status: 401
+        },
+        {
+          httpStatus: 401,
+          requestId: "req-login-401",
+          retryAfter: null
+        }
+      );
+    });
+
+    render(
+      <AuthContext.Provider
+        value={{
+          apiClient: apiClientStub,
+          user: null,
+          accessToken: null,
+          isAuthenticated: false,
+          isBootstrapping: false,
+          login,
+          register: async () => undefined,
+          logout: async () => undefined,
+          bootstrapSession: async () => false
+        }}
+      >
+        <MemoryRouter initialEntries={["/login"]}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(await screen.findByPlaceholderText("Password"), { target: { value: "wrong-pass" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(await screen.findByText("Invalid credentials. Please try again.")).toBeInTheDocument();
   });
 });

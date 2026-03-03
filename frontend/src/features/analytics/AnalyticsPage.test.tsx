@@ -206,7 +206,7 @@ describe("AnalyticsPage", () => {
     );
 
     renderPage();
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(await screen.findByText("Client contract error. Please refresh.")).toBeInTheDocument();
   });
 
   it("shows no budget period copy when overlay is enabled and no limits exist", async () => {
@@ -248,9 +248,7 @@ describe("AnalyticsPage", () => {
     );
 
     renderPage();
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
     expect(screen.queryByText("Invalid date range")).not.toBeInTheDocument();
   });
 });
-
-

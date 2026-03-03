@@ -14,9 +14,15 @@ The frontend MUST authenticate users through `POST /auth/login` and `POST /auth/
 - **AND** it SHALL navigate to `/app/dashboard`
 
 #### Scenario: Login failure shows canonical error handling path
-- **WHEN** backend returns an authentication failure for login
+- **WHEN** backend returns an authentication failure or request-validation failure for login
 - **THEN** the frontend SHALL keep user unauthenticated
-- **AND** it SHALL present a safe error message without leaking internal details
+- **AND** it SHALL render canonical user-facing messaging derived from normalized `ProblemDetails` mapping
+- **AND** it SHALL avoid misleading fixed copy that contradicts backend failure category
+
+#### Scenario: Login validation failure preserves actionable guidance
+- **WHEN** login returns a `400` ProblemDetails validation failure (including `about:blank` with safe validation detail)
+- **THEN** the frontend SHALL present validation-appropriate guidance instead of invalid-credentials messaging
+- **AND** it SHALL preserve safe actionable detail per centralized error UX policy
 
 #### Scenario: Login route auto-restores existing session
 - **WHEN** a user manually navigates to `/login` while a valid refresh cookie exists
@@ -32,7 +38,7 @@ The frontend MUST authenticate users through `POST /auth/login` and `POST /auth/
 #### Scenario: Register failure shows canonical error handling path
 - **WHEN** backend returns register validation or conflict failure
 - **THEN** the frontend SHALL keep user unauthenticated
-- **AND** it SHALL present safe, canonical user-facing error messaging
+- **AND** it SHALL present canonical mapped messaging consistent with centralized ProblemDetails UX policy
 
 #### Scenario: Register route auto-redirects for authenticated sessions
 - **WHEN** an authenticated user manually navigates to `/register`

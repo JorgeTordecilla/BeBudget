@@ -1,12 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { type FormEvent, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { ApiProblemError } from "@/api/errors";
 import type { ProblemDetails } from "@/api/types";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ModalForm from "@/components/ModalForm";
 import PageHeader from "@/components/PageHeader";
 import ProblemBanner from "@/components/ProblemBanner";
+import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
+import ProblemDetailsToast from "@/components/errors/ProblemDetailsToast";
+import { publishProblemToast } from "@/components/errors/problemToastStore";
 import TransactionForm, { type TransactionFormState } from "@/components/transactions/TransactionForm";
 import TransactionRowActions from "@/components/transactions/TransactionRowActions";
 
@@ -250,9 +254,47 @@ describe("shared components", () => {
     const problem: ProblemDetails = { type: "about:blank", title: "", status: 406 };
     render(<ProblemBanner problem={problem} onClose={onClose} />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(screen.getByText("Client contract error")).toBeInTheDocument();
+    expect(screen.getByText("Client contract error. Please refresh.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders equivalent semantics across inline, banner, and toast surfaces for the same problem", async () => {
+    const problem = new ApiProblemError(
+      {
+        type: "https://api.budgetbuddy.dev/problems/forbidden",
+        title: "Forbidden",
+        status: 403
+      },
+      { httpStatus: 403, requestId: "req-equivalent", retryAfter: null }
+    );
+
+    render(
+      <>
+        <ProblemDetailsInline error={problem} />
+        <ProblemBanner problem={problem} />
+        <ProblemDetailsToast />
+      </>
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText("You do not have access to this resource.").length).toBe(2);
+    });
+
+    publishProblemToast({
+      message: "You do not have access to this resource.",
+      detail: null,
+      presentation: "inline",
+      requestId: "req-equivalent",
+      status: 403,
+      type: "https://api.budgetbuddy.dev/problems/forbidden",
+      retryAfter: null
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText("You do not have access to this resource.").length).toBe(3);
+      expect(screen.getAllByText("Support code: REQEQUIV").length).toBe(3);
+    });
   });
 
   it("renders transaction form and filters categories by type", () => {

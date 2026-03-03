@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { copyToClipboard } from "@/utils/clipboard";
 import { subscribeProblemToast, type ProblemToastPayload } from "@/components/errors/problemToastStore";
+import { toSupportCode } from "@/components/errors/supportCode";
 
 type ToastState = ProblemToastPayload & { copied: boolean };
 
@@ -42,7 +43,7 @@ export default function ProblemDetailsToast() {
           ) : null}
           {toast.problem.requestId ? (
             <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="truncate">Request ID: {toast.problem.requestId}</span>
+              <span className="truncate">Support code: {toSupportCode(toast.problem.requestId)}</span>
               <button
                 type="button"
                 className="underline"
@@ -57,4 +58,3 @@ export default function ProblemDetailsToast() {
     </div>
   );
 }
-

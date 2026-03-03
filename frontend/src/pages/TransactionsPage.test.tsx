@@ -288,7 +288,7 @@ describe("TransactionsPage", () => {
     fireEvent.change(screen.getByLabelText("Amount (cents)"), { target: { value: "1.5" } });
     fireEvent.click(screen.getByRole("button", { name: "Create transaction" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
     expect(createTransaction).not.toHaveBeenCalled();
   });
 
@@ -299,7 +299,7 @@ describe("TransactionsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
     expect(updateTransaction).not.toHaveBeenCalled();
   });
 
@@ -547,5 +547,4 @@ describe("TransactionsPage", () => {
     expect(await screen.findByText("Rate limited. Try again later.")).toBeInTheDocument();
   });
 });
-
 

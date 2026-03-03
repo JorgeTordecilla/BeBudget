@@ -8,13 +8,14 @@ import {
   restoreCategory,
   updateCategory
 } from "@/api/categories";
-import { ApiProblemError } from "@/api/problem";
-import type { Category, CategoryCreate, CategoryType, ProblemDetails } from "@/api/types";
+import type { Category, CategoryCreate, CategoryType } from "@/api/types";
 import { useAuth } from "@/auth/useAuth";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ModalForm from "@/components/ModalForm";
 import PageHeader from "@/components/PageHeader";
+import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
 import ProblemBanner from "@/components/ProblemBanner";
+import { publishSuccessToast } from "@/components/feedback/successToastStore";
 import { appendCursorPage } from "@/lib/pagination";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { Button } from "@/ui/button";
@@ -46,8 +47,8 @@ export default function CategoriesPage() {
   const [items, setItems] = useState<Category[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
-  const [pageProblem, setPageProblem] = useState<ProblemDetails | null>(null);
-  const [formProblem, setFormProblem] = useState<ProblemDetails | null>(null);
+  const [pageProblem, setPageProblem] = useState<unknown | null>(null);
+  const [formProblem, setFormProblem] = useState<unknown | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Category | null>(null);
@@ -57,28 +58,11 @@ export default function CategoriesPage() {
   const hasMore = Boolean(nextCursor);
   const isEditing = Boolean(editing);
 
-  function toProblemDetails(error: unknown, title: string): ProblemDetails {
-    if (error instanceof ApiProblemError) {
-      return (
-        error.problem ?? {
-          type: "about:blank",
-          title,
-          status: error.status
-        }
-      );
-    }
-    return {
-      type: "about:blank",
-      title,
-      status: 500,
-      detail: "Unexpected client error."
-    };
-  }
-
   const baseQueryKey = ["categories", includeArchived, typeFilter] as const;
 
   const categoriesQuery = useQuery({
     queryKey: baseQueryKey,
+    meta: { skipGlobalErrorToast: true },
     queryFn: () =>
       listCategories(apiClient, {
         includeArchived,
@@ -88,6 +72,7 @@ export default function CategoriesPage() {
   });
 
   const loadMoreMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (cursor: string) =>
       listCategories(apiClient, {
         includeArchived,
@@ -101,11 +86,12 @@ export default function CategoriesPage() {
       setNextCursor(response.next_cursor);
     },
     onError: (error) => {
-      setPageProblem(toProblemDetails(error, "Failed to load categories"));
+      setPageProblem(error);
     }
   });
 
   const saveMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: async (payload: CategoryCreate) => {
       if (editing) {
         await updateCategory(apiClient, editing.id, { name: payload.name, note: payload.note ?? null });
@@ -114,32 +100,37 @@ export default function CategoriesPage() {
       await createCategory(apiClient, payload);
     },
     onSuccess: async () => {
+      publishSuccessToast(editing ? "Category updated successfully." : "Category created successfully.");
       setFormOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
     onError: (error) => {
-      setFormProblem(toProblemDetails(error, "Failed to save category"));
+      setFormProblem(error);
     }
   });
 
   const archiveMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (categoryId: string) => archiveCategory(apiClient, categoryId),
     onSuccess: async () => {
+      publishSuccessToast("Category archived successfully.");
       setArchiveTarget(null);
       await queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
     onError: (error) => {
-      setPageProblem(toProblemDetails(error, "Failed to archive category"));
+      setPageProblem(error);
     }
   });
 
   const restoreMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (categoryId: string) => restoreCategory(apiClient, categoryId),
     onSuccess: async () => {
+      publishSuccessToast("Category restored successfully.");
       await queryClient.invalidateQueries({ queryKey: ["categories"] });
     },
     onError: (error) => {
-      setPageProblem(toProblemDetails(error, "Failed to restore category"));
+      setPageProblem(error);
     }
   });
 
@@ -153,7 +144,7 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     if (categoriesQuery.error) {
-      setPageProblem(toProblemDetails(categoriesQuery.error, "Failed to load categories"));
+      setPageProblem(categoriesQuery.error);
     }
   }, [categoriesQuery.error]);
 
@@ -409,7 +400,7 @@ export default function CategoriesPage() {
               rows={3}
             />
           </label>
-          <ProblemBanner problem={formProblem} onClose={() => setFormProblem(null)} />
+          {formProblem ? <ProblemDetailsInline error={formProblem} onDismiss={() => setFormProblem(null)} /> : null}
         </div>
       </ModalForm>
 

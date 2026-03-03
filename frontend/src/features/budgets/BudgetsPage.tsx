@@ -10,6 +10,7 @@ import type { Budget, BudgetCreate, BudgetUpdate, Category, ProblemDetails } fro
 import { useAuth } from "@/auth/useAuth";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
+import { publishSuccessToast } from "@/components/feedback/successToastStore";
 import PageHeader from "@/components/PageHeader";
 import { useBudgetsList, invalidateBudgetCaches } from "@/features/budgets/budgetsQueries";
 import BudgetFormModal, { type BudgetFormState } from "@/features/budgets/components/BudgetFormModal";
@@ -25,6 +26,7 @@ const MONEY_AMOUNT_PREFIX = "https://api.budgetbuddy.dev/problems/money-amount-"
 
 type BudgetFieldErrors = {
   month?: string;
+  categoryId?: string;
   limit?: string;
 };
 
@@ -100,6 +102,7 @@ export default function BudgetsPage() {
   const budgetsQuery = useBudgetsList(apiClient, appliedRange, rangeIsValid);
 
   const saveMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: async (payload: BudgetCreate | BudgetUpdate) => {
       if (editing) {
         await updateBudget(apiClient, editing.id, payload as BudgetUpdate);
@@ -108,6 +111,7 @@ export default function BudgetsPage() {
       await createBudget(apiClient, payload as BudgetCreate);
     },
     onSuccess: async () => {
+      publishSuccessToast(editing ? "Budget updated successfully." : "Budget created successfully.");
       setFormOpen(false);
       await invalidateBudgetCaches(queryClient, editing?.id);
     },
@@ -119,8 +123,10 @@ export default function BudgetsPage() {
   });
 
   const archiveMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
     mutationFn: (budgetId: string) => archiveBudget(apiClient, budgetId),
     onSuccess: async () => {
+      publishSuccessToast("Budget archived successfully.");
       const targetId = archiveTarget?.id;
       setArchiveTarget(null);
       await invalidateBudgetCaches(queryClient, targetId);
@@ -213,38 +219,37 @@ export default function BudgetsPage() {
       if (field === "limit" && previous.limit) {
         return { ...previous, limit: undefined };
       }
+      if (field === "categoryId" && previous.categoryId) {
+        return { ...previous, categoryId: undefined };
+      }
       return previous;
     });
   }
 
   function buildCreatePayload(): BudgetCreate | null {
-    if (!isValidMonth(formState.month) || !formState.categoryId) {
-      setFormProblem(toLocalProblem({
-        type: BUDGET_MONTH_INVALID_TYPE,
-        title: "Invalid request",
-        status: 400,
-        detail: "month and category are required and month must be YYYY-MM."
-      }));
-      if (!isValidMonth(formState.month)) {
-        setFormFieldErrors((previous) => ({ ...previous, month: "Month must use YYYY-MM format." }));
-      }
-      return null;
+    const nextErrors: BudgetFieldErrors = {};
+    if (!isValidMonth(formState.month)) {
+      nextErrors.month = "Month must use YYYY-MM format.";
     }
+    if (!formState.categoryId) {
+      nextErrors.categoryId = "Select a category.";
+    }
+
     const limitCents = parseLimitInputToCents(formState.limit);
-    if (!limitCents) {
-      setFormProblem(toLocalProblem({
-        type: `${MONEY_AMOUNT_PREFIX}invalid`,
-        title: "Invalid limit",
-        status: 400,
-        detail: "Limit must be a positive amount with up to two decimals."
-      }));
-      setFormFieldErrors((previous) => ({ ...previous, limit: "Limit must be a positive amount with up to two decimals." }));
+    if (limitCents === null) {
+      nextErrors.limit = "Limit must be a positive amount with up to two decimals.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFormProblem(null);
+      setFormFieldErrors(nextErrors);
       return null;
     }
+
     return {
       month: formState.month,
       category_id: formState.categoryId,
-      limit_cents: limitCents
+      limit_cents: limitCents!
     };
   }
 
@@ -268,12 +273,8 @@ export default function BudgetsPage() {
     }
     if (formState.categoryId !== editing.category_id) {
       if (!formState.categoryId) {
-        setFormProblem(toLocalProblem({
-          type: "about:blank",
-          title: "Invalid request",
-          status: 400,
-          detail: "category is required."
-        }));
+        setFormProblem(null);
+        setFormFieldErrors((previous) => ({ ...previous, categoryId: "Select a category." }));
         return null;
       }
       payload.category_id = formState.categoryId;

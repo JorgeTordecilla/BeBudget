@@ -12,6 +12,7 @@ export type BudgetFormState = {
 
 type BudgetFieldErrors = {
   month?: string;
+  categoryId?: string;
   limit?: string;
 };
 
@@ -69,9 +70,10 @@ export default function BudgetFormModal({
         <label className="space-y-1 text-sm">
           <span>Category</span>
           <select
-            className="field-select"
+            className={`field-select ${fieldErrors.categoryId ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
             value={state.categoryId}
             onChange={(event) => onFieldChange("categoryId", event.target.value)}
+            aria-invalid={Boolean(fieldErrors.categoryId)}
           >
             <option value="">Select category</option>
             {categories.map((category) => (
@@ -80,6 +82,7 @@ export default function BudgetFormModal({
               </option>
             ))}
           </select>
+          {fieldErrors.categoryId ? <p className="text-xs text-destructive">{fieldErrors.categoryId}</p> : null}
         </label>
         <label className="space-y-1 text-sm">
           <span>Limit</span>
