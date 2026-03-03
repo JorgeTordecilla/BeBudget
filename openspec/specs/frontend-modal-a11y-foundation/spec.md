@@ -39,6 +39,6 @@ Modal and dialog layouts SHALL remain accessible and readable on mobile and desk
 - **AND** title/description associations SHALL be correctly exposed to assistive technology.
 
 #### Scenario: Modal content prevents horizontal control overflow
-- **WHEN** form controls with intrinsic width behavior (for example date fields) render inside modal content on narrow screens
+- **WHEN** form controls with intrinsic width behavior (including native `date` and `month` fields) render inside modal content on narrow screens
 - **THEN** modal content containers SHALL constrain control width to available space
-- **AND** modal interaction SHALL NOT require horizontal scrolling to reach or edit fields.
+- **AND** modal interaction SHALL NOT require horizontal scrolling to reach or edit fields across iOS Safari/Chrome/Brave and Android Chrome/Brave.
