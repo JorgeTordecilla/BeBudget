@@ -24,3 +24,15 @@ The backend MUST implement `GET /analytics/income` returning deterministic integ
 #### Scenario: Archived records policy is deterministic
 - **WHEN** analytics totals are produced
 - **THEN** archived transactions SHALL be excluded and archived income sources SHALL follow documented inclusion policy consistently
+
+#### Scenario: Inactive sources are excluded from expected income
+- **WHEN** expected totals are computed for `/analytics/income`
+- **THEN** only active, non-archived income sources SHALL contribute to `expected_income_cents`
+
+#### Scenario: Income analytics baseline with no sources is deterministic
+- **WHEN** `/analytics/income` is requested for a valid date range and the user has no active income sources
+- **THEN** the response SHALL still return deterministic month rows for the requested range with `expected_income_cents=0`
+
+#### Scenario: Income analytics validates user currency context
+- **WHEN** `/analytics/income` is requested and the authenticated user currency context fails money validation rules
+- **THEN** the API SHALL return canonical money-validation `400` ProblemDetails

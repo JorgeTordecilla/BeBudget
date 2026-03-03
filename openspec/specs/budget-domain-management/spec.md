@@ -141,6 +141,10 @@ Transaction domain behavior MUST support optional linkage to user-owned income s
 - **WHEN** a transaction write references an income source not owned by authenticated user
 - **THEN** the API SHALL reject with canonical `403` or documented conflict semantics consistently across transaction ownership rules
 
+#### Scenario: Cross-user income_source_id is rejected on create and patch
+- **WHEN** `POST /transactions` or `PATCH /transactions/{transaction_id}` references an `income_source_id` owned by a different authenticated user
+- **THEN** the API SHALL reject with documented ownership conflict semantics and SHALL NOT persist the linkage
+
 ### Requirement: Ownership and access control across domain resources
 The backend MUST enforce authenticated user ownership for accounts, categories, and transactions.
 

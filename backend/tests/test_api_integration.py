@@ -2134,6 +2134,166 @@ def test_income_analytics_breakdown_includes_unassigned_income_rows():
         assert "Unassigned" in row_names
 
 
+def test_income_analytics_excludes_inactive_and_archived_sources_from_expected():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+
+        active_status, active_source = _create_income_source(
+            client,
+            headers,
+            name="Income Active",
+            expected_amount_cents=300000,
+            is_active=True,
+        )
+        assert active_status == 201
+
+        inactive_status, inactive_source = _create_income_source(
+            client,
+            headers,
+            name="Income Inactive",
+            expected_amount_cents=500000,
+            is_active=False,
+        )
+        assert inactive_status == 201
+
+        archived_status, archived_source = _create_income_source(
+            client,
+            headers,
+            name="Income Archived",
+            expected_amount_cents=700000,
+            is_active=True,
+        )
+        assert archived_status == 201
+
+        archived = client.delete(
+            f"/api/income-sources/{archived_source['id']}",
+            headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"},
+        )
+        assert archived.status_code == 204
+
+        income_analytics = client.get("/api/analytics/income?from=2026-09-01&to=2026-09-30", headers=headers)
+        assert income_analytics.status_code == 200
+        body = income_analytics.json()
+        assert body["items"]
+        september = body["items"][0]
+        assert september["month"] == "2026-09"
+        assert september["expected_income_cents"] == 300000
+        row_names = {row["income_source_name"] for row in september["rows"]}
+        assert "Income Active" in row_names
+        assert inactive_source["name"] not in row_names
+        assert archived_source["name"] not in row_names
+
+
+def test_income_analytics_returns_deterministic_month_rows_without_active_sources():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+
+        source_status, source = _create_income_source(client, headers, name="Income Temporary", expected_amount_cents=250000)
+        assert source_status == 201
+        archived = client.delete(
+            f"/api/income-sources/{source['id']}",
+            headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"},
+        )
+        assert archived.status_code == 204
+
+        income_analytics = client.get("/api/analytics/income?from=2026-01-01&to=2026-03-31", headers=headers)
+        assert income_analytics.status_code == 200
+        body = income_analytics.json()
+        assert [item["month"] for item in body["items"]] == ["2026-01", "2026-02", "2026-03"]
+        for item in body["items"]:
+            assert item["expected_income_cents"] == 0
+            assert item["actual_income_cents"] == 0
+            assert item["rows"] == []
+
+
+def test_income_analytics_currency_mismatch_returns_canonical_problem():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+
+        db = SessionLocal()
+        try:
+            user_row = db.query(User).filter(User.username == user["username"]).one()
+            user_row.currency_code = "JPY"
+            db.commit()
+        finally:
+            db.close()
+
+        response = client.get("/api/analytics/income?from=2026-03-01&to=2026-03-31", headers=headers)
+        _assert_money_problem(response, MONEY_CURRENCY_MISMATCH_TYPE, MONEY_CURRENCY_MISMATCH_TITLE)
+
+
+def test_create_transaction_rejects_foreign_income_source_id():
+    with TestClient(app) as client:
+        owner = _register_user(client)
+        actor = _register_user(client)
+        owner_headers = _auth_headers(owner["access"])
+        actor_headers = _auth_headers(actor["access"])
+
+        owner_source_status, owner_source = _create_income_source(client, owner_headers, name="owner-source")
+        assert owner_source_status == 201
+
+        actor_account_id = _create_account(client, actor_headers, "actor-account")
+        actor_income_category_id = _create_category(client, actor_headers, "actor-income-category", "income")
+        response = client.post(
+            "/api/transactions",
+            json={
+                "type": "income",
+                "account_id": actor_account_id,
+                "category_id": actor_income_category_id,
+                "income_source_id": owner_source["id"],
+                "amount_cents": 10000,
+                "date": "2026-10-20",
+            },
+            headers=actor_headers,
+        )
+        assert response.status_code == 409
+        assert response.headers["content-type"].startswith(PROBLEM)
+        body = response.json()
+        assert body["title"] == "Conflict"
+        assert body["status"] == 409
+
+
+def test_patch_transaction_rejects_foreign_income_source_id():
+    with TestClient(app) as client:
+        owner = _register_user(client)
+        actor = _register_user(client)
+        owner_headers = _auth_headers(owner["access"])
+        actor_headers = _auth_headers(actor["access"])
+
+        owner_source_status, owner_source = _create_income_source(client, owner_headers, name="owner-source-patch")
+        assert owner_source_status == 201
+
+        actor_account_id = _create_account(client, actor_headers, "actor-account-patch")
+        actor_income_category_id = _create_category(client, actor_headers, "actor-income-category-patch", "income")
+        created = client.post(
+            "/api/transactions",
+            json={
+                "type": "income",
+                "account_id": actor_account_id,
+                "category_id": actor_income_category_id,
+                "amount_cents": 9000,
+                "date": "2026-10-21",
+            },
+            headers=actor_headers,
+        )
+        assert created.status_code == 201
+        transaction_id = created.json()["id"]
+
+        patched = client.patch(
+            f"/api/transactions/{transaction_id}",
+            json={"income_source_id": owner_source["id"]},
+            headers=actor_headers,
+        )
+        assert patched.status_code == 409
+        assert patched.headers["content-type"].startswith(PROBLEM)
+        body = patched.json()
+        assert body["title"] == "Conflict"
+        assert body["status"] == 409
+
+
 def _seed_filter_domain_data(client: TestClient, auth_headers: dict[str, str]) -> tuple[str, str, str, str]:
     account_1_id = _create_account(client, auth_headers, "wallet-main")
     account_2_id = _create_account(client, auth_headers, "wallet-secondary")
