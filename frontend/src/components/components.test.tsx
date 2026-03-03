@@ -333,6 +333,7 @@ describe("shared components", () => {
     expect(screen.getByRole("option", { name: "Food" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Salary" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Amount (cents)")).toHaveClass("field-input");
+    expect(screen.getByLabelText("Date")).toHaveClass("field-date-input");
     fireEvent.change(screen.getByLabelText("Type"), { target: { value: "income" } });
     expect(onFieldChange).toHaveBeenCalledWith("type", "income");
   });
