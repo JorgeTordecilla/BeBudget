@@ -221,11 +221,11 @@ The transactions page SHALL provide card/list rendering on small viewports and d
 #### Scenario: Filter controls remain within mobile container bounds
 - **WHEN** the transactions filter surface renders on a small viewport
 - **THEN** date and select controls SHALL remain within container width
-- **AND** horizontal page overflow SHALL NOT be introduced by filter controls.
+- **AND** native `input[type="date"]` controls SHALL NOT introduce horizontal page overflow on iOS Safari/Chrome/Brave and Android Chrome/Brave.
 
 #### Scenario: Transaction form controls remain within modal bounds
 - **WHEN** a user opens the create or edit transaction modal on a small viewport
-- **THEN** all form controls (including date inputs) SHALL remain within modal content width
+- **THEN** all form controls (including native `input[type="date"]`) SHALL remain within modal content width
 - **AND** modal interaction SHALL NOT require horizontal scrolling.
 
 ### Requirement: Transactions action accessibility

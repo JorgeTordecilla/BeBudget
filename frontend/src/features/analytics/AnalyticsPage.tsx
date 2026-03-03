@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
             <span className="text-muted-foreground">From</span>
             <input
               type="date"
-              className="field-input"
+              className="field-date-input"
               value={draftRange.from}
               onChange={(event) => setDraftRange((previous) => ({ ...previous, from: event.target.value }))}
               aria-label="From date"
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
             <span className="text-muted-foreground">To</span>
             <input
               type="date"
-              className="field-input"
+              className="field-date-input"
               value={draftRange.to}
               onChange={(event) => setDraftRange((previous) => ({ ...previous, to: event.target.value }))}
               aria-label="To date"

@@ -107,9 +107,13 @@ describe("BudgetsPage", () => {
     renderPage();
     await screen.findByText("2026-03");
 
+    expect(screen.getByLabelText("From month")).toHaveClass("field-date-input");
+    expect(screen.getByLabelText("To month")).toHaveClass("field-date-input");
+
     fireEvent.click(screen.getByRole("button", { name: "New budget" }));
 
     const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByLabelText("Month")).toHaveClass("field-date-input");
     const categorySelect = within(dialog).getByLabelText("Category");
     expect(within(dialog).getByRole("option", { name: "Food (expense)" })).toBeInTheDocument();
     expect(within(dialog).getByRole("option", { name: "Salary (income)" })).toBeInTheDocument();

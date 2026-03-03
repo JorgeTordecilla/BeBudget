@@ -651,7 +651,7 @@ export default function TransactionsPage() {
             <input
               type="date"
               aria-label="From"
-              className="field-input"
+              className="field-date-input"
               value={filters.from}
               onChange={(event) =>
                 setFilters((previous) => ({
@@ -666,7 +666,7 @@ export default function TransactionsPage() {
             <input
               type="date"
               aria-label="To"
-              className="field-input"
+              className="field-date-input"
               value={filters.to}
               onChange={(event) =>
                 setFilters((previous) => ({

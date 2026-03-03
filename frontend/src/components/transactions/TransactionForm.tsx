@@ -113,7 +113,7 @@ export default function TransactionForm({
         <label className="min-w-0 space-y-1 text-sm">
           <span>Date</span>
           <input
-            className="field-input"
+            className="field-date-input"
             type="date"
             value={state.date}
             onChange={(event) => onFieldChange("date", event.target.value)}

@@ -256,7 +256,11 @@ describe("TransactionsPage", () => {
     renderPage();
     await screen.findByText("Market");
 
+    expect(screen.getByLabelText("From")).toHaveClass("field-date-input");
+    expect(screen.getByLabelText("To")).toHaveClass("field-date-input");
+
     fireEvent.click(screen.getByRole("button", { name: "New transaction" }));
+    expect(screen.getByLabelText("Date")).toHaveClass("field-date-input");
     fireEvent.change(screen.getAllByLabelText("Account")[1]!, { target: { value: "a1" } });
     fireEvent.change(screen.getAllByLabelText("Category")[1]!, { target: { value: "c1" } });
     fireEvent.change(screen.getByLabelText("Amount (cents)"), { target: { value: "1200" } });
@@ -547,4 +551,3 @@ describe("TransactionsPage", () => {
     expect(await screen.findByText("Rate limited. Try again later.")).toBeInTheDocument();
   });
 });
-

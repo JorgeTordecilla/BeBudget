@@ -364,7 +364,7 @@ export default function BudgetsPage() {
             <span className="block">From</span>
             <input
               type="month"
-              className="field-input"
+              className="field-date-input"
               value={draftFrom}
               onChange={(event) => setDraftFrom(event.target.value)}
               aria-label="From month"
@@ -374,7 +374,7 @@ export default function BudgetsPage() {
             <span className="block">To</span>
             <input
               type="month"
-              className="field-input"
+              className="field-date-input"
               value={draftTo}
               onChange={(event) => setDraftTo(event.target.value)}
               aria-label="To month"

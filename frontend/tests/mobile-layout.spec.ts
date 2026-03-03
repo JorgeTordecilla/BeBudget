@@ -16,7 +16,7 @@ async function assertNoHorizontalOverflow(page: Page) {
 }
 
 test.describe("mobile layout resilience", () => {
-  test("transactions and analytics avoid overflow and keep FAB separated from bottom nav", async ({ page }) => {
+  test("date controls remain overflow-safe across transactions, analytics, and budgets", async ({ page }) => {
     test.skip(!E2E_USERNAME || !E2E_PASSWORD, "E2E_USERNAME/E2E_PASSWORD are required for authenticated mobile layout checks.");
 
     await page.goto("/login");
@@ -27,10 +27,13 @@ test.describe("mobile layout resilience", () => {
 
     await page.getByRole("link", { name: "Transactions" }).first().click();
     await page.waitForURL(/\/app\/transactions/);
+    await expect(page.getByLabel("From")).toHaveClass(/field-date-input/);
+    await expect(page.getByLabel("To")).toHaveClass(/field-date-input/);
     await assertNoHorizontalOverflow(page);
 
     await page.getByRole("button", { name: "Create transaction" }).first().click();
     await page.getByRole("heading", { name: "Create transaction" }).waitFor();
+    await expect(page.getByLabel("Date")).toHaveClass(/field-date-input/);
     await assertNoHorizontalOverflow(page);
     await page.getByRole("button", { name: "Cancel" }).click();
 
@@ -47,6 +50,20 @@ test.describe("mobile layout resilience", () => {
 
     await page.getByRole("link", { name: "Analytics" }).first().click();
     await page.waitForURL(/\/app\/analytics/);
+    await expect(page.getByLabel("From date")).toHaveClass(/field-date-input/);
+    await expect(page.getByLabel("To date")).toHaveClass(/field-date-input/);
     await assertNoHorizontalOverflow(page);
+
+    await page.getByRole("link", { name: "Budgets" }).first().click();
+    await page.waitForURL(/\/app\/budgets/);
+    await expect(page.getByLabel("From month")).toHaveClass(/field-date-input/);
+    await expect(page.getByLabel("To month")).toHaveClass(/field-date-input/);
+    await assertNoHorizontalOverflow(page);
+
+    await page.getByRole("button", { name: "New budget" }).click();
+    await page.getByRole("heading", { name: "Create budget" }).waitFor();
+    await expect(page.getByLabel("Month", { exact: true })).toHaveClass(/field-date-input/);
+    await assertNoHorizontalOverflow(page);
+    await page.getByRole("button", { name: "Cancel" }).click();
   });
 });

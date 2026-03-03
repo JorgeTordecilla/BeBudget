@@ -60,7 +60,7 @@ export default function BudgetFormModal({
           <span>Month</span>
           <input
             type="month"
-            className={`field-input ${fieldErrors.month ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
+            className={`field-date-input ${fieldErrors.month ? "border-destructive focus-visible:ring-destructive/40" : ""}`}
             value={state.month}
             onChange={(event) => onFieldChange("month", event.target.value)}
             aria-invalid={Boolean(fieldErrors.month)}

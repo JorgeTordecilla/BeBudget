@@ -114,7 +114,7 @@ The analytics interface SHALL preserve trend and breakdown readability across mo
 #### Scenario: Analytics filter controls avoid mobile overflow
 - **WHEN** date range controls are rendered on a small viewport
 - **THEN** controls SHALL reflow in a mobile-first layout that keeps each control fully visible
-- **AND** date inputs SHALL NOT overflow their parent container width.
+- **AND** native `input[type="date"]` controls SHALL NOT overflow their parent container width on iOS Safari/Chrome/Brave and Android Chrome/Brave.
 
 ### Requirement: Analytics control consistency
 Analytics range and overlay controls SHALL remain consistently accessible and understandable at all supported breakpoints.
