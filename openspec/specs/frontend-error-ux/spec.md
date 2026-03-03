@@ -26,17 +26,23 @@ The frontend SHALL map canonical `problem.type` values to user-facing messages a
 #### Scenario: Known canonical types map to deterministic UX
 - **WHEN** normalized ProblemDetails contains a known canonical `type`
 - **THEN** frontend SHALL resolve message and presentation from one central mapping source
-- **AND** reuse that mapping across routes.
+- **AND** reuse that mapping across routes and shared error components
 
-#### Scenario: Unknown problem types use safe fallback
-- **WHEN** normalized ProblemDetails contains an unknown `type`
-- **THEN** frontend SHALL fallback to a generic safe message and deterministic presentation
-- **AND** SHALL avoid exposing potentially sensitive raw backend detail by default.
+#### Scenario: Unknown problem types use safe fallback with controlled detail policy
+- **WHEN** normalized ProblemDetails contains an unknown `type` (including `about:blank`)
+- **THEN** frontend SHALL resolve deterministic fallback messaging and presentation
+- **AND** it SHALL avoid exposing potentially sensitive raw backend detail by default
+- **AND** it SHALL allow safe actionable detail when failure category is request validation and detail is suitable for end-user guidance
 
 #### Scenario: Session-expired auth failures follow mapped UX policy
 - **WHEN** refresh flow returns ProblemDetails with unauthorized or forbidden auth types
 - **THEN** frontend SHALL render deterministic mapped messaging
 - **AND** request-id visibility/copy behavior SHALL remain available in the error presentation path.
+
+#### Scenario: Equivalent ProblemDetails payloads render equivalent messages across surfaces
+- **WHEN** the same normalized ProblemDetails is rendered via inline form state, shared inline component, or banner/toast entry points
+- **THEN** frontend SHALL display equivalent user-facing message semantics
+- **AND** it SHALL avoid contradictory messaging between components for the same failure
 
 ### Requirement: Error UI must expose request id and support copy interaction
 All rendered frontend error surfaces SHALL display request correlation metadata when available.

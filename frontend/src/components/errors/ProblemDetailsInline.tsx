@@ -2,13 +2,15 @@ import { useState } from "react";
 
 import { resolveProblemUi } from "@/api/problemMapping";
 import { copyToClipboard } from "@/utils/clipboard";
+import { toSupportCode } from "@/components/errors/supportCode";
 
 type ProblemDetailsInlineProps = {
   error: unknown;
   onRetry?: () => void;
+  onDismiss?: () => void;
 };
 
-export default function ProblemDetailsInline({ error, onRetry }: ProblemDetailsInlineProps) {
+export default function ProblemDetailsInline({ error, onRetry, onDismiss }: ProblemDetailsInlineProps) {
   const [copied, setCopied] = useState(false);
   const ui = resolveProblemUi(error, "Request failed.");
 
@@ -27,11 +29,16 @@ export default function ProblemDetailsInline({ error, onRetry }: ProblemDetailsI
       {ui.retryAfter ? <p className="mt-1 text-muted-foreground">Retry-After: {ui.retryAfter}s</p> : null}
       {ui.requestId ? (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span>Request ID: {ui.requestId}</span>
+          <span>Support code: {toSupportCode(ui.requestId)}</span>
           <button type="button" className="underline" onClick={handleCopy}>
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
+      ) : null}
+      {onDismiss ? (
+        <button type="button" className="mt-2 text-xs underline" onClick={onDismiss}>
+          Dismiss
+        </button>
       ) : null}
       {onRetry ? (
         <button type="button" className="mt-2 text-xs underline" onClick={onRetry}>
@@ -41,4 +48,3 @@ export default function ProblemDetailsInline({ error, onRetry }: ProblemDetailsI
     </div>
   );
 }
-

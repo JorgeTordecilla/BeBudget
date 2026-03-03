@@ -23,6 +23,7 @@ import type {
 import { useAuth } from "@/auth/useAuth";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
+import { publishSuccessToast } from "@/components/feedback/successToastStore";
 import PageHeader from "@/components/PageHeader";
 import TransactionForm, { type TransactionFormState } from "@/components/transactions/TransactionForm";
 import TransactionRowActions from "@/components/transactions/TransactionRowActions";
@@ -252,6 +253,7 @@ export default function TransactionsPage() {
       await createTransaction(apiClient, payload as TransactionCreate);
     },
     onSuccess: async () => {
+      publishSuccessToast(editing ? "Transaction updated successfully." : "Transaction created successfully.");
       setFormOpen(false);
       await invalidateTransactionsAndAnalytics(queryClient);
     },
@@ -264,6 +266,7 @@ export default function TransactionsPage() {
     meta: { skipGlobalErrorToast: true },
     mutationFn: (transactionId: string) => archiveTransaction(apiClient, transactionId),
     onSuccess: async () => {
+      publishSuccessToast("Transaction archived successfully.");
       setArchiveTarget(null);
       await invalidateTransactionsAndAnalytics(queryClient);
     },
@@ -276,6 +279,7 @@ export default function TransactionsPage() {
     meta: { skipGlobalErrorToast: true },
     mutationFn: (transactionId: string) => restoreTransaction(apiClient, transactionId),
     onSuccess: async () => {
+      publishSuccessToast("Transaction restored successfully.");
       await invalidateTransactionsAndAnalytics(queryClient);
     },
     onError: (error) => {
@@ -296,6 +300,7 @@ export default function TransactionsPage() {
     onSuccess: ({ blob, contentDisposition }) => {
       const filename = resolveCsvFilename(contentDisposition);
       downloadBlob(blob, filename);
+      publishSuccessToast("Transactions exported successfully.");
       setPageProblem(null);
       setMoreActionsOpen(false);
     },

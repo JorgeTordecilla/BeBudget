@@ -34,25 +34,76 @@ describe("resolveProblemUi", () => {
     );
 
     const ui = resolveProblemUi(error);
-    expect(ui.message).toBe("Your session expired. Please sign in again.");
-    expect(ui.presentation).toBe("toast");
+    expect(ui.message).toBe("Invalid credentials. Please try again.");
+    expect(ui.presentation).toBe("inline");
     expect(ui.requestId).toBe("req-auth-1");
   });
 
-  it("uses fallback for unknown problem types", () => {
+  it("uses validation fallback and friendly detail for unknown 400 auth problems", () => {
+    const error = new ApiProblemError(
+      {
+        type: "about:blank",
+        title: "Invalid request",
+        status: 400,
+        detail: "[{'type': 'string_too_short', 'loc': ('body', 'password'), 'msg': 'String should have at least 12 characters.'}]"
+      },
+      { httpStatus: 400, requestId: null, retryAfter: null }
+    );
+
+    const ui = resolveProblemUi(error, "Unexpected error.", { authFlow: "register" });
+    expect(ui.message).toBe("Validation failed. Check your input and try again.");
+    expect(ui.presentation).toBe("inline");
+    expect(ui.detail).toBe("Password must have at least 12 characters.");
+  });
+
+  it("uses safe fallback without raw detail for non-validation unknown problem types", () => {
     const error = new ApiProblemError(
       {
         type: "https://api.budgetbuddy.dev/problems/unknown",
         title: "Some unknown problem",
-        status: 400,
-        detail: "secret stack trace"
+        status: 500,
+        detail: "Traceback: ValueError..."
       },
-      { httpStatus: 400, requestId: null, retryAfter: null }
+      { httpStatus: 500, requestId: null, retryAfter: null }
     );
     const ui = resolveProblemUi(error);
     expect(ui.message).toBe("Unexpected error. Please retry.");
     expect(ui.presentation).toBe("toast");
     expect(ui.detail).toBeNull();
+  });
+
+  it("maps register username conflict to friendly deterministic message", () => {
+    const error = new ApiProblemError(
+      {
+        type: "about:blank",
+        title: "Conflict",
+        status: 409,
+        detail: "Username already exists"
+      },
+      { httpStatus: 409, requestId: "req-conflict", retryAfter: null }
+    );
+    const ui = resolveProblemUi(error, "Unexpected error.", { authFlow: "register" });
+    expect(ui.message).toBe("Username already exists. Try another one.");
+    expect(ui.presentation).toBe("inline");
+    expect(ui.detail).toBeNull();
+  });
+
+  it("maps unknown conflict problems to inline detail-first message", () => {
+    const error = new ApiProblemError(
+      {
+        type: "about:blank",
+        title: "Conflict",
+        status: 409,
+        detail: "Category name already exists for this type"
+      },
+      { httpStatus: 409, requestId: "req-cat-409", retryAfter: null }
+    );
+
+    const ui = resolveProblemUi(error);
+    expect(ui.message).toBe("Category name already exists for this type");
+    expect(ui.presentation).toBe("inline");
+    expect(ui.detail).toBeNull();
+    expect(ui.requestId).toBe("req-cat-409");
   });
 
   it("maps unknown http errors to generic toast", () => {

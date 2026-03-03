@@ -1,7 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
-import { ApiProblemError } from "@/api/errors";
 import { resolveProblemUi } from "@/api/problemMapping";
 import { useAuth } from "@/auth/useAuth";
 import { Button } from "@/ui/button";
@@ -43,13 +42,9 @@ export default function Register() {
       await register(username, password, currencyCode);
       navigate(from, { replace: true });
     } catch (caught) {
-      if (caught instanceof ApiProblemError) {
-        const mapped = resolveProblemUi(caught);
-        const suffix = mapped.detail ? ` ${mapped.detail}` : "";
-        setError(`${mapped.message}${suffix}`.trim());
-      } else {
-        setError("Unable to create account. Please try again.");
-      }
+      const mapped = resolveProblemUi(caught, "Unexpected error.", { authFlow: "register" });
+      const suffix = mapped.detail ? ` ${mapped.detail}` : "";
+      setError(`${mapped.message}${suffix}`.trim());
     } finally {
       setSubmitting(false);
     }

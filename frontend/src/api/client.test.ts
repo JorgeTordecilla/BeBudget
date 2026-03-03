@@ -8,6 +8,7 @@ vi.mock("@/components/errors/problemToastStore", () => ({
 }));
 
 import { createApiClient } from "@/api/client";
+import { ApiProblemError } from "@/api/errors";
 import type { User } from "@/api/types";
 
 function makeUser(): User {
@@ -317,7 +318,7 @@ describe("api client refresh behavior", () => {
       }
     );
 
-    await expect(client.login("demo", "secret")).rejects.toThrow("login_failed");
+    await expect(client.login("demo", "secret")).rejects.toThrow("Login failed.");
     await client.refresh();
     await client.logout();
 
@@ -429,7 +430,7 @@ describe("api client refresh behavior", () => {
       { fetchImpl: fetchMock, baseUrl: "http://test.local/api", onAuthFailure: () => undefined }
     );
 
-    await expect(client.login("u", "p")).rejects.toThrow("login_failed");
+    await expect(client.login("u", "p")).rejects.toThrow("Login failed.");
     await expect(client.me()).rejects.toThrow("me_failed");
   });
 
@@ -500,6 +501,40 @@ describe("api client refresh behavior", () => {
       httpStatus: 409,
       requestId: "req-register-409"
     });
+  });
+
+  it("login throws normalized problem error on failure", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          type: "about:blank",
+          title: "Invalid request",
+          status: 400,
+          detail: "String should have at least 12 characters."
+        }),
+        { status: 400, headers: { "content-type": "application/problem+json", "X-Request-Id": "req-login-400" } }
+      )
+    );
+    const client = createApiClient(
+      {
+        getAccessToken: () => null,
+        setSession: () => undefined,
+        clearSession: () => undefined
+      },
+      { fetchImpl: fetchMock, baseUrl: "http://test.local/api", onAuthFailure: () => undefined }
+    );
+
+    try {
+      await client.login("demo", "short");
+      throw new Error("expected login to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiProblemError);
+      expect(error).toMatchObject({
+        name: "ApiProblemError",
+        httpStatus: 400,
+        requestId: "req-login-400"
+      });
+    }
   });
 
   it("returns parsed payload for login and me success", async () => {

@@ -140,7 +140,7 @@ describe("AccountsPage", () => {
     fireEvent.change(screen.getByLabelText("Initial balance (cents)"), { target: { value: "1.5" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText("Invalid amount")).toBeInTheDocument();
+    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
     expect(createAccount).not.toHaveBeenCalled();
   });
 
@@ -195,8 +195,7 @@ describe("AccountsPage", () => {
     );
 
     renderPage();
-    expect(await screen.findByText("Forbidden")).toBeInTheDocument();
-    expect(screen.getByText("Not allowed")).toBeInTheDocument();
+    expect(await screen.findByText("You do not have access to this resource.")).toBeInTheDocument();
   });
 
   it("shows client contract error banner for 406 responses", async () => {
@@ -210,8 +209,7 @@ describe("AccountsPage", () => {
     );
 
     renderPage();
-    expect(await screen.findByText("Client contract error")).toBeInTheDocument();
-    expect(screen.getByText("Invalid Accept header")).toBeInTheDocument();
+    expect(await screen.findByText("Client contract error. Please refresh.")).toBeInTheDocument();
   });
 
   it("shows empty state when list is empty", async () => {
@@ -230,7 +228,7 @@ describe("AccountsPage", () => {
     fireEvent.change(screen.getByLabelText("Initial balance (cents)"), { target: { value: "100" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText("Failed to save account")).toBeInTheDocument();
+    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
   });
 
   it("shows save fallback problem when api error has no problem payload", async () => {
@@ -243,7 +241,7 @@ describe("AccountsPage", () => {
     fireEvent.change(screen.getByLabelText("Initial balance (cents)"), { target: { value: "100" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText("request_failed")).toBeInTheDocument();
+    expect(await screen.findByText("Conflict detected. Review your input and try again.")).toBeInTheDocument();
   });
 
   it("shows fallback banner when archive fails unexpectedly", async () => {
@@ -254,7 +252,7 @@ describe("AccountsPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[0]!);
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[1]!);
 
-    expect(await screen.findByText("Failed to archive account")).toBeInTheDocument();
+    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
   });
 
   it("shows archive fallback problem when api error has no problem payload", async () => {
@@ -265,7 +263,7 @@ describe("AccountsPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[0]!);
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[1]!);
 
-    expect(await screen.findByText("request_failed")).toBeInTheDocument();
+    expect(await screen.findByText("Conflict detected. Review your input and try again.")).toBeInTheDocument();
   });
 
   it("hides archive action for archived accounts", async () => {
@@ -310,18 +308,18 @@ describe("AccountsPage", () => {
       })
     );
     renderPage();
-    expect(await screen.findByText("Forbidden")).toBeInTheDocument();
+    expect(await screen.findByText("You do not have access to this resource.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    await waitFor(() => expect(screen.queryByText("Forbidden")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("You do not have access to this resource.")).not.toBeInTheDocument());
 
     vi.mocked(createAccount).mockRejectedValueOnce(new ApiProblemError(409, null));
     fireEvent.click(screen.getByRole("button", { name: "New account" }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Duplicate" } });
     fireEvent.change(screen.getByLabelText("Initial balance (cents)"), { target: { value: "100" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-    expect(await screen.findByText("request_failed")).toBeInTheDocument();
+    expect(await screen.findByText("Conflict detected. Review your input and try again.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    await waitFor(() => expect(screen.queryByText("request_failed")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Conflict detected. Review your input and try again.")).not.toBeInTheDocument());
   });
 
   it("cancels archive dialog without API call", async () => {
@@ -335,5 +333,3 @@ describe("AccountsPage", () => {
     expect(archiveAccount).not.toHaveBeenCalled();
   });
 });
-
-

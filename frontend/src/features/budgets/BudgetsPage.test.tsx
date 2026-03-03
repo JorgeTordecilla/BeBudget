@@ -214,7 +214,7 @@ describe("BudgetsPage", () => {
     fireEvent.change(screen.getByLabelText("To month"), { target: { value: "2026-01" } });
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
   });
 
   it("renders mapped 409 budget-duplicate feedback", async () => {
@@ -295,7 +295,6 @@ describe("BudgetsPage", () => {
     fireEvent.change(within(dialog).getByLabelText("Limit"), { target: { value: "100" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Create budget" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
     expect(screen.getAllByText("Month must use YYYY-MM format.").length).toBeGreaterThan(0);
     expect(createBudget).not.toHaveBeenCalled();
   });
@@ -310,8 +309,21 @@ describe("BudgetsPage", () => {
     fireEvent.change(within(dialog).getByLabelText("Limit"), { target: { value: "0" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Create budget" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
     expect(screen.getAllByText("Limit must be a positive amount with up to two decimals.").length).toBeGreaterThan(0);
+    expect(createBudget).not.toHaveBeenCalled();
+  });
+
+  it("shows category and limit validation on create when required fields are missing", async () => {
+    renderPage();
+    await screen.findByText("2026-03");
+    fireEvent.click(screen.getByRole("button", { name: "New budget" }));
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create budget" }));
+
+    expect(await screen.findByText("Select a category.")).toBeInTheDocument();
+    expect(screen.getByText("Limit must be a positive amount with up to two decimals.")).toBeInTheDocument();
+    expect(screen.queryByText("Unexpected error. Please retry.")).not.toBeInTheDocument();
     expect(createBudget).not.toHaveBeenCalled();
   });
 
@@ -337,7 +349,7 @@ describe("BudgetsPage", () => {
     const dialog = screen.getByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Save changes" }));
 
-    expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
+    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
     expect(updateBudget).not.toHaveBeenCalled();
   });
 
@@ -377,5 +389,3 @@ describe("BudgetsPage", () => {
     expect(await screen.findByText("Unexpected error. Please retry.")).toBeInTheDocument();
   });
 });
-
-

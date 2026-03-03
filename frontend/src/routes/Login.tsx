@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 
+import { resolveProblemUi } from "@/api/problemMapping";
 import { useAuth } from "@/auth/useAuth";
 import SessionLoader from "@/components/session/SessionLoader";
 import { Button } from "@/ui/button";
@@ -59,8 +60,10 @@ export default function Login() {
     try {
       await login(username, password);
       navigate(from, { replace: true });
-    } catch {
-      setError("Invalid credentials. Please try again.");
+    } catch (caught) {
+      const mapped = resolveProblemUi(caught, "Unexpected error.", { authFlow: "login" });
+      const suffix = mapped.detail ? ` ${mapped.detail}` : "";
+      setError(`${mapped.message}${suffix}`.trim());
     } finally {
       setSubmitting(false);
     }

@@ -234,7 +234,7 @@ export function createApiClient(bindings: AuthBindings, options: ClientOptions =
         body: JSON.stringify({ username, password })
       });
       if (!response.ok) {
-        throw new Error("login_failed");
+        throw await toApiError(response, "Login failed.");
       }
       return (await response.json()) as AuthSessionResponse;
     },
@@ -244,7 +244,7 @@ export function createApiClient(bindings: AuthBindings, options: ClientOptions =
         body: JSON.stringify(payload)
       });
       if (!response.ok) {
-        throw await toApiError(response, "register_failed");
+        throw await toApiError(response, "Registration failed.");
       }
       return (await response.json()) as AuthSessionResponse;
     },

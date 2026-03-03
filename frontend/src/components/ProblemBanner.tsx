@@ -1,29 +1,50 @@
-import type { ProblemDetails } from "@/api/types";
+import { useState } from "react";
 
-const STATUS_MESSAGE: Record<number, string> = {
-  403: "Forbidden",
-  406: "Client contract error"
-};
+import { ApiProblemError } from "@/api/errors";
+import type { ProblemDetails } from "@/api/types";
+import { resolveProblemUi } from "@/api/problemMapping";
+import { copyToClipboard } from "@/utils/clipboard";
+import { toSupportCode } from "@/components/errors/supportCode";
 
 type ProblemBannerProps = {
-  problem: ProblemDetails | null;
+  problem: unknown | null;
   onClose?: () => void;
 };
 
 export default function ProblemBanner({ problem, onClose }: ProblemBannerProps) {
+  const [copied, setCopied] = useState(false);
   if (!problem) {
     return null;
   }
 
-  const fallbackTitle = STATUS_MESSAGE[problem.status] ?? "Request failed";
-  const title = problem.title || fallbackTitle;
+  const normalizedError =
+    isProblemDetails(problem)
+      ? new ApiProblemError(problem, { httpStatus: problem.status, requestId: null, retryAfter: null })
+      : problem;
+  const ui = resolveProblemUi(normalizedError, "Request failed.");
+
+  async function handleCopy() {
+    if (!ui.requestId) {
+      return;
+    }
+    const ok = await copyToClipboard(ui.requestId);
+    setCopied(ok);
+  }
 
   return (
     <div role="alert" aria-live="assertive" className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <p className="font-semibold">{title}</p>
-          {problem.detail ? <p className="text-muted-foreground">{problem.detail}</p> : null}
+          <p className="font-semibold">{ui.message}</p>
+          {ui.detail ? <p className="text-muted-foreground">{ui.detail}</p> : null}
+          {ui.requestId ? (
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span>Support code: {toSupportCode(ui.requestId)}</span>
+              <button type="button" className="underline" onClick={handleCopy}>
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          ) : null}
         </div>
         {onClose ? (
           <button type="button" className="text-xs text-muted-foreground underline" onClick={onClose}>
@@ -32,5 +53,15 @@ export default function ProblemBanner({ problem, onClose }: ProblemBannerProps) 
         ) : null}
       </div>
     </div>
+  );
+}
+
+function isProblemDetails(value: unknown): value is ProblemDetails {
+  return Boolean(
+    value
+      && typeof value === "object"
+      && "type" in value
+      && "title" in value
+      && "status" in value
   );
 }
