@@ -41,14 +41,14 @@ export default function ProblemBanner({ problem, onClose }: ProblemBannerProps) 
           {ui.requestId ? (
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span>Support code: {toSupportCode(ui.requestId)}</span>
-              <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={handleCopy}>
+              <Button type="button" variant="ghost" className="h-auto p-0 text-xs underline" onClick={handleCopy}>
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
           ) : null}
         </div>
         {onClose ? (
-          <Button type="button" variant="link" className="h-auto p-0 text-xs text-muted-foreground" onClick={onClose}>
+          <Button type="button" variant="ghost" className="h-auto p-0 text-xs text-muted-foreground underline" onClick={onClose}>
             Dismiss
           </Button>
         ) : null}

@@ -25,7 +25,7 @@ export default function CategoryBreakdown({ items, currencyCode, metric, onMetri
       <div className="flex items-center gap-2">
         <Button
           type="button"
-          variant={metric === "expense" ? "secondary" : "outline"}
+          variant={metric === "expense" ? "default" : "outline"}
           size="sm"
           onClick={() => onMetricChange("expense")}
         >
@@ -33,7 +33,7 @@ export default function CategoryBreakdown({ items, currencyCode, metric, onMetri
         </Button>
         <Button
           type="button"
-          variant={metric === "income" ? "secondary" : "outline"}
+          variant={metric === "income" ? "default" : "outline"}
           size="sm"
           onClick={() => onMetricChange("income")}
         >

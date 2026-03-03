@@ -31,18 +31,18 @@ export default function ProblemDetailsInline({ error, onRetry, onDismiss }: Prob
       {ui.requestId ? (
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <span>Support code: {toSupportCode(ui.requestId)}</span>
-          <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={handleCopy}>
+          <Button type="button" variant="ghost" className="h-auto p-0 text-xs underline" onClick={handleCopy}>
             {copied ? "Copied" : "Copy"}
           </Button>
         </div>
       ) : null}
       {onDismiss ? (
-        <Button type="button" variant="link" className="mt-2 h-auto p-0 text-xs" onClick={onDismiss}>
+        <Button type="button" variant="ghost" className="mt-2 h-auto p-0 text-xs underline" onClick={onDismiss}>
           Dismiss
         </Button>
       ) : null}
       {onRetry ? (
-        <Button type="button" variant="link" className="mt-2 h-auto p-0 text-xs" onClick={onRetry}>
+        <Button type="button" variant="ghost" className="mt-2 h-auto p-0 text-xs underline" onClick={onRetry}>
           Retry
         </Button>
       ) : null}

@@ -280,7 +280,7 @@ export default function AppShell() {
             ))}
             <Button
               type="button"
-              variant={overflowOpen ? "secondary" : "ghost"}
+              variant={overflowOpen ? "outline" : "ghost"}
               className="flex min-h-12 items-center justify-center rounded-xl px-2 text-[11px] font-semibold"
               aria-expanded={overflowOpen}
               aria-controls="mobile-nav-overflow"

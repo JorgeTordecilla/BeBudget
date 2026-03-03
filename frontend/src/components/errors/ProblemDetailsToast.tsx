@@ -49,8 +49,8 @@ export default function ProblemDetailsToast() {
                 <span className="truncate">Support code: {toSupportCode(toast.problem.requestId)}</span>
                 <Button
                   type="button"
-                  variant="link"
-                  className="h-auto p-0 text-xs"
+                  variant="ghost"
+                  className="h-auto p-0 text-xs underline"
                   onClick={() => handleCopy(toast.id, toast.problem.requestId as string)}
                 >
                   {toast.copied ? "Copied" : "Copy"}
