@@ -178,6 +178,7 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "Categories" })).toHaveAttribute("href", "/app/categories");
     expect(screen.getByRole("link", { name: "Income Sources" })).toHaveAttribute("href", "/app/income-sources");
     expect(screen.getByRole("link", { name: "Bills" })).toHaveAttribute("href", "/app/bills");
+    expect(screen.getByRole("link", { name: "Savings" })).toHaveAttribute("href", "/app/savings");
     expect(screen.getByRole("link", { name: "Budgets" })).toHaveAttribute("href", "/app/budgets");
     expect(screen.getByRole("link", { name: "Transactions" })).toHaveAttribute("href", "/app/transactions");
   });
@@ -538,6 +539,43 @@ describe("AppShell", () => {
     );
 
     expect(await screen.findByText("Import content")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
+  });
+
+  it("renders savings route under RequireAuth and AppShell", async () => {
+    renderWithQueryClient(
+      <AuthContext.Provider
+        value={{
+          apiClient: apiClientStub,
+          user: { id: "u1", username: "demo", currency_code: "USD" },
+          accessToken: "token",
+          isAuthenticated: true,
+          isBootstrapping: false,
+          login: async () => undefined,
+          register: async () => undefined,
+          logout: async () => undefined,
+          bootstrapSession: async () => true
+        }}
+      >
+        <MemoryRouter initialEntries={["/app/savings"]}>
+          <Routes>
+            <Route
+              path="/app"
+              element={(
+                <RequireAuth>
+                  <AppShell />
+                </RequireAuth>
+              )}
+            >
+              <Route path="savings" element={<div>Savings content</div>} />
+            </Route>
+            <Route path="/login" element={<div>Login page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    expect(await screen.findByText("Savings content")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
   });
 });
