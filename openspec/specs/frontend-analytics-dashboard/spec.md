@@ -62,6 +62,11 @@ The frontend SHALL present monthly trend data with currency-aware formatting and
 - **THEN** values SHALL reflect integer-cents semantics converted to major units once
 - **AND** user-entered major-unit amounts SHALL not appear 100x smaller or larger in analytics UI.
 
+#### Scenario: Budget usage excludes income-category budget limits
+- **WHEN** the analytics summary card displays `Budget usage`
+- **THEN** the displayed limit SHALL reflect only expense-category budget limits
+- **AND** budgets configured on income categories SHALL NOT inflate the budget usage denominator.
+
 ### Requirement: Category analytics breakdown must support income and expense views
 The frontend SHALL provide category breakdown views for both income and expense totals with deterministic ordering.
 
