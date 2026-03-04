@@ -12,6 +12,7 @@ from app.errors import (
     account_archived_error,
     category_archived_error,
     forbidden_error,
+    not_found_error,
     savings_contribution_invalid_amount_error,
     savings_goal_already_completed_error,
     savings_goal_category_type_mismatch_error,
@@ -339,7 +340,7 @@ def delete_savings_contribution(
         .where(SavingsContribution.user_id == current_user.id)
     )
     if not contribution:
-        return Response(status_code=404)
+        raise not_found_error("Contribution not found for the selected goal.")
 
     transaction = db.scalar(
         select(Transaction)

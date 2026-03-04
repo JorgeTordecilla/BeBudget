@@ -8,6 +8,10 @@ FORBIDDEN_TYPE = "https://api.budgetbuddy.dev/problems/forbidden"
 FORBIDDEN_TITLE = "Forbidden"
 FORBIDDEN_STATUS = 403
 
+NOT_FOUND_TYPE = "about:blank"
+NOT_FOUND_TITLE = "Not Found"
+NOT_FOUND_STATUS = 404
+
 NOT_ACCEPTABLE_TYPE = "https://api.budgetbuddy.dev/problems/not-acceptable"
 NOT_ACCEPTABLE_TITLE = "Not Acceptable"
 NOT_ACCEPTABLE_STATUS = 406
@@ -146,6 +150,15 @@ def forbidden_error(detail: str | None = None) -> APIError:
         title=FORBIDDEN_TITLE,
         detail=detail,
         type_=FORBIDDEN_TYPE,
+    )
+
+
+def not_found_error(detail: str | None = None) -> APIError:
+    return APIError(
+        status=NOT_FOUND_STATUS,
+        title=NOT_FOUND_TITLE,
+        detail=detail,
+        type_=NOT_FOUND_TYPE,
     )
 
 

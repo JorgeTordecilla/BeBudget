@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define frontend behavior for savings-goals UI, including route integration, progress display, actions, and error handling.
+
+## Requirements
 
 ### Requirement: Savings route is available under authenticated AppShell
 The frontend MUST expose `/app/savings` under the existing auth guard and AppShell navigation.

@@ -49,6 +49,13 @@ function mutationStub() {
   };
 }
 
+function toIsoLocalDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
@@ -158,5 +165,92 @@ describe("SavingsPage", () => {
     expect(await screen.findByText("Emergency Fund")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Add contribution" }));
     await waitFor(() => expect(screen.getByText("Add contribution: Emergency Fund")).toBeInTheDocument());
+  });
+
+  it("applies status filter and refetches goals with selected status", async () => {
+    vi.mocked(listSavingsGoals).mockResolvedValue({
+      items: [
+        {
+          id: "goal_1",
+          name: "Emergency Fund",
+          target_cents: 500000,
+          account_id: "acc_1",
+          category_id: "cat_1",
+          deadline: "2026-12-31",
+          note: null,
+          status: "active",
+          archived_at: null,
+          created_at: "2026-03-01T00:00:00Z",
+          updated_at: "2026-03-01T00:00:00Z",
+          saved_cents: 150000,
+          remaining_cents: 350000,
+          progress_pct: 30.0
+        }
+      ]
+    });
+
+    renderPage();
+    await screen.findByText("Emergency Fund");
+
+    fireEvent.change(screen.getByLabelText("Savings status filter"), { target: { value: "completed" } });
+
+    await waitFor(() => {
+      expect(listSavingsGoals).toHaveBeenLastCalledWith(expect.anything(), { status: "completed" });
+    });
+  });
+
+  it("renders due soon and overdue badges using local-device deadline rules", async () => {
+    const now = new Date();
+    const dueSoonDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 10);
+    const overdueDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2);
+    vi.mocked(listSavingsGoals).mockResolvedValue({
+      items: [
+        {
+          id: "goal_due_soon",
+          name: "Trip",
+          target_cents: 400000,
+          account_id: "acc_1",
+          category_id: "cat_1",
+          deadline: toIsoLocalDate(dueSoonDate),
+          note: null,
+          status: "active",
+          archived_at: null,
+          created_at: "2026-03-01T00:00:00Z",
+          updated_at: "2026-03-01T00:00:00Z",
+          saved_cents: 100000,
+          remaining_cents: 300000,
+          progress_pct: 25.0
+        },
+        {
+          id: "goal_overdue",
+          name: "Laptop",
+          target_cents: 200000,
+          account_id: "acc_1",
+          category_id: "cat_1",
+          deadline: toIsoLocalDate(overdueDate),
+          note: null,
+          status: "active",
+          archived_at: null,
+          created_at: "2026-03-01T00:00:00Z",
+          updated_at: "2026-03-01T00:00:00Z",
+          saved_cents: 50000,
+          remaining_cents: 150000,
+          progress_pct: 25.0
+        }
+      ]
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Trip")).toBeInTheDocument();
+    expect(screen.getByText("Due soon")).toBeInTheDocument();
+    expect(screen.getByText("Overdue")).toBeInTheDocument();
+  });
+
+  it("keeps page container protected against horizontal overflow", async () => {
+    renderPage();
+    expect(await screen.findByText("No savings goals yet - set your first goal.")).toBeInTheDocument();
+    const pageContainer = screen.getByTestId("savings-page");
+    expect(pageContainer).toHaveClass("overflow-x-hidden");
   });
 });

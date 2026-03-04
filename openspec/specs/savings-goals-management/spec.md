@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Define backend savings-goals behavior, lifecycle transitions, and contribution transaction ownership semantics.
+
+## Requirements
 
 ### Requirement: Savings goals support authenticated CRUD with derived progress fields
 The system MUST expose `/savings-goals` CRUD for authenticated users with ownership checks and computed progress metrics.

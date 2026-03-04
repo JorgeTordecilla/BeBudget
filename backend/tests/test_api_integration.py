@@ -4685,6 +4685,12 @@ def test_savings_goal_status_actions_idempotency_and_auth_rules():
             headers=headers_a,
         )
         assert missing_delete.status_code == 404
+        assert missing_delete.headers["content-type"].startswith(PROBLEM)
+        missing_delete_body = missing_delete.json()
+        assert missing_delete_body["type"] == "about:blank"
+        assert missing_delete_body["title"] == "Not Found"
+        assert missing_delete_body["status"] == 404
+        assert missing_delete_body["detail"] == "Contribution not found for the selected goal."
 
         forbidden_contribution = client.post(
             f"/api/savings-goals/{cancellable_id}/contributions",

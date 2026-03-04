@@ -301,7 +301,7 @@ export default function SavingsPage() {
   }
 
   return (
-    <div className="space-y-4 overflow-x-hidden">
+    <div data-testid="savings-page" className="space-y-4 overflow-x-hidden">
       <PageHeader
         title="Savings Goals"
         description="Track targets, progress, and contributions in one place."
