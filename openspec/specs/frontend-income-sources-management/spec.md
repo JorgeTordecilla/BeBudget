@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Define the frontend contract for authenticated income source management, including list/create/update/archive/restore behavior and contract-safe money input handling.
+
+## Requirements
 
 ### Requirement: Income sources frontend flow is authenticated and contract-safe
 The frontend MUST provide an authenticated income sources management experience with list/create/update/archive flows aligned to API contract behavior.

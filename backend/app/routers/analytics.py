@@ -56,8 +56,10 @@ def analytics_by_month(
             Budget.month.label("month"),
             func.coalesce(func.sum(Budget.limit_cents), 0).label("budget_limit_cents"),
         )
+        .join(Category, Category.id == Budget.category_id)
         .where(Budget.user_id == current_user.id)
         .where(Budget.archived_at.is_(None))
+        .where(Category.type == "expense")
         .where(Budget.month >= from_month)
         .where(Budget.month <= to_month)
         .group_by(Budget.month)
@@ -136,8 +138,10 @@ def analytics_by_category(
             Budget.category_id.label("category_id"),
             func.coalesce(func.sum(Budget.limit_cents), 0).label("budget_limit_cents"),
         )
+        .join(Category, Category.id == Budget.category_id)
         .where(Budget.user_id == current_user.id)
         .where(Budget.archived_at.is_(None))
+        .where(Category.type == "expense")
         .where(Budget.month >= from_month)
         .where(Budget.month <= to_month)
         .group_by(Budget.category_id)

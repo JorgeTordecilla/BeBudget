@@ -40,6 +40,11 @@ The backend MUST implement `GET /analytics/by-month` with required `from` and `t
 - **WHEN** `expected_income_cents` is computed for a month
 - **THEN** value SHALL be derived from active income sources according to the documented frequency policy
 
+#### Scenario: Monthly budget limit excludes income-category budgets
+- **WHEN** `budget_limit_cents` is computed for `GET /analytics/by-month`
+- **THEN** the total SHALL include only budget limits linked to categories of type `expense`
+- **AND** budget limits linked to categories of type `income` SHALL be excluded.
+
 ### Requirement: Category analytics aggregation
 The backend MUST implement `GET /analytics/by-category` with required `from` and `to` parameters and return totals grouped by category, computed deterministically using integer cents only, with budget comparison fields when matching monthly category budgets exist in range.
 
@@ -58,6 +63,11 @@ The backend MUST implement `GET /analytics/by-category` with required `from` and
 #### Scenario: Category analytics include spent versus limit values
 - **WHEN** matching budgets exist for category-month periods included in the requested date range
 - **THEN** the API SHALL expose deterministic integer-cents spent-versus-limit context without introducing non-integer rounding behavior
+
+#### Scenario: Category budget limit is provided only for expense categories
+- **WHEN** `budget_limit_cents` is computed for `GET /analytics/by-category`
+- **THEN** budget limit SHALL be non-zero only for categories of type `expense` with matching budgets in range
+- **AND** categories of type `income` SHALL report `budget_limit_cents = 0`.
 
 ### Requirement: Analytics security and media-type compliance
 Analytics endpoints MUST require valid access tokens and follow shared HTTP contract behavior.

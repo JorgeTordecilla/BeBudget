@@ -3058,21 +3058,28 @@ def test_analytics_include_budget_spent_vs_limit_integer_fields():
         user = _register_user(client)
         headers = _auth_headers(user["access"])
         account_id = _create_account(client, headers, "budget-analytics-account")
-        category_id = _create_category(client, headers, "budget-analytics-category", "expense")
+        expense_category_id = _create_category(client, headers, "budget-analytics-category", "expense")
+        income_category_id = _create_category(client, headers, "budget-analytics-income-category", "income")
 
-        create_budget = client.post(
+        create_expense_budget = client.post(
             "/api/budgets",
-            json={"month": "2026-06", "category_id": category_id, "limit_cents": 10000},
+            json={"month": "2026-06", "category_id": expense_category_id, "limit_cents": 10000},
             headers=headers,
         )
-        assert create_budget.status_code == 201
+        assert create_expense_budget.status_code == 201
+        create_income_budget = client.post(
+            "/api/budgets",
+            json={"month": "2026-06", "category_id": income_category_id, "limit_cents": 90000},
+            headers=headers,
+        )
+        assert create_income_budget.status_code == 201
 
-        tx = client.post(
+        expense_tx = client.post(
             "/api/transactions",
             json={
                 "type": "expense",
                 "account_id": account_id,
-                "category_id": category_id,
+                "category_id": expense_category_id,
                 "amount_cents": 3000,
                 "date": "2026-06-15",
                 "merchant": "Store",
@@ -3080,7 +3087,21 @@ def test_analytics_include_budget_spent_vs_limit_integer_fields():
             },
             headers=headers,
         )
-        assert tx.status_code == 201
+        assert expense_tx.status_code == 201
+        income_tx = client.post(
+            "/api/transactions",
+            json={
+                "type": "income",
+                "account_id": account_id,
+                "category_id": income_category_id,
+                "amount_cents": 7000,
+                "date": "2026-06-16",
+                "merchant": "Payroll",
+                "note": "salary",
+            },
+            headers=headers,
+        )
+        assert income_tx.status_code == 201
 
         by_month = client.get(
             "/api/analytics/by-month?from=2026-06-01&to=2026-06-30",
@@ -3093,6 +3114,7 @@ def test_analytics_include_budget_spent_vs_limit_integer_fields():
         assert month_item["budget_limit_cents"] == 10000
         assert isinstance(month_item["budget_spent_cents"], int)
         assert isinstance(month_item["budget_limit_cents"], int)
+        assert month_item["income_total_cents"] == 7000
 
         by_category = client.get(
             "/api/analytics/by-category?from=2026-06-01&to=2026-06-30",
@@ -3100,11 +3122,17 @@ def test_analytics_include_budget_spent_vs_limit_integer_fields():
         )
         assert by_category.status_code == 200
         assert by_category.headers["content-type"].startswith(VENDOR)
-        category_item = by_category.json()["items"][0]
-        assert category_item["budget_spent_cents"] == 3000
-        assert category_item["budget_limit_cents"] == 10000
-        assert isinstance(category_item["budget_spent_cents"], int)
-        assert isinstance(category_item["budget_limit_cents"], int)
+        items = by_category.json()["items"]
+        by_category_id = {item["category_id"]: item for item in items}
+        expense_item = by_category_id[expense_category_id]
+        income_item = by_category_id[income_category_id]
+
+        assert expense_item["budget_spent_cents"] == 3000
+        assert expense_item["budget_limit_cents"] == 10000
+        assert isinstance(expense_item["budget_spent_cents"], int)
+        assert isinstance(expense_item["budget_limit_cents"], int)
+        assert income_item["budget_limit_cents"] == 0
+        assert income_item["budget_spent_cents"] == 0
 
 
 def test_transactions_import_partial_mixed_rows_reports_deterministic_failures():

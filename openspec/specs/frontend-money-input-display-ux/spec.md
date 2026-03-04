@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Define shared frontend rules for currency-aware money input and display, ensuring major-unit UX with integer-cents API safety.
+
+## Requirements
 
 ### Requirement: Frontend money input/display contract is currency-aware and deterministic
 The frontend MUST provide a shared money UX contract that accepts major-unit user input, formats values using user currency, and preserves integer-cents API safety.

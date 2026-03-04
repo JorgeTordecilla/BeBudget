@@ -277,6 +277,32 @@ describe("AnalyticsPage", () => {
     expect(screen.queryByText("Invalid date range")).not.toBeInTheDocument();
   });
 
+  it("shows budget usage denominator from expense budgets only", async () => {
+    vi.mocked(getAnalyticsByCategory).mockResolvedValueOnce({
+      items: [
+        {
+          category_id: "c-expense",
+          category_name: "Food",
+          income_total_cents: 0,
+          expense_total_cents: 200000,
+          budget_spent_cents: 150000,
+          budget_limit_cents: 250000
+        },
+        {
+          category_id: "c-income",
+          category_name: "Salary",
+          income_total_cents: 350000,
+          expense_total_cents: 0,
+          budget_spent_cents: 0,
+          budget_limit_cents: 0
+        }
+      ]
+    });
+
+    renderPage();
+    expect(await screen.findAllByText(/\$1,500\.00 \/ \$2,500\.00/)).toHaveLength(2);
+  });
+
   it("keeps expected vs actual income scale-correct for large COP values", async () => {
     vi.mocked(getAnalyticsByMonth).mockResolvedValueOnce({
       items: [
