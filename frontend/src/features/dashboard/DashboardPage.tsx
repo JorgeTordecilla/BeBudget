@@ -112,7 +112,11 @@ export default function DashboardPage() {
   const overBudgetItems = useMemo(() => toOverBudgetItems(categoryQuery.data ?? []), [categoryQuery.data]);
   const spikes = useMemo(() => detectSpendingSpikes(expenseSampleQuery.data ?? []), [expenseSampleQuery.data]);
   const expenseByCategory = useMemo(
-    () => [...(categoryQuery.data ?? [])].sort((left, right) => right.expense_total_cents - left.expense_total_cents).slice(0, 5),
+    () =>
+      [...(categoryQuery.data ?? [])]
+        .filter((item) => item.category_type === "expense" && item.expense_total_cents > 0)
+        .sort((left, right) => right.expense_total_cents - left.expense_total_cents)
+        .slice(0, 5),
     [categoryQuery.data]
   );
   const maxExpenseCategory = expenseByCategory[0]?.expense_total_cents ?? 0;

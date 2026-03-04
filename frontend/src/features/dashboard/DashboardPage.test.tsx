@@ -81,6 +81,7 @@ function mockDashboardQueries() {
       {
         category_id: "c1",
         category_name: "Food",
+        category_type: "expense",
         income_total_cents: 0,
         expense_total_cents: 200000,
         budget_spent_cents: 160000,
@@ -171,5 +172,37 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Projected month usage")).toBeInTheDocument();
     expect(screen.getByText("Actual budget usage")).toBeInTheDocument();
     expect(screen.getByText("Pace signal")).toBeInTheDocument();
+  });
+
+  it("excludes income categories from expense drivers", () => {
+    vi.mocked(dashboardQueries.useDashboardCategorySummary).mockReturnValue({
+      data: [
+        {
+          category_id: "c-expense",
+          category_name: "Food",
+          category_type: "expense",
+          income_total_cents: 0,
+          expense_total_cents: 200000,
+          budget_spent_cents: 160000,
+          budget_limit_cents: 120000
+        },
+        {
+          category_id: "c-income",
+          category_name: "Salary",
+          category_type: "income",
+          income_total_cents: 350000,
+          expense_total_cents: 0,
+          budget_spent_cents: 0,
+          budget_limit_cents: 0
+        }
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn()
+    } as never);
+
+    renderPage(1280);
+    expect(screen.getAllByText("Food").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Salary")).not.toBeInTheDocument();
   });
 });

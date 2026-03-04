@@ -7,6 +7,7 @@ const items = [
   {
     category_id: "c1",
     category_name: "Food",
+    category_type: "expense",
     income_total_cents: 1000,
     expense_total_cents: 3000,
     budget_spent_cents: 2500,
@@ -15,6 +16,7 @@ const items = [
   {
     category_id: "c2",
     category_name: "Salary",
+    category_type: "income",
     income_total_cents: 7000,
     expense_total_cents: 0,
     budget_spent_cents: 0,
@@ -23,7 +25,7 @@ const items = [
 ];
 
 describe("CategoryBreakdown", () => {
-  it("renders expense-first sorting and no-budget fallback", () => {
+  it("filters to expense-domain categories in expense view", () => {
     render(
       <CategoryBreakdown
         items={items}
@@ -36,7 +38,9 @@ describe("CategoryBreakdown", () => {
 
     const names = screen.getAllByTestId("category-name");
     expect(names[0]).toHaveTextContent("Food");
-    expect(screen.getByText("No budget")).toBeInTheDocument();
+    expect(screen.queryByText("Salary")).not.toBeInTheDocument();
+    expect(screen.getByText(/\$25\.00 \/ \$50\.00/)).toBeInTheDocument();
+    expect(screen.getByText("50% used")).toBeInTheDocument();
   });
 
   it("triggers metric change and shows overlay-off copy", () => {
@@ -56,7 +60,7 @@ describe("CategoryBreakdown", () => {
     expect(screen.getAllByText("Overlay off").length).toBeGreaterThan(0);
   });
 
-  it("renders income metric label and budget usage details", () => {
+  it("filters to income-domain categories in income view", () => {
     render(
       <CategoryBreakdown
         items={items}
@@ -68,7 +72,8 @@ describe("CategoryBreakdown", () => {
     );
 
     expect(screen.getAllByText(/Income total/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/\$25\.00 \/ \$50\.00/)).toBeInTheDocument();
-    expect(screen.getByText("50% used")).toBeInTheDocument();
+    expect(screen.getByText("Salary")).toBeInTheDocument();
+    expect(screen.queryByText("Food")).not.toBeInTheDocument();
+    expect(screen.getByText("No budget")).toBeInTheDocument();
   });
 });

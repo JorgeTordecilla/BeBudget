@@ -65,6 +65,7 @@ describe("AnalyticsPage", () => {
         {
           category_id: "c-expense",
           category_name: "Food",
+          category_type: "expense",
           income_total_cents: 10000,
           expense_total_cents: 200000,
           budget_spent_cents: 150000,
@@ -73,6 +74,7 @@ describe("AnalyticsPage", () => {
         {
           category_id: "c-income",
           category_name: "Salary",
+          category_type: "income",
           income_total_cents: 350000,
           expense_total_cents: 0,
           budget_spent_cents: 0,
@@ -118,12 +120,14 @@ describe("AnalyticsPage", () => {
 
     let names = screen.getAllByTestId("category-name");
     expect(names[0]).toHaveTextContent("Food");
+    expect(screen.queryByText("Salary")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Income categories" }));
 
     await waitFor(() => {
       names = screen.getAllByTestId("category-name");
       expect(names[0]).toHaveTextContent("Salary");
+      expect(screen.queryByText("Food")).not.toBeInTheDocument();
     });
   });
 
@@ -251,6 +255,7 @@ describe("AnalyticsPage", () => {
         {
           category_id: "c-expense",
           category_name: "Food",
+          category_type: "expense",
           income_total_cents: 0,
           expense_total_cents: 200000,
           budget_spent_cents: 0,
@@ -283,6 +288,7 @@ describe("AnalyticsPage", () => {
         {
           category_id: "c-expense",
           category_name: "Food",
+          category_type: "expense",
           income_total_cents: 0,
           expense_total_cents: 200000,
           budget_spent_cents: 150000,
@@ -291,6 +297,7 @@ describe("AnalyticsPage", () => {
         {
           category_id: "c-income",
           category_name: "Salary",
+          category_type: "income",
           income_total_cents: 350000,
           expense_total_cents: 0,
           budget_spent_cents: 0,

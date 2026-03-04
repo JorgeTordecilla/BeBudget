@@ -2514,6 +2514,7 @@ paths:
                 items:
                 - category_id: 0dab8db1-dcb8-44a2-bccd-d2efce11c7c9
                   category_name: Groceries
+                  category_type: expense
                   income_total_cents: 0
                   expense_total_cents: 120000
                   budget_spent_cents: 120000
@@ -3515,6 +3516,7 @@ components:
       required:
       - category_id
       - category_name
+      - category_type
       - income_total_cents
       - expense_total_cents
       properties:
@@ -3523,6 +3525,11 @@ components:
           format: uuid
         category_name:
           type: string
+        category_type:
+          type: string
+          enum:
+          - income
+          - expense
         income_total_cents:
           type: integer
         expense_total_cents:
@@ -3544,6 +3551,7 @@ components:
         items:
         - category_id: 0dab8db1-dcb8-44a2-bccd-d2efce11c7c9
           category_name: Groceries
+          category_type: expense
           income_total_cents: 0
           expense_total_cents: 120000
           budget_spent_cents: 120000
@@ -3673,5 +3681,4 @@ components:
         title: Service Unavailable
         status: 503
         detail: Service temporarily unavailable, please retry.
-
 

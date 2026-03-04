@@ -121,6 +121,7 @@ def analytics_by_category(
         select(
             Category.id.label("category_id"),
             Category.name.label("category_name"),
+            Category.type.label("category_type"),
             income_expr.label("income_total_cents"),
             expense_expr.label("expense_total_cents"),
         )
@@ -129,7 +130,7 @@ def analytics_by_category(
         .where(Transaction.archived_at.is_(None))
         .where(Transaction.date >= from_)
         .where(Transaction.date <= to)
-        .group_by(Category.id, Category.name)
+        .group_by(Category.id, Category.name, Category.type)
     )
     tx_subq = tx_stmt.subquery()
 
@@ -152,6 +153,7 @@ def analytics_by_category(
         select(
             tx_subq.c.category_id,
             tx_subq.c.category_name,
+            tx_subq.c.category_type,
             tx_subq.c.income_total_cents,
             tx_subq.c.expense_total_cents,
             func.coalesce(budget_subq.c.budget_limit_cents, 0).label("budget_limit_cents"),
@@ -165,6 +167,7 @@ def analytics_by_category(
         {
             "category_id": row.category_id,
             "category_name": row.category_name,
+            "category_type": row.category_type,
             "income_total_cents": int(row.income_total_cents),
             "expense_total_cents": int(row.expense_total_cents),
             "budget_spent_cents": int(row.expense_total_cents),

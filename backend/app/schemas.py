@@ -138,6 +138,7 @@ class AnalyticsByMonthResponse(BaseModel):
 class AnalyticsByCategoryItem(BaseModel):
     category_id: str
     category_name: str
+    category_type: Literal["income", "expense"]
     income_total_cents: int
     expense_total_cents: int
     budget_spent_cents: int | None = None

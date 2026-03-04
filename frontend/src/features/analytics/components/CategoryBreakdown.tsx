@@ -14,7 +14,8 @@ type Props = {
 };
 
 export default function CategoryBreakdown({ items, currencyCode, metric, onMetricChange, showBudgetOverlay }: Props) {
-  const sorted = [...items].sort((a, b) => {
+  const filtered = items.filter((item) => item.category_type === metric);
+  const sorted = [...filtered].sort((a, b) => {
     const left = metric === "expense" ? a.expense_total_cents : a.income_total_cents;
     const right = metric === "expense" ? b.expense_total_cents : b.income_total_cents;
     return right - left;

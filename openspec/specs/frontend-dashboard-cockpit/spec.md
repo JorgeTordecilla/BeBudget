@@ -48,6 +48,11 @@ Cockpit SHALL provide deterministic, explainable alert sections from existing AP
 - **THEN** cockpit SHALL show a deterministic `Not enough data` message
 - **AND** SHALL avoid spike inference.
 
+#### Scenario: Expense drivers use expense-domain categories only
+- **WHEN** cockpit renders "Expense drivers" from by-category analytics
+- **THEN** frontend SHALL include only rows where `category_type = expense`
+- **AND** rows with `expense_total_cents = 0` SHALL be excluded from drivers ranking.
+
 ### Requirement: Cockpit actions and bridges must navigate with actionable context
 Cockpit SHALL expose primary actions and deep links that preserve selected-month context.
 
