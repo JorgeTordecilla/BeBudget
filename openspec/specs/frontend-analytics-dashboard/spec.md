@@ -72,7 +72,8 @@ The frontend SHALL provide category breakdown views for both income and expense 
 
 #### Scenario: Metric switching updates category ranking
 - **WHEN** user switches the metric view between `expense` and `income`
-- **THEN** frontend SHALL sort categories descending by the selected metric total
+- **THEN** frontend SHALL filter category rows by matching `category_type` (`expense` tab => `expense`, `income` tab => `income`)
+- **AND** frontend SHALL sort remaining categories descending by the selected metric total
 - **AND** displayed values SHALL use integer-cents formatting rules.
 
 #### Scenario: Category budget overlay is rendered when present

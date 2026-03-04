@@ -67,6 +67,7 @@ describe("dashboard query hooks", () => {
         {
           category_id: "c1",
           category_name: "Food",
+          category_type: "expense",
           income_total_cents: 0,
           expense_total_cents: 500,
           budget_spent_cents: 0,

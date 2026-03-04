@@ -92,6 +92,7 @@ describe("Dashboard", () => {
         {
           category_id: "c1",
           category_name: "Food",
+          category_type: "expense",
           income_total_cents: 0,
           expense_total_cents: 200000,
           budget_spent_cents: 160000,
@@ -288,5 +289,4 @@ describe("Dashboard", () => {
     expect(screen.getByText("Actual budget usage")).toBeInTheDocument();
   });
 });
-
 

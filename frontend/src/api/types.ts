@@ -190,6 +190,7 @@ export type AnalyticsByMonthResponse = {
 export type AnalyticsByCategoryItem = {
   category_id: string;
   category_name: string;
+  category_type: "income" | "expense";
   income_total_cents: number;
   expense_total_cents: number;
   budget_spent_cents?: number;

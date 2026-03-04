@@ -50,7 +50,7 @@ The backend MUST implement `GET /analytics/by-category` with required `from` and
 
 #### Scenario: Category analytics success
 - **WHEN** a valid authenticated request includes valid `from` and `to`
-- **THEN** the API SHALL return `200` with `AnalyticsByCategoryResponse` items containing `category_id`, `category_name`, `income_total_cents`, and `expense_total_cents`
+- **THEN** the API SHALL return `200` with `AnalyticsByCategoryResponse` items containing `category_id`, `category_name`, `category_type`, `income_total_cents`, and `expense_total_cents`
 
 #### Scenario: Category totals use integer cents only
 - **WHEN** category analytics totals are calculated
@@ -68,6 +68,11 @@ The backend MUST implement `GET /analytics/by-category` with required `from` and
 - **WHEN** `budget_limit_cents` is computed for `GET /analytics/by-category`
 - **THEN** budget limit SHALL be non-zero only for categories of type `expense` with matching budgets in range
 - **AND** categories of type `income` SHALL report `budget_limit_cents = 0`.
+
+#### Scenario: Category analytics includes explicit category domain
+- **WHEN** a by-category analytics item is returned
+- **THEN** item SHALL include `category_type` with value `income` or `expense`
+- **AND** `category_type` SHALL match the category domain used for transaction classification.
 
 ### Requirement: Analytics security and media-type compliance
 Analytics endpoints MUST require valid access tokens and follow shared HTTP contract behavior.
