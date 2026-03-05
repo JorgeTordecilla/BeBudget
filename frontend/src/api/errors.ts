@@ -58,7 +58,16 @@ export class ApiNetworkError extends Error {
   }
 }
 
-export type NormalizedApiError = ApiProblemError | ApiUnknownError | ApiNetworkError;
+export class OfflineMutationError extends Error {
+  readonly name = "OfflineMutationError";
+  readonly type = "offline_mutation";
+
+  constructor(message = "Sin conexion - intenta de nuevo cuando tengas red") {
+    super(message);
+  }
+}
+
+export type NormalizedApiError = ApiProblemError | ApiUnknownError | ApiNetworkError | OfflineMutationError;
 
 function readHeader(response: Response, name: string): string | null {
   return response.headers.get(name);
@@ -94,7 +103,7 @@ export async function toApiError(input: Response | unknown, fallbackMessage = "U
     return new ApiUnknownError(fallbackMessage, meta);
   }
 
-  if (input instanceof ApiProblemError || input instanceof ApiUnknownError || input instanceof ApiNetworkError) {
+  if (input instanceof ApiProblemError || input instanceof ApiUnknownError || input instanceof ApiNetworkError || input instanceof OfflineMutationError) {
     return input;
   }
 

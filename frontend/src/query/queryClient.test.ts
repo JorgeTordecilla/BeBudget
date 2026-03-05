@@ -5,11 +5,13 @@ import * as toastStore from "@/components/errors/problemToastStore";
 import { createAppQueryClient } from "@/query/queryClient";
 
 describe("createAppQueryClient global error policy", () => {
-  it("keeps retry disabled by default for queries and mutations", () => {
+  it("uses offline-aware retry for queries and keeps mutation retry disabled", () => {
     const queryClient = createAppQueryClient();
     const defaults = queryClient.getDefaultOptions();
-    expect(defaults.queries?.retry).toBe(false);
+    expect(typeof defaults.queries?.retry).toBe("function");
     expect(defaults.mutations?.retry).toBe(false);
+    expect(defaults.queries?.staleTime).toBe(1000 * 60 * 5);
+    expect(defaults.queries?.gcTime).toBe(1000 * 60 * 60 * 24);
   });
 
   it("emits toast for mutation errors with toast presentation", async () => {

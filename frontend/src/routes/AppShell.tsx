@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -9,9 +9,12 @@ import { ApiProblemError } from "@/api/errors";
 import { createTransaction } from "@/api/transactions";
 import type { Account, Category, IncomeSource, ProblemDetails, TransactionCreate } from "@/api/types";
 import { useAuth } from "@/auth/useAuth";
+import AppBadgeSync from "@/components/pwa/AppBadgeSync";
+import OfflineBanner from "@/components/pwa/OfflineBanner";
 import { publishSuccessToast } from "@/components/feedback/successToastStore";
 import TransactionForm, { type TransactionFormState } from "@/components/transactions/TransactionForm";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { clearAppBadgeIfSupported } from "@/hooks/useAppBadge";
 import { Button } from "@/ui/button";
 import { todayIsoDate } from "@/utils/dates";
 import { parseMoneyInputToCents } from "@/utils/money";
@@ -92,6 +95,21 @@ export default function AppShell() {
     [location.pathname]
   );
   const currencyCode = user?.currency_code ?? "USD";
+
+  useEffect(() => {
+    void clearAppBadgeIfSupported();
+  }, []);
+
+  function handleInAppNav(event: MouseEvent<HTMLAnchorElement>, to: string) {
+    if (event.defaultPrevented) {
+      return;
+    }
+    if (event.button !== 0 || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) {
+      return;
+    }
+    event.preventDefault();
+    navigate(to);
+  }
 
   useEffect(() => {
     if (!formOpen) {
@@ -229,6 +247,9 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen pb-[calc(8.75rem+env(safe-area-inset-bottom))] md:pb-0">
+      <OfflineBanner />
+      <AppBadgeSync />
+
       <header className="sticky top-0 z-30 border-b border-border/50 bg-card/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-2 sm:px-6">
           {isDesktop ? (
@@ -242,6 +263,7 @@ export default function AppShell() {
                     <NavLink
                       key={link.to}
                       to={link.to}
+                      onClick={(event) => handleInAppNav(event, link.to)}
                       className={({ isActive }) =>
                         cn(
                           "whitespace-nowrap rounded-md px-2.5 py-1.5 text-[0.84rem] font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
@@ -289,13 +311,16 @@ export default function AppShell() {
               <NavLink
                 key={link.to}
                 to={link.to}
+                onClick={(event) => {
+                  handleInAppNav(event, link.to);
+                  setOverflowOpen(false);
+                }}
                 className={({ isActive }) =>
                   cn(
                     "flex min-h-12 items-center justify-center rounded-xl px-2 text-[11px] font-semibold",
                     isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/70"
                   )
                 }
-                onClick={() => setOverflowOpen(false)}
               >
                 {link.label}
               </NavLink>
@@ -317,13 +342,16 @@ export default function AppShell() {
                 <NavLink
                   key={link.to}
                   to={link.to}
+                  onClick={(event) => {
+                    handleInAppNav(event, link.to);
+                    setOverflowOpen(false);
+                  }}
                   className={({ isActive }) =>
                     cn(
                       "rounded-lg px-3 py-2 text-sm font-semibold",
                       isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/70"
                     )
                   }
-                  onClick={() => setOverflowOpen(false)}
                 >
                   {link.label}
                 </NavLink>

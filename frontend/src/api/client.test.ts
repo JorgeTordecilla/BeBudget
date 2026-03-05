@@ -8,7 +8,7 @@ vi.mock("@/components/errors/problemToastStore", () => ({
 }));
 
 import { createApiClient } from "@/api/client";
-import { ApiProblemError } from "@/api/errors";
+import { ApiProblemError, OfflineMutationError } from "@/api/errors";
 import type { User } from "@/api/types";
 
 function makeUser(): User {
@@ -637,6 +637,32 @@ describe("api client refresh behavior", () => {
 
     await expect(client.logout()).rejects.toThrow("network down");
     expect(clearSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks non-GET requests when browser is offline", async () => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => false
+    });
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response("ok", { status: 200 }));
+    const client = createApiClient(
+      {
+        getAccessToken: () => "access-123",
+        setSession: () => undefined,
+        clearSession: () => undefined
+      },
+      { fetchImpl: fetchMock, baseUrl: "http://test.local/api", onAuthFailure: () => undefined }
+    );
+
+    await expect(client.request("/transactions", { method: "POST", body: JSON.stringify({}) })).rejects.toBeInstanceOf(
+      OfflineMutationError
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => true
+    });
   });
 
   it("publishes non-blocking logout feedback with request id on 5xx response", async () => {
