@@ -436,6 +436,22 @@ class TransactionImportResult(BaseModel):
     failures: list[TransactionImportFailure]
 
 
+class TransactionImportJobAccepted(BaseModel):
+    job_id: str
+    status: Literal["queued", "running", "completed", "failed"]
+    idempotency_reused: bool
+
+
+class TransactionImportJobOut(BaseModel):
+    job_id: str
+    status: Literal["queued", "running", "completed", "failed"]
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    result: TransactionImportResult | None = None
+    error_message: str | None = None
+
+
 class BudgetListResponse(BaseModel):
     items: list[BudgetOut]
 

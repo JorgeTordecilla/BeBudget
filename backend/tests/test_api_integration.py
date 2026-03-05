@@ -1226,6 +1226,23 @@ def _configure_transaction_rate_limit_for_test(
     monkeypatch.setattr(transactions_router, "_TRANSACTION_RATE_LIMITER", InMemoryRateLimiter(now_fn=now_fn))
 
 
+def _configure_async_import_jobs_for_test(
+    monkeypatch,
+    *,
+    per_user_limit: int,
+    queue_limit: int,
+    worker_count: int,
+):
+    import app.routers.transactions as transactions_router
+
+    manager = transactions_router._ImportJobManager(
+        per_user_limit=per_user_limit,
+        queue_limit=queue_limit,
+        worker_count=worker_count,
+    )
+    monkeypatch.setattr(transactions_router, "_IMPORT_JOB_MANAGER", manager)
+
+
 def test_auth_login_rate_limit_exceeded_returns_canonical_429(monkeypatch):
     _configure_auth_rate_limit_for_test(monkeypatch, login_limit=1, refresh_limit=30, window_seconds=60)
 
@@ -3684,6 +3701,219 @@ def test_transactions_import_batch_limit_returns_canonical_400(monkeypatch):
             headers=headers,
         )
         _assert_money_problem(response, IMPORT_BATCH_LIMIT_EXCEEDED_TYPE, IMPORT_BATCH_LIMIT_EXCEEDED_TITLE)
+
+
+def test_transactions_import_jobs_lifecycle_and_status_polling(monkeypatch):
+    _configure_async_import_jobs_for_test(monkeypatch, per_user_limit=4, queue_limit=10, worker_count=1)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-account")
+        category_id = _create_category(client, headers, "job-income", "income")
+
+        submit = client.post(
+            "/api/transactions/import/jobs",
+            json={
+                "mode": "partial",
+                "items": [
+                    {
+                        "type": "income",
+                        "account_id": account_id,
+                        "category_id": category_id,
+                        "amount_cents": 5000,
+                        "date": "2026-11-01",
+                    }
+                ],
+            },
+            headers=headers,
+        )
+        assert submit.status_code == 202
+        assert submit.headers["content-type"].startswith(VENDOR)
+        accepted = submit.json()
+        assert accepted["status"] in {"queued", "running"}
+        assert accepted["idempotency_reused"] is False
+        job_id = accepted["job_id"]
+
+        terminal = None
+        for _ in range(50):
+            status = client.get(f"/api/transactions/import/jobs/{job_id}", headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"})
+            assert status.status_code == 200
+            body = status.json()
+            if body["status"] in {"completed", "failed"}:
+                terminal = body
+                break
+            time.sleep(0.02)
+
+        assert terminal is not None
+        assert terminal["status"] == "completed"
+        assert terminal["result"]["created_count"] == 1
+        assert terminal["result"]["failed_count"] == 0
+
+
+def test_transactions_import_jobs_enforce_backpressure_429(monkeypatch):
+    _configure_async_import_jobs_for_test(monkeypatch, per_user_limit=1, queue_limit=1, worker_count=0)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-limit-account")
+        category_id = _create_category(client, headers, "job-limit-income", "income")
+
+        payload = {
+            "mode": "partial",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 5000,
+                    "date": "2026-11-02",
+                }
+            ],
+        }
+        first = client.post("/api/transactions/import/jobs", json=payload, headers=headers)
+        assert first.status_code == 202
+
+        second = client.post("/api/transactions/import/jobs", json=payload, headers=headers)
+        _assert_rate_limited_problem(second)
+
+
+def test_transactions_import_jobs_idempotency_reuses_existing_job(monkeypatch):
+    _configure_async_import_jobs_for_test(monkeypatch, per_user_limit=2, queue_limit=5, worker_count=0)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-idem-account")
+        category_id = _create_category(client, headers, "job-idem-income", "income")
+
+        payload = {
+            "mode": "partial",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 5000,
+                    "date": "2026-11-03",
+                }
+            ],
+        }
+        headers_with_idem = {**headers, "Idempotency-Key": "same-key"}
+
+        first = client.post("/api/transactions/import/jobs", json=payload, headers=headers_with_idem)
+        second = client.post("/api/transactions/import/jobs", json=payload, headers=headers_with_idem)
+
+        assert first.status_code == 202
+        assert second.status_code == 202
+        first_body = first.json()
+        second_body = second.json()
+        assert first_body["job_id"] == second_body["job_id"]
+        assert first_body["idempotency_reused"] is False
+        assert second_body["idempotency_reused"] is True
+
+
+def test_transactions_import_jobs_burst_load_degrades_with_429(monkeypatch):
+    _configure_async_import_jobs_for_test(monkeypatch, per_user_limit=10, queue_limit=3, worker_count=0)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-burst-account")
+        category_id = _create_category(client, headers, "job-burst-income", "income")
+
+        payload = {
+            "mode": "partial",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 5000,
+                    "date": "2026-11-04",
+                }
+            ],
+        }
+
+        responses = [client.post("/api/transactions/import/jobs", json=payload, headers=headers) for _ in range(8)]
+        status_codes = [response.status_code for response in responses]
+
+        assert 202 in status_codes
+        assert 429 in status_codes
+        assert all(code in {202, 429} for code in status_codes)
+
+
+def test_transactions_import_jobs_emit_accept_and_finish_logs(monkeypatch, caplog):
+    _configure_async_import_jobs_for_test(monkeypatch, per_user_limit=4, queue_limit=10, worker_count=0)
+    import app.routers.transactions as transactions_router
+
+    with TestClient(app) as client, caplog.at_level(logging.INFO, logger="app.import_jobs"):
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-log-account")
+        category_id = _create_category(client, headers, "job-log-income", "income")
+
+        submit = client.post(
+            "/api/transactions/import/jobs",
+            json={
+                "mode": "partial",
+                "items": [
+                    {
+                        "type": "income",
+                        "account_id": account_id,
+                        "category_id": category_id,
+                        "amount_cents": 5000,
+                        "date": "2026-11-05",
+                    }
+                ],
+            },
+            headers=headers,
+        )
+        assert submit.status_code == 202
+        job_id = submit.json()["job_id"]
+
+        # Run queued job deterministically in-test to validate finish logging without background threads.
+        transactions_router._IMPORT_JOB_MANAGER._process_job(job_id)
+        status = client.get(f"/api/transactions/import/jobs/{job_id}", headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"})
+        assert status.status_code == 200
+        body = status.json()
+        assert body["status"] == "completed"
+
+    messages = [record.getMessage() for record in caplog.records if record.name == "app.import_jobs"]
+    assert any("event=import_job_accepted" in message for message in messages)
+    assert any("event=import_job_finished" in message for message in messages)
+
+
+def test_transactions_import_jobs_emit_rejection_logs(monkeypatch, caplog):
+    _configure_async_import_jobs_for_test(monkeypatch, per_user_limit=1, queue_limit=1, worker_count=0)
+
+    with TestClient(app) as client, caplog.at_level(logging.WARNING, logger="app.import_jobs"):
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-log-limit-account")
+        category_id = _create_category(client, headers, "job-log-limit-income", "income")
+
+        payload = {
+            "mode": "partial",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 5000,
+                    "date": "2026-11-06",
+                }
+            ],
+        }
+        first = client.post("/api/transactions/import/jobs", json=payload, headers=headers)
+        assert first.status_code == 202
+
+        second = client.post("/api/transactions/import/jobs", json=payload, headers=headers)
+        _assert_rate_limited_problem(second)
+
+    messages = [record.getMessage() for record in caplog.records if record.name == "app.import_jobs"]
+    assert any("event=import_job_rejected" in message for message in messages)
 
 
 def test_transactions_export_returns_csv_headers_and_row_count():

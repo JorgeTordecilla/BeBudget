@@ -153,6 +153,24 @@ export type TransactionImportResult = {
   failures: TransactionImportFailure[];
 };
 
+export type TransactionImportJobStatus = "queued" | "running" | "completed" | "failed";
+
+export type TransactionImportJobAccepted = {
+  job_id: string;
+  status: TransactionImportJobStatus;
+  idempotency_reused: boolean;
+};
+
+export type TransactionImportJob = {
+  job_id: string;
+  status: TransactionImportJobStatus;
+  created_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  result?: TransactionImportResult | null;
+  error_message?: string | null;
+};
+
 export type Budget = {
   id: string;
   month: string;
