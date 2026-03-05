@@ -1,4 +1,4 @@
-import { ApiProblemError, ApiUnknownError } from "@/api/errors";
+import { ApiProblemError, ApiUnknownError, OfflineMutationError } from "@/api/errors";
 import {
   PROBLEM_TYPE_ACCOUNT_ARCHIVED,
   PROBLEM_TYPE_BUDGET_DUPLICATE,
@@ -256,6 +256,18 @@ export function resolveProblemUi(
   _fallbackMessage = "Unexpected error.",
   options: ResolveProblemOptions = {}
 ): ResolvedProblemUi {
+  if (error instanceof OfflineMutationError) {
+    return {
+      message: error.message,
+      detail: null,
+      presentation: "toast",
+      requestId: null,
+      status: 0,
+      type: error.type,
+      retryAfter: null
+    };
+  }
+
   if (error instanceof ApiProblemError) {
     const knownMapped = PROBLEM_UI_MAP[error.problem.type];
     const mapped = knownMapped

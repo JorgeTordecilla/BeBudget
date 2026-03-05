@@ -1,6 +1,6 @@
 import { ENV } from "@/config/env";
 import type { AuthSessionResponse, ProblemDetails, RegisterRequest, User } from "@/api/types";
-import { parseProblemDetails, toApiError } from "@/api/errors";
+import { OfflineMutationError, parseProblemDetails, toApiError } from "@/api/errors";
 import { resolveProblemUi } from "@/api/problemMapping";
 import { publishProblemToast } from "@/components/errors/problemToastStore";
 import { setLastRequestId } from "@/state/diagnostics";
@@ -162,6 +162,12 @@ export function createApiClient(bindings: AuthBindings, options: ClientOptions =
 
   const rawRequest = async (path: string, init: RequestInit = {}, requestOptions: RequestOptions = {}): Promise<Response> => {
     const { auth = false, retryOn401 = false } = requestOptions;
+    const method = (init.method ?? "GET").toUpperCase();
+
+    if (method !== "GET" && typeof navigator !== "undefined" && !navigator.onLine) {
+      throw new OfflineMutationError();
+    }
+
     const headers = new Headers(init.headers);
     const reqId = requestId();
     if (!headers.has("Accept")) {
