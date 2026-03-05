@@ -1,10 +1,16 @@
+import hashlib
+import json
+import logging
 import csv
 import io
-from datetime import date
+from collections import deque
+from dataclasses import dataclass
+from datetime import date, datetime
+from threading import Condition, Lock, Thread
 from typing import Iterator, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
@@ -17,7 +23,7 @@ from app.core.money import validate_amount_cents, validate_user_currency_for_mon
 from app.core.rate_limit import InMemoryRateLimiter, RateLimiter, log_rate_limited
 from app.core.pagination import decode_cursor, encode_cursor, parse_date, parse_datetime
 from app.core.responses import vendor_response
-from app.db import get_db
+from app.db import SessionLocal, get_db
 from app.dependencies import get_current_user, utcnow
 from app.errors import (
     account_archived_error,
@@ -36,9 +42,12 @@ from app.repositories import (
     SQLAlchemyCategoryRepository,
     SQLAlchemyIncomeSourceRepository,
     SQLAlchemyTransactionRepository,
+    SQLAlchemyUserRepository,
 )
 from app.schemas import (
     TransactionCreate,
+    TransactionImportJobAccepted,
+    TransactionImportJobOut,
     TransactionImportFailure,
     TransactionImportRequest,
     TransactionImportResult,
@@ -49,6 +58,7 @@ from app.schemas import (
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 _TRANSACTION_RATE_LIMITER: RateLimiter = InMemoryRateLimiter()
 _VALID_TRANSACTION_MOODS = {"happy", "neutral", "sad", "anxious", "bored"}
+_IMPORT_LOGGER = logging.getLogger("app.import_jobs")
 
 
 def _owned_transaction_or_403(db: Session, user_id: str, transaction_id: str) -> Transaction:
@@ -168,6 +178,259 @@ def _build_import_failure(index: int, exc: Exception) -> TransactionImportFailur
             problem={"type": exc.type_, "title": exc.title, "status": exc.status},
         )
     return TransactionImportFailure(index=index, message="Import row failed validation")
+
+
+def _execute_import_payload(
+    *,
+    payload: TransactionImportRequest,
+    current_user: User,
+    db: Session,
+    request: Request | None,
+) -> TransactionImportResult:
+    mode = payload.mode
+    failures: list[TransactionImportFailure] = []
+    rows_to_insert: list[Transaction] = []
+
+    for index, item in enumerate(payload.items):
+        try:
+            data = item.model_dump()
+            _validate_transaction_mood(data)
+            data["amount_cents"] = _validate_money_rules(current_user, data["type"], data["amount_cents"])
+            _validate_business_rules(db, current_user.id, data)
+            rows_to_insert.append(Transaction(user_id=current_user.id, **data))
+        except Exception as exc:
+            failures.append(_build_import_failure(index, exc))
+
+    if mode == "all_or_nothing" and failures:
+        return TransactionImportResult(created_count=0, failed_count=len(failures), failures=failures)
+
+    for row in rows_to_insert:
+        db.add(row)
+    if rows_to_insert:
+        db.flush()
+        for row in rows_to_insert:
+            emit_audit_event(
+                db,
+                request=request,
+                user_id=current_user.id,
+                resource_type="transaction",
+                resource_id=row.id,
+                action="transaction.create",
+            )
+        db.commit()
+
+    return TransactionImportResult(
+        created_count=len(rows_to_insert),
+        failed_count=len(failures),
+        failures=failures,
+    )
+
+
+@dataclass
+class _ImportJobRecord:
+    job_id: str
+    user_id: str
+    payload: TransactionImportRequest
+    status: Literal["queued", "running", "completed", "failed"]
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    result: TransactionImportResult | None = None
+    error_message: str | None = None
+
+
+class _ImportJobManager:
+    def __init__(self, *, per_user_limit: int, queue_limit: int, worker_count: int) -> None:
+        self._per_user_limit = max(1, per_user_limit)
+        self._queue_limit = max(1, queue_limit)
+        self._worker_count = max(0, worker_count)
+        self._lock = Lock()
+        self._condition = Condition(self._lock)
+        self._jobs: dict[str, _ImportJobRecord] = {}
+        self._queue: deque[str] = deque()
+        self._active_per_user: dict[str, int] = {}
+        self._idempotency: dict[tuple[str, str], tuple[str, str]] = {}
+        self._running = 0
+        self._workers_started = False
+
+    def start_workers(self) -> None:
+        with self._condition:
+            if self._workers_started:
+                return
+            self._workers_started = True
+            for index in range(self._worker_count):
+                thread = Thread(target=self._worker_loop, name=f"import-job-worker-{index + 1}", daemon=True)
+                thread.start()
+
+    def _payload_digest(self, payload: TransactionImportRequest) -> str:
+        raw = json.dumps(payload.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def submit(
+        self,
+        *,
+        user_id: str,
+        payload: TransactionImportRequest,
+        idempotency_key: str | None,
+    ) -> tuple[_ImportJobRecord, bool]:
+        payload_copy = payload.model_copy(deep=True)
+        normalized_key = (idempotency_key or "").strip()
+        payload_digest = self._payload_digest(payload_copy)
+
+        with self._condition:
+            if normalized_key:
+                idempotency_ref = self._idempotency.get((user_id, normalized_key))
+                if idempotency_ref:
+                    known_digest, known_job_id = idempotency_ref
+                    if known_digest != payload_digest:
+                        raise APIError(
+                            status=409,
+                            title="Conflict",
+                            detail="Idempotency-Key was reused with a different payload",
+                        )
+                    existing = self._jobs.get(known_job_id)
+                    if existing is not None:
+                        return existing, True
+
+            if self._active_per_user.get(user_id, 0) >= self._per_user_limit:
+                _IMPORT_LOGGER.warning(
+                    "event=import_job_rejected reason=per_user_limit user_id=%s queue_depth=%s running=%s",
+                    user_id,
+                    len(self._queue),
+                    self._running,
+                )
+                raise rate_limited_error("Too many active import jobs for this user", retry_after=1)
+
+            if len(self._queue) + self._running >= self._queue_limit:
+                _IMPORT_LOGGER.warning(
+                    "event=import_job_rejected reason=queue_limit user_id=%s queue_depth=%s running=%s",
+                    user_id,
+                    len(self._queue),
+                    self._running,
+                )
+                raise rate_limited_error("Import queue is full, retry later", retry_after=1)
+
+            job = _ImportJobRecord(
+                job_id=str(uuid4()),
+                user_id=user_id,
+                payload=payload_copy,
+                status="queued",
+                created_at=utcnow(),
+            )
+            self._jobs[job.job_id] = job
+            self._queue.append(job.job_id)
+            self._active_per_user[user_id] = self._active_per_user.get(user_id, 0) + 1
+            if normalized_key:
+                self._idempotency[(user_id, normalized_key)] = (payload_digest, job.job_id)
+            self._condition.notify()
+
+            _IMPORT_LOGGER.info(
+                "event=import_job_accepted job_id=%s user_id=%s queue_depth=%s running=%s active_user=%s",
+                job.job_id,
+                user_id,
+                len(self._queue),
+                self._running,
+                self._active_per_user[user_id],
+            )
+            return job, False
+
+    def get_for_user(self, *, user_id: str, job_id: str) -> _ImportJobRecord | None:
+        with self._condition:
+            job = self._jobs.get(job_id)
+            if job is None or job.user_id != user_id:
+                return None
+            return job
+
+    def _worker_loop(self) -> None:
+        while True:
+            with self._condition:
+                while not self._queue:
+                    self._condition.wait()
+                job_id = self._queue.popleft()
+                job = self._jobs.get(job_id)
+                if job is None:
+                    continue
+                job.status = "running"
+                job.started_at = utcnow()
+                self._running += 1
+            self._process_job(job_id)
+
+    def _process_job(self, job_id: str) -> None:
+        try:
+            with self._condition:
+                job = self._jobs.get(job_id)
+                if job is None:
+                    return
+                user_id = job.user_id
+                payload = job.payload.model_copy(deep=True)
+
+            with SessionLocal() as db:
+                user = SQLAlchemyUserRepository(db).get_by_id(user_id)
+                if user is None:
+                    raise APIError(status=403, title="Forbidden", detail="User no longer exists")
+                result = _execute_import_payload(payload=payload, current_user=user, db=db, request=None)
+
+            with self._condition:
+                current = self._jobs.get(job_id)
+                if current is not None:
+                    current.status = "completed"
+                    current.completed_at = utcnow()
+                    current.result = result
+                    current.error_message = None
+        except Exception as exc:
+            if isinstance(exc, APIError):
+                message = sanitize_problem_detail(exc.detail) or exc.title
+            else:
+                message = "Import job failed"
+            with self._condition:
+                current = self._jobs.get(job_id)
+                if current is not None:
+                    current.status = "failed"
+                    current.completed_at = utcnow()
+                    current.error_message = message
+        finally:
+            with self._condition:
+                current = self._jobs.get(job_id)
+                if current is not None:
+                    active = self._active_per_user.get(current.user_id, 0)
+                    if active <= 1:
+                        self._active_per_user.pop(current.user_id, None)
+                    else:
+                        self._active_per_user[current.user_id] = active - 1
+                    _IMPORT_LOGGER.info(
+                        "event=import_job_finished job_id=%s user_id=%s status=%s queue_depth=%s running=%s",
+                        current.job_id,
+                        current.user_id,
+                        current.status,
+                        len(self._queue),
+                        max(0, self._running - 1),
+                    )
+                self._running = max(0, self._running - 1)
+                self._condition.notify_all()
+
+
+_IMPORT_JOB_MANAGER = _ImportJobManager(
+    per_user_limit=settings.transactions_import_async_per_user_limit,
+    queue_limit=settings.transactions_import_async_queue_limit,
+    worker_count=settings.transactions_import_async_worker_count,
+)
+
+
+def _get_import_job_manager() -> _ImportJobManager:
+    _IMPORT_JOB_MANAGER.start_workers()
+    return _IMPORT_JOB_MANAGER
+
+
+def _serialize_import_job(job: _ImportJobRecord) -> dict:
+    return TransactionImportJobOut(
+        job_id=job.job_id,
+        status=job.status,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        result=job.result,
+        error_message=job.error_message,
+    ).model_dump(mode="json")
 
 
 def _csv_line(cells: list[object]) -> str:
@@ -354,45 +617,53 @@ def import_transactions(
         identity=f"{current_user.id}:{_client_ip(request)}",
     )
     _validate_batch_size_or_400(len(payload.items))
-    mode = payload.mode
-    failures: list[TransactionImportFailure] = []
-    rows_to_insert: list[Transaction] = []
-
-    for index, item in enumerate(payload.items):
-        try:
-            data = item.model_dump()
-            _validate_transaction_mood(data)
-            data["amount_cents"] = _validate_money_rules(current_user, data["type"], data["amount_cents"])
-            _validate_business_rules(db, current_user.id, data)
-            rows_to_insert.append(Transaction(user_id=current_user.id, **data))
-        except Exception as exc:
-            failures.append(_build_import_failure(index, exc))
-
-    if mode == "all_or_nothing" and failures:
-        result = TransactionImportResult(created_count=0, failed_count=len(failures), failures=failures)
-        return vendor_response(result.model_dump(mode="json"))
-
-    for row in rows_to_insert:
-        db.add(row)
-    if rows_to_insert:
-        db.flush()
-        for row in rows_to_insert:
-            emit_audit_event(
-                db,
-                request=request,
-                user_id=current_user.id,
-                resource_type="transaction",
-                resource_id=row.id,
-                action="transaction.create",
-            )
-        db.commit()
-
-    result = TransactionImportResult(
-        created_count=len(rows_to_insert),
-        failed_count=len(failures),
-        failures=failures,
+    result = _execute_import_payload(
+        payload=payload,
+        current_user=current_user,
+        db=db,
+        request=request,
     )
     return vendor_response(result.model_dump(mode="json"))
+
+
+@router.post("/import/jobs")
+def submit_import_job(
+    payload: TransactionImportRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+):
+    _transactions_rate_limit_or_429(
+        request,
+        endpoint="transactions_import",
+        identity=f"{current_user.id}:{_client_ip(request)}",
+    )
+    _validate_batch_size_or_400(len(payload.items))
+
+    manager = _get_import_job_manager()
+    job, reused = manager.submit(
+        user_id=current_user.id,
+        payload=payload,
+        idempotency_key=idempotency_key,
+    )
+    body = TransactionImportJobAccepted(
+        job_id=job.job_id,
+        status=job.status,
+        idempotency_reused=reused,
+    )
+    return vendor_response(body.model_dump(mode="json"), status_code=202)
+
+
+@router.get("/import/jobs/{job_id}")
+def get_import_job_status(
+    job_id: UUID,
+    current_user: User = Depends(get_current_user),
+):
+    manager = _get_import_job_manager()
+    job = manager.get_for_user(user_id=current_user.id, job_id=str(job_id))
+    if job is None:
+        raise forbidden_error("Not allowed")
+    return vendor_response(_serialize_import_job(job))
 
 
 @router.get("/export")

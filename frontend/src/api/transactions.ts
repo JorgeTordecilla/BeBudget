@@ -6,6 +6,8 @@ import { setLastProblemType, setLastRequestId } from "@/state/diagnostics";
 import type {
   Transaction,
   TransactionCreate,
+  TransactionImportJob,
+  TransactionImportJobAccepted,
   TransactionImportRequest,
   TransactionImportResult,
   TransactionsListResponse,
@@ -135,6 +137,34 @@ export async function importTransactions(client: ApiClient, payload: Transaction
     await throwApiError(response, "transactions_import_failed");
   }
   return (await response.json()) as TransactionImportResult;
+}
+
+export async function submitTransactionsImportJob(
+  client: ApiClient,
+  payload: TransactionImportRequest,
+  idempotencyKey?: string
+): Promise<TransactionImportJobAccepted> {
+  const headers: Record<string, string> = {};
+  if (idempotencyKey) {
+    headers["Idempotency-Key"] = idempotencyKey;
+  }
+  const response = await client.request("/transactions/import/jobs", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    await throwApiError(response, "transactions_import_job_submit_failed");
+  }
+  return (await response.json()) as TransactionImportJobAccepted;
+}
+
+export async function getTransactionsImportJob(client: ApiClient, jobId: string): Promise<TransactionImportJob> {
+  const response = await client.request(`/transactions/import/jobs/${jobId}`, { method: "GET" });
+  if (!response.ok) {
+    await throwApiError(response, "transactions_import_job_status_failed");
+  }
+  return (await response.json()) as TransactionImportJob;
 }
 
 export async function exportTransactionsCsv(
