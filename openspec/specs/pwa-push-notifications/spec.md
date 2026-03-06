@@ -1,5 +1,9 @@
-## ADDED Requirements
+# pwa-push-notifications Specification
 
+## Purpose
+TBD - created by syncing change pwa-push-notifications-bill-reminders. Update Purpose after archive.
+
+## Requirements
 ### Requirement: Backend MUST support secure push subscription lifecycle
 The API MUST expose VAPID public key retrieval and authenticated subscription management while keeping private-key material confidential.
 
