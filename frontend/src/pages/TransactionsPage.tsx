@@ -620,7 +620,7 @@ export default function TransactionsPage() {
     () =>
       items.map((transaction) => (
         <li key={transaction.id}>
-          <Card>
+          <Card className="border-border/70 bg-card/95 shadow-sm">
             <CardContent className="space-y-2 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -680,7 +680,7 @@ export default function TransactionsPage() {
   const incomeSourceOptions: IncomeSource[] = incomeSourcesQuery.data?.items ?? [];
 
   return (
-    <section className="space-y-4">
+    <section className="relative mx-auto w-full max-w-6xl space-y-4 overflow-hidden pb-3 sm:space-y-5">
       <PageHeader
         title="Transactions"
         description="Create, update, restore, and archive transactions with contract-safe behavior."
@@ -729,7 +729,7 @@ export default function TransactionsPage() {
         )}
       />
 
-      <Card>
+      <Card className="border-border/70 bg-card/95 shadow-sm">
         <CardContent className="overflow-x-hidden p-3 sm:p-4">
           <div className="grid grid-cols-1 gap-3 text-sm text-muted-foreground sm:grid-cols-2 xl:grid-cols-6">
           <label className="min-w-0 space-y-1">
@@ -838,7 +838,7 @@ export default function TransactionsPage() {
 
       {pageProblem ? <ProblemDetailsInline error={pageProblem} onRetry={() => void transactionsQuery.refetch()} /> : null}
 
-      <Card className="animate-rise-in">
+      <Card className="animate-rise-in border-border/70 bg-card/95 shadow-sm">
         <CardContent className="p-0">
           {transactionsQuery.isLoading ? (
             <div className="p-4 text-sm text-muted-foreground">Loading transactions...</div>

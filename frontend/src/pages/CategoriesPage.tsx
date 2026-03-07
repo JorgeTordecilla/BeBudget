@@ -64,6 +64,11 @@ export default function CategoriesPage() {
 
   const baseQueryKey = ["categories", includeArchived, typeFilter] as const;
 
+  async function invalidateCategoryCaches(): Promise<void> {
+    await queryClient.invalidateQueries({ queryKey: ["categories"] });
+    await queryClient.invalidateQueries({ queryKey: ["categories-options"] });
+  }
+
   const categoriesQuery = useQuery({
     queryKey: baseQueryKey,
     meta: { skipGlobalErrorToast: true },
@@ -106,7 +111,7 @@ export default function CategoriesPage() {
     onSuccess: async () => {
       publishSuccessToast(editing ? "Category updated successfully." : "Category created successfully.");
       setFormOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await invalidateCategoryCaches();
     },
     onError: (error) => {
       setFormProblem(error);
@@ -119,7 +124,7 @@ export default function CategoriesPage() {
     onSuccess: async () => {
       publishSuccessToast("Category archived successfully.");
       setArchiveTarget(null);
-      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await invalidateCategoryCaches();
     },
     onError: (error) => {
       setPageProblem(error);
@@ -131,7 +136,7 @@ export default function CategoriesPage() {
     mutationFn: (categoryId: string) => restoreCategory(apiClient, categoryId),
     onSuccess: async () => {
       publishSuccessToast("Category restored successfully.");
-      await queryClient.invalidateQueries({ queryKey: ["categories"] });
+      await invalidateCategoryCaches();
     },
     onError: (error) => {
       setPageProblem(error);

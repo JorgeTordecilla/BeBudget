@@ -29,7 +29,7 @@ export default function SuccessToast() {
           className="pointer-events-auto border-primary/35"
         >
           <CardContent className="p-3">
-            <p className="text-sm font-semibold text-foreground">Transaction created</p>
+            <p className="text-sm font-semibold text-foreground">Success</p>
             <p className="text-xs text-muted-foreground">{toast.message}</p>
           </CardContent>
         </Card>

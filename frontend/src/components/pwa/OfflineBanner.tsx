@@ -14,7 +14,7 @@ export default function OfflineBanner() {
         aria-live="polite"
         className="rounded-lg border border-amber-400/50 bg-amber-100/90 px-3 py-2 text-sm font-medium text-amber-950 shadow"
       >
-        Sin conexion - mostrando datos guardados
+        Offline - showing cached data
       </div>
     </div>
   );

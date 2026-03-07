@@ -26,3 +26,8 @@ The frontend SHALL handle virtual keyboard open/close transitions without persis
 #### Scenario: Decorative backgrounds do not induce mobile keyboard jitter
 - **WHEN** a mobile keyboard opens or closes on a screen using global background layers
 - **THEN** background rendering SHALL avoid fixed-attachment behavior that causes visible jump/repaint artifacts.
+
+#### Scenario: Date/month field triggers do not summon keyboard unexpectedly
+- **WHEN** users interact with date/month picker triggers in modal forms
+- **THEN** virtual keyboard SHALL not open unless an editable text input is intentionally focused
+- **AND** no residual text-selection state SHALL remain after picker close.

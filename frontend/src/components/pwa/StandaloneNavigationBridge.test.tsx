@@ -15,11 +15,7 @@ type TestLinkProps = {
 };
 
 function TestLink({ href, label }: TestLinkProps) {
-  return (
-    <a href={href} onClick={(event) => event.preventDefault()}>
-      {label}
-    </a>
-  );
+  return <a href={href}>{label}</a>;
 }
 
 function renderBridge(initialPath = "/start") {
@@ -32,6 +28,17 @@ function renderBridge(initialPath = "/start") {
       </Routes>
     </MemoryRouter>
   );
+}
+
+function clickWithoutJsdomNavigation(anchor: HTMLElement, options?: MouseEventInit) {
+  const preventNavigation = (event: MouseEvent) => {
+    if (event.target instanceof HTMLAnchorElement) {
+      event.preventDefault();
+    }
+  };
+  document.addEventListener("click", preventNavigation);
+  fireEvent.click(anchor, options);
+  document.removeEventListener("click", preventNavigation);
 }
 
 describe("StandaloneNavigationBridge", () => {
@@ -51,7 +58,7 @@ describe("StandaloneNavigationBridge", () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as unknown as typeof window.matchMedia;
 
     renderBridge();
-    fireEvent.click(screen.getByRole("link", { name: "Go next" }));
+    clickWithoutJsdomNavigation(screen.getByRole("link", { name: "Go next" }));
 
     expect(screen.getByTestId("location")).toHaveTextContent("/start");
   });
@@ -61,7 +68,7 @@ describe("StandaloneNavigationBridge", () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia;
 
     renderBridge();
-    fireEvent.click(screen.getByRole("link", { name: "Go next" }), { ctrlKey: true });
+    clickWithoutJsdomNavigation(screen.getByRole("link", { name: "Go next" }), { ctrlKey: true });
 
     expect(screen.getByTestId("location")).toHaveTextContent("/start");
   });
@@ -82,9 +89,9 @@ describe("StandaloneNavigationBridge", () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByRole("link", { name: "External" }));
-    fireEvent.click(screen.getByRole("link", { name: "Mail" }));
-    fireEvent.click(screen.getByRole("link", { name: "Tel" }));
+    clickWithoutJsdomNavigation(screen.getByRole("link", { name: "External" }));
+    clickWithoutJsdomNavigation(screen.getByRole("link", { name: "Mail" }));
+    clickWithoutJsdomNavigation(screen.getByRole("link", { name: "Tel" }));
 
     expect(screen.getByTestId("location")).toHaveTextContent("/start");
   });
@@ -103,7 +110,7 @@ describe("StandaloneNavigationBridge", () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(screen.getByRole("link", { name: "Same" }));
+    clickWithoutJsdomNavigation(screen.getByRole("link", { name: "Same" }));
     expect(screen.getByTestId("location")).toHaveTextContent("/start");
   });
 });

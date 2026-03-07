@@ -1,4 +1,4 @@
-import { type FormEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -10,6 +10,7 @@ import { createTransaction } from "@/api/transactions";
 import type { Account, Category, IncomeSource, ProblemDetails, TransactionCreate } from "@/api/types";
 import { useAuth } from "@/auth/useAuth";
 import AppBadgeSync from "@/components/pwa/AppBadgeSync";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import OfflineBanner from "@/components/pwa/OfflineBanner";
 import PushPermissionRequest from "@/components/pwa/PushPermissionRequest";
 import { publishSuccessToast } from "@/components/feedback/successToastStore";
@@ -105,16 +106,17 @@ export default function AppShell() {
     void clearAppBadgeIfSupported();
   }, []);
 
-  function handleInAppNav(event: MouseEvent<HTMLAnchorElement>, to: string) {
-    if (event.defaultPrevented) {
-      return;
+  useEffect(() => {
+    // Prevent Safari restoring mid-scroll when entering app routes after auth redirect.
+    const isJsdom = typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent);
+    if (!isJsdom && typeof window.scrollTo === "function") {
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      } catch {
+        // jsdom and older embedded webviews may not fully implement scroll options.
+      }
     }
-    if (event.button !== 0 || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) {
-      return;
-    }
-    event.preventDefault();
-    navigate(to);
-  }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!formOpen) {
@@ -254,6 +256,7 @@ export default function AppShell() {
     <div className="min-h-screen overflow-x-hidden pb-[calc(8.75rem_+_env(safe-area-inset-bottom))] md:pb-0">
       <OfflineBanner />
       <AppBadgeSync />
+      <InstallPrompt />
 
       <header className="sticky top-0 z-30 border-b border-border/50 bg-card/70 backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-4 py-2 sm:px-6">
@@ -268,7 +271,6 @@ export default function AppShell() {
                     <NavLink
                       key={link.to}
                       to={link.to}
-                      onClick={(event) => handleInAppNav(event, link.to)}
                       className={({ isActive }) =>
                         cn(
                           "whitespace-nowrap rounded-md px-2.5 py-1.5 text-[0.84rem] font-semibold text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
@@ -289,8 +291,12 @@ export default function AppShell() {
             <div className="rounded-2xl border border-border/70 bg-background/85 px-3 py-2 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/15 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-primary">
-                    BB
+                  <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10">
+                    <img
+                      src="/apple-touch-icon.png"
+                      alt="BudgetBuddy logo"
+                      className="h-5 w-5 rounded-md object-cover"
+                    />
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-[0.78rem] font-semibold uppercase tracking-[0.16em] text-foreground">{mobileSectionTitle}</p>
@@ -310,7 +316,7 @@ export default function AppShell() {
       {!isDesktop ? (
         <nav
           className={cn(
-            "pointer-events-none fixed inset-x-0 z-40 w-full",
+            "pointer-events-none fixed inset-x-0 z-40 box-border",
             isStandaloneMode
               ? "bottom-[max(0px,_calc(env(safe-area-inset-bottom)_-_0.25rem))] px-4"
               : "bottom-[calc(0.9rem_+_env(safe-area-inset-bottom))] px-3"
@@ -336,8 +342,7 @@ export default function AppShell() {
                 <NavLink
                   key={link.to}
                   to={link.to}
-                  onClick={(event) => {
-                    handleInAppNav(event, link.to);
+                  onClick={() => {
                     setOverflowOpen(false);
                   }}
                   className={({ isActive }) =>
@@ -367,8 +372,7 @@ export default function AppShell() {
                   <NavLink
                     key={link.to}
                     to={link.to}
-                    onClick={(event) => {
-                      handleInAppNav(event, link.to);
+                    onClick={() => {
                       setOverflowOpen(false);
                     }}
                     className={({ isActive }) =>

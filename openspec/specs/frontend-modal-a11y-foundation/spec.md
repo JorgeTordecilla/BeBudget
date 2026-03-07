@@ -38,6 +38,16 @@ Modal and dialog layouts SHALL remain accessible and readable on mobile and desk
 - **THEN** modal content SHALL remain scrollable within the dialog container
 - **AND** dismiss/submit actions SHALL remain operable after the keyboard closes.
 
+#### Scenario: Mobile modal geometry is rounded and clipped consistently
+- **WHEN** dialog or modal content is rendered on narrow screens
+- **THEN** the modal surface SHALL preserve rounded corners and clipping boundaries
+- **AND** header/body/footer layers SHALL not render square-edge overflow artifacts.
+
+#### Scenario: Mobile modal remains contained while keyboard is active
+- **WHEN** a user focuses inputs in a modal on iOS or Android
+- **THEN** modal content SHALL remain vertically scrollable within its container
+- **AND** modal width SHALL remain bounded without horizontal overflow.
+
 #### Scenario: ARIA metadata is complete
 - **WHEN** a modal or dialog renders
 - **THEN** `role="dialog"` or equivalent accessible primitive semantics SHALL be present

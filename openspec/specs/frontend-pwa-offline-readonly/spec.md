@@ -5,16 +5,22 @@ TBD - created by syncing change frontend-pwa-installable-offline-readonly. Updat
 
 ## Requirements
 ### Requirement: Frontend MUST be installable as a standards-compliant PWA
-The frontend SHALL provide manifest metadata, icons, and service-worker registration needed for installability on supported Android and iOS browsers.
+The frontend SHALL provide manifest metadata, icon assets, and service-worker registration needed for installability on supported Android and iOS browsers.
 
 #### Scenario: Manifest is generated at default plugin path
 - **WHEN** production build artifacts are inspected
 - **THEN** the manifest SHALL be available at `/manifest.webmanifest`
-- **AND** the project SHALL NOT require custom `manifestFilename` override.
+- **AND** the project SHALL NOT require a custom `manifestFilename` override.
+
+#### Scenario: Manifest includes separated 512 icon purposes
+- **WHEN** manifest content is validated
+- **THEN** it SHALL include a `512x512` icon for general launcher usage with `purpose: "any"` (or no purpose field)
+- **AND** it SHALL include a dedicated `512x512` icon with `purpose: "maskable"` pointing to `pwa-maskable-512x512.png`
+- **AND** it SHALL NOT rely on a single icon entry with `purpose: "any maskable"`.
 
 #### Scenario: Manifest includes installability metadata
 - **WHEN** manifest content is validated
-- **THEN** it SHALL include `name`, `short_name`, `display: standalone`, `start_url`, icons (192 + 512 + maskable), and shortcuts.
+- **THEN** it SHALL include `name`, `short_name`, `display: standalone`, `start_url`, icons (192 + 512 any + 512 maskable), and shortcuts.
 
 #### Scenario: iOS metadata is present
 - **WHEN** `index.html` is inspected
@@ -83,14 +89,50 @@ Badge count SHALL be computed from current system month, independent of bills sc
 - **AND** badge SHALL clear when count is zero or when app shell mounts.
 
 ### Requirement: PWA integration MUST satisfy frontend quality gates
-PWA integration SHALL compile and test cleanly with virtual module typings and jsdom mocks.
+PWA integration SHALL compile and test cleanly with install-prompt behavior covered by unit tests.
 
-#### Scenario: TypeScript recognizes virtual PWA modules
-- **WHEN** frontend build is executed
-- **THEN** `virtual:pwa-register/react` imports SHALL compile without type errors
-- **AND** `tsconfig.app.json` SHALL include `vite-plugin-pwa/client` types.
+#### Scenario: Build succeeds with updated manifest assets
+- **WHEN** frontend production build is executed
+- **THEN** build SHALL succeed with the updated manifest icon entries and maskable asset reference.
 
-#### Scenario: Test harness supports SW and badge APIs
+#### Scenario: Install prompt hook behavior is validated
 - **WHEN** frontend tests run in jsdom
-- **THEN** service worker and app badge APIs SHALL be mocked in test setup
-- **AND** existing and new test suites SHALL pass.
+- **THEN** `useInstallPrompt` tests SHALL cover deferred event capture, prompt result mapping, and standalone suppression (`canInstall = false`).
+
+#### Scenario: Install prompt UI behavior is validated
+- **WHEN** frontend tests run
+- **THEN** `InstallPrompt` tests SHALL cover hidden state when unavailable, dismiss behavior for current session, and install-click prompt invocation.
+
+### Requirement: Install prompt UX MUST be deterministic and non-intrusive
+The app SHALL expose a contextual install banner backed by a single install lifecycle hook, and SHALL never show install CTA while already running in standalone mode.
+
+#### Scenario: Hook captures beforeinstallprompt lifecycle
+- **WHEN** the browser dispatches `beforeinstallprompt`
+- **THEN** the hook SHALL call `preventDefault()`, persist a deferred prompt reference, and expose `canInstall = true` unless the app is standalone.
+
+#### Scenario: Hook promptInstall returns canonical outcomes
+- **WHEN** `promptInstall()` is invoked and a deferred prompt exists
+- **THEN** the hook SHALL trigger browser prompt and resolve exactly one of: `"accepted"` or `"dismissed"`
+- **AND** if prompt is unavailable it SHALL resolve `"unavailable"`.
+
+#### Scenario: Hook disables install in standalone mode
+- **WHEN** the app is running in standalone display mode
+- **THEN** the hook SHALL expose `canInstall = false` even if install events were previously observed.
+
+#### Scenario: Banner renders when install is available
+- **WHEN** `canInstall = true`
+- **THEN** `InstallPrompt` SHALL render a non-intrusive banner with copy "Install BudgetBuddy for quick access", primary action "Install", and secondary action "Not now".
+
+#### Scenario: Not-now action hides prompt for current session
+- **WHEN** user clicks "Not now"
+- **THEN** the banner SHALL hide immediately
+- **AND** it SHALL not reappear during the same session.
+
+#### Scenario: Install action always closes banner
+- **WHEN** user clicks "Install"
+- **THEN** component SHALL call `promptInstall()`
+- **AND** banner SHALL hide regardless of result (`accepted`, `dismissed`, or `unavailable`).
+
+#### Scenario: App shell exposes install prompt with other PWA surfaces
+- **WHEN** AppShell renders top-level PWA state components
+- **THEN** `InstallPrompt` SHALL be rendered in the same top shell zone as `OfflineBanner` and `AppBadgeSync`.

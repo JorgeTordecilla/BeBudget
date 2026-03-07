@@ -79,6 +79,11 @@ The frontend SHALL provide persistent, thumb-friendly primary navigation for aut
 - **WHEN** an authenticated user is on a viewport below the desktop breakpoint
 - **THEN** the UI shows persistent primary navigation that allows direct access to Dashboard, Analytics, Accounts, Categories, Budgets, and Transactions without relying on wrapped header links
 
+#### Scenario: Mobile bottom navigation remains viewport-bounded across browsers
+- **WHEN** an authenticated user navigates on iOS Safari/Chrome/Brave or Android Chrome/Brave
+- **THEN** the fixed bottom navigation container SHALL remain fully inside the visual viewport width
+- **AND** no horizontal page overflow SHALL be introduced by the navigation shell.
+
 ### Requirement: Responsive app shell hierarchy
 The app shell SHALL present a consistent visual hierarchy for title, contextual actions, and navigation across mobile, tablet, and desktop breakpoints, including keyboard-driven viewport transitions on mobile.
 
@@ -95,3 +100,8 @@ The app shell SHALL present a consistent visual hierarchy for title, contextual 
 - **WHEN** fixed bottom navigation and floating transaction action controls are present on mobile routes
 - **THEN** app shell spacing SHALL account for safe-area insets and fixed control stack height
 - **AND** bottom page content and interactive controls SHALL remain reachable without being obscured.
+
+#### Scenario: Mobile shell remains stable during browser toolbar and keyboard transitions
+- **WHEN** browser chrome or virtual keyboard changes visual viewport dimensions on mobile
+- **THEN** fixed shell controls (bottom nav and floating actions) SHALL preserve reachable placement
+- **AND** layout SHALL remain bounded without clipped or off-screen controls.

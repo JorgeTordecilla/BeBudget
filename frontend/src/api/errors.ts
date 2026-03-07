@@ -62,7 +62,7 @@ export class OfflineMutationError extends Error {
   readonly name = "OfflineMutationError";
   readonly type = "offline_mutation";
 
-  constructor(message = "Sin conexion - intenta de nuevo cuando tengas red") {
+  constructor(message = "Offline - try again when you have a connection") {
     super(message);
   }
 }

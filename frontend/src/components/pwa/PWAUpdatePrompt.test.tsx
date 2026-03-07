@@ -21,13 +21,13 @@ describe("PWAUpdatePrompt", () => {
   it("does not render when no update is available", () => {
     hookState.needRefresh = [false, vi.fn()];
     render(<PWAUpdatePrompt />);
-    expect(screen.queryByText("Nueva version disponible")).not.toBeInTheDocument();
+    expect(screen.queryByText("New version available")).not.toBeInTheDocument();
   });
 
   it("renders and triggers service worker update action", () => {
     hookState.needRefresh = [true, vi.fn()];
     render(<PWAUpdatePrompt />);
-    fireEvent.click(screen.getByRole("button", { name: "Actualizar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
     expect(updateServiceWorker).toHaveBeenCalledWith(true);
   });
 });

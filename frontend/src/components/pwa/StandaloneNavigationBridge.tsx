@@ -67,9 +67,9 @@ export default function StandaloneNavigationBridge() {
       navigate(nextPath);
     }
 
-    document.addEventListener("click", handleDocumentClick, true);
+    document.addEventListener("click", handleDocumentClick);
     return () => {
-      document.removeEventListener("click", handleDocumentClick, true);
+      document.removeEventListener("click", handleDocumentClick);
     };
   }, [location.hash, location.pathname, location.search, navigate]);
 
