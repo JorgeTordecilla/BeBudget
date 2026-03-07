@@ -73,6 +73,14 @@ describe("AccountsPage", () => {
     renderPage();
 
     expect(await screen.findByText("Main Wallet")).toBeInTheDocument();
+    const expectedBalance = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(10);
+    expect(screen.getAllByText(expectedBalance).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Initial cents: 1000")).not.toBeInTheDocument();
     expect(listAccounts).toHaveBeenCalledWith(apiClientStub, expect.objectContaining({ includeArchived: false }));
   });
 
