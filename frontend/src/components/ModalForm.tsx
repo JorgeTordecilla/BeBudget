@@ -89,7 +89,7 @@ export default function ModalForm({
             event.preventDefault();
           }
         }}
-        className="w-auto max-w-none gap-0 overflow-hidden rounded-2xl border-border/70 bg-card p-0 sm:w-[calc(100dvw_-_1.5rem)] sm:max-w-xl"
+        className="flex max-h-[inherit] w-auto max-w-none flex-col gap-0 overflow-hidden rounded-2xl border-border/70 bg-card p-0 sm:w-[calc(100dvw_-_1.5rem)] sm:max-w-xl"
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <DialogHeader className="shrink-0 space-y-1 border-b border-border/60 bg-card/95 px-4 pb-4 pt-5 text-left sm:px-5">

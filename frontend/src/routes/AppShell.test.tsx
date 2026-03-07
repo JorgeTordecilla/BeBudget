@@ -188,10 +188,31 @@ describe("AppShell", () => {
     renderShellAt(375);
     const mobileNav = screen.getByRole("navigation", { name: "Main" });
     expect(mobileNav).toBeInTheDocument();
-    expect(mobileNav).toHaveClass("w-full");
+    expect(mobileNav).toHaveClass("inset-x-0");
     const navCard = mobileNav.firstElementChild as HTMLElement;
     expect(navCard).toHaveClass("max-w-none");
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+  });
+
+  it("uses standalone-safe bottom nav sizing when display-mode is standalone on mobile", () => {
+    setupModalDataMocks();
+    const matchMediaSpy = vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({
+      matches: query === "(display-mode: standalone)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => false)
+    }) as MediaQueryList);
+
+    renderShellAt(375);
+    const mobileNav = screen.getByRole("navigation", { name: "Main" });
+    expect(mobileNav).toHaveClass("bottom-[max(0px,_calc(env(safe-area-inset-bottom)_-_0.25rem))]");
+    const navCard = mobileNav.firstElementChild as HTMLElement;
+    expect(navCard).toHaveClass("max-w-[30rem]");
+    matchMediaSpy.mockRestore();
   });
 
   it("opens overflow menu on mobile and navigates to secondary routes", async () => {
@@ -285,6 +306,42 @@ describe("AppShell", () => {
     expect(screen.getByText("Inside app")).toBeInTheDocument();
   });
 
+  it("does not render quick transaction CTA outside dashboard/transactions context", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 375
+    });
+    window.dispatchEvent(new Event("resize"));
+
+    renderWithQueryClient(
+      <AuthContext.Provider
+        value={{
+          apiClient: apiClientStub,
+          user: { id: "u1", username: "demo", currency_code: "USD" },
+          accessToken: "token",
+          isAuthenticated: true,
+          isBootstrapping: false,
+          login: async () => undefined,
+          register: async () => undefined,
+          logout: async () => undefined,
+          bootstrapSession: async () => true
+        }}
+      >
+        <MemoryRouter initialEntries={["/app/accounts"]}>
+          <Routes>
+            <Route path="/app" element={<AppShell />}>
+              <Route path="accounts" element={<div>Accounts content</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    expect(await screen.findByText("Accounts content")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create transaction" })).not.toBeInTheDocument();
+  });
+
   it("submits quick transaction and emits success toast", async () => {
     setupModalDataMocks();
     vi.mocked(createTransaction).mockResolvedValue({
@@ -303,14 +360,18 @@ describe("AppShell", () => {
     renderShellAt(375);
 
     fireEvent.click(screen.getByRole("button", { name: "Create transaction" }));
-    await screen.findByRole("heading", { name: "Create transaction" });
-
-    fireEvent.change(screen.getByLabelText("Account"), { target: { value: "a1" } });
-    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "c1" } });
-    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "12.00" } });
-    fireEvent.change(screen.getByLabelText("Date", { selector: "input" }), { target: { value: "2026-02-28" } });
-
     const dialog = screen.getByRole("dialog");
+    await within(dialog).findByRole("heading", { name: "Create transaction" });
+    await waitFor(() => {
+      expect(within(dialog).getByRole("option", { name: "Main" })).toBeInTheDocument();
+      expect(within(dialog).getByRole("option", { name: "Food" })).toBeInTheDocument();
+    });
+
+    fireEvent.change(within(dialog).getByLabelText("Account"), { target: { value: "a1" } });
+    fireEvent.change(within(dialog).getByLabelText("Category"), { target: { value: "c1" } });
+    fireEvent.change(within(dialog).getByLabelText("Amount"), { target: { value: "12.00" } });
+    fireEvent.change(within(dialog).getByLabelText("Date", { selector: "input" }), { target: { value: "2026-02-28" } });
+
     fireEvent.click(within(dialog).getByRole("button", { name: "Create transaction" }));
 
     await waitFor(() => {

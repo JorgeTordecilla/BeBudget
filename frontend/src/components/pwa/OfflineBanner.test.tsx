@@ -14,13 +14,13 @@ describe("OfflineBanner", () => {
   it("renders when browser is offline and hides when online", () => {
     setOnlineState(false);
     render(<OfflineBanner />);
-    expect(screen.getByText("Sin conexion - mostrando datos guardados")).toBeInTheDocument();
+    expect(screen.getByText("Offline - showing cached data")).toBeInTheDocument();
 
     setOnlineState(true);
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
 
-    expect(screen.queryByText("Sin conexion - mostrando datos guardados")).not.toBeInTheDocument();
+    expect(screen.queryByText("Offline - showing cached data")).not.toBeInTheDocument();
   });
 });

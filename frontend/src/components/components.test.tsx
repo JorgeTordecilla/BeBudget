@@ -59,7 +59,7 @@ describe("shared components", () => {
     expect(dialog).toHaveAttribute("aria-modal", "true");
     expect(dialog.className).toContain("rounded-2xl");
     const mobileViewportContainer = Array.from(dialog.querySelectorAll("div")).find((element) =>
-      element.className.includes("max-h-[calc(100svh_-_1rem)]")
+      element.className.includes("flex-1 flex-col")
     );
     expect(mobileViewportContainer).toBeTruthy();
     const contentScrollContainer = dialog.querySelector(".overscroll-contain");

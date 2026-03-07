@@ -21,6 +21,12 @@ describe("ENV config", () => {
     expect(ENV.FEATURE_AUDIT).toBe(false);
   });
 
+  it("falls back to /api when API base URL is blank", async () => {
+    vi.stubEnv("VITE_API_BASE_URL", "   ");
+    const { ENV } = await loadEnvModule();
+    expect(ENV.API_BASE_URL).toBe("/api");
+  });
+
   it("normalizes production config and blocks cross-origin absolute API URL", async () => {
     vi.stubEnv("VITE_APP_ENV", "production");
     vi.stubEnv("VITE_API_BASE_URL", " https://api.example.com ");

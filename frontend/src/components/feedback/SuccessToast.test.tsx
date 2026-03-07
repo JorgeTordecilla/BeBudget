@@ -9,7 +9,7 @@ describe("SuccessToast", () => {
     render(<SuccessToast />);
     publishSuccessToast("Your transaction was saved successfully.");
 
-    expect(await screen.findByText("Transaction created")).toBeInTheDocument();
+    expect(await screen.findByText("Success")).toBeInTheDocument();
     expect(screen.getByText("Your transaction was saved successfully.")).toBeInTheDocument();
   });
 });

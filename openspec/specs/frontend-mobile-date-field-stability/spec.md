@@ -27,6 +27,11 @@ The frontend SHALL render date/month selection controls using a shared picker im
 - **THEN** verification notes SHALL include iOS Safari, iOS Chrome, and iOS Brave coverage outcomes
 - **AND** each outcome SHALL identify pass/fail/blocked status for date and month surfaces.
 
+#### Scenario: Date/month picker interaction does not trigger hidden text selection artifacts
+- **WHEN** a user opens date or month selection from modal forms on iOS Safari/Chrome/Brave or Android Chrome/Brave
+- **THEN** the interaction SHALL not expose hidden text-selection handles or ghost-selected values
+- **AND** picker interaction SHALL remain within the intended button/popover flow.
+
 ### Requirement: Shared date field styling SHALL be reusable across pages and modals
 The frontend SHALL use one shared date/month field styling contract so all date selectors inherit the same overflow protections.
 
