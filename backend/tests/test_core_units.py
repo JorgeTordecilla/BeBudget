@@ -290,6 +290,25 @@ def test_settings_fail_fast_for_production_missing_explicit_cookie_vars(monkeypa
         Settings()
 
 
+def test_settings_bootstrap_create_demo_user_defaults_to_false(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.delenv("BOOTSTRAP_CREATE_DEMO_USER", raising=False)
+    settings = Settings()
+    assert settings.bootstrap_create_demo_user is False
+
+
+def test_settings_fail_fast_for_production_demo_user_with_default_password(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("BOOTSTRAP_CREATE_DEMO_USER", "true")
+    monkeypatch.delenv("BOOTSTRAP_DEMO_PASSWORD", raising=False)
+    with pytest.raises(
+        ValueError,
+        match="BOOTSTRAP_DEMO_PASSWORD must be changed from default when BOOTSTRAP_CREATE_DEMO_USER is true in production",
+    ):
+        Settings()
+
+
 def test_settings_migrations_strict_default_is_environment_sensitive(monkeypatch):
     _set_minimum_config_env(monkeypatch)
     monkeypatch.delenv("MIGRATIONS_STRICT", raising=False)
