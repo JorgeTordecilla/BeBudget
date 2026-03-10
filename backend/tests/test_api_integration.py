@@ -20,7 +20,7 @@ from app.core.rate_limit import InMemoryRateLimiter
 from app.main import app
 from app.core.security import hash_refresh_token
 from app.db import SessionLocal
-from app.dependencies import utcnow
+from app.core.utils import utcnow
 from app.models import MonthlyRollover, RefreshToken, Transaction, User
 
 VENDOR = "application/vnd.budgetbuddy.v1+json"

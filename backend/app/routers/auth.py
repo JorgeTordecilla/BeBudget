@@ -15,6 +15,7 @@ from app.core.errors import APIError
 from app.core.network import resolve_rate_limit_client_ip
 from app.core.rate_limit import InMemoryRateLimiter, RateLimiter, log_rate_limited
 from app.core.responses import vendor_response
+from app.core.utils import utcnow
 from app.core.security import (
     clear_refresh_cookie,
     create_access_token,
@@ -24,7 +25,6 @@ from app.core.security import (
     set_refresh_cookie,
     verify_password,
 )
-from app.dependencies import utcnow
 from app.dependencies import get_current_user
 from app.db import get_db
 from app.errors import (

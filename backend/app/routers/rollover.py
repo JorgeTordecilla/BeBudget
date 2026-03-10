@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import APIError
 from app.core.responses import vendor_response
 from app.db import get_db
-from app.dependencies import get_current_user, utcnow
+from app.core.utils import utcnow
+from app.dependencies import get_current_user
 from app.errors import category_type_mismatch_error, invalid_date_range_error, rollover_already_applied_error, rollover_no_surplus_error
 from app.models import Account, Category, IncomeSource, MonthlyRollover, Transaction, User
 from app.schemas import RolloverApplyOut, RolloverApplyRequest, RolloverPreviewOut

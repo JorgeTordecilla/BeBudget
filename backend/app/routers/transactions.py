@@ -25,7 +25,8 @@ from app.core.rate_limit import InMemoryRateLimiter, RateLimiter, log_rate_limit
 from app.core.pagination import decode_cursor, encode_cursor, parse_date, parse_datetime
 from app.core.responses import vendor_response
 from app.db import SessionLocal, get_db
-from app.dependencies import get_current_user, utcnow
+from app.core.utils import utcnow
+from app.dependencies import get_current_user
 from app.errors import (
     account_archived_error,
     category_archived_error,
