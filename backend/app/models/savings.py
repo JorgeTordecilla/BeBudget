@@ -1,10 +1,11 @@
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Date, DateTime, Enum as SAEnum, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+from app.models.enums import SavingsGoalStatus
 
 
 class SavingsGoal(Base):
@@ -22,7 +23,11 @@ class SavingsGoal(Base):
     category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)
     deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
+    status: Mapped[SavingsGoalStatus] = mapped_column(
+        SAEnum(SavingsGoalStatus, name="ck_savings_goals_status_enum", native_enum=False, create_constraint=True, validate_strings=True),
+        nullable=False,
+        default=SavingsGoalStatus.ACTIVE,
+    )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz=UTC), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
