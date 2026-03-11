@@ -68,6 +68,7 @@ class Settings:
     transactions_import_async_terminal_ttl_seconds: int
     transactions_import_async_idempotency_ttl_seconds: int
     transactions_import_async_retained_terminal_cap: int
+    transactions_rate_limit_window_seconds: int
     auth_rate_limit_window_seconds: int
     auth_rate_limit_lock_enabled: bool
     auth_rate_limit_lock_seconds: int
@@ -151,6 +152,10 @@ class Settings:
         self.transactions_import_async_retained_terminal_cap = _env_positive_int(
             "TRANSACTIONS_IMPORT_ASYNC_RETAINED_TERMINAL_CAP",
             "5000",
+        )
+        self.transactions_rate_limit_window_seconds = _env_positive_int(
+            "TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS",
+            "60",
         )
         self.auth_rate_limit_window_seconds = _env_positive_int("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60")
         self.auth_rate_limit_lock_enabled = _env_bool("AUTH_RATE_LIMIT_LOCK_ENABLED", False)

@@ -1504,7 +1504,7 @@ def _configure_transaction_rate_limit_for_test(
 
     monkeypatch.setattr(transactions_router.settings, "transactions_import_rate_limit_per_minute", import_limit)
     monkeypatch.setattr(transactions_router.settings, "transactions_export_rate_limit_per_minute", export_limit)
-    monkeypatch.setattr(transactions_router.settings, "auth_rate_limit_window_seconds", window_seconds)
+    monkeypatch.setattr(transactions_router.settings, "transactions_rate_limit_window_seconds", window_seconds)
     monkeypatch.setattr(transactions_router.settings, "rate_limit_trusted_proxies", trusted_proxies or [])
     monkeypatch.setattr(transactions_router, "_TRANSACTION_RATE_LIMITER", InMemoryRateLimiter(now_fn=now_fn))
 
@@ -1810,6 +1810,45 @@ def test_transactions_export_rate_limit_untrusted_forwarded_headers_cannot_bypas
             },
         )
         _assert_rate_limited_problem(second)
+
+
+def test_transactions_rate_limit_window_is_decoupled_from_auth_window(monkeypatch):
+    import app.routers.transactions as transactions_router
+
+    clock = {"now": 1_000.0}
+    _configure_transaction_rate_limit_for_test(
+        monkeypatch,
+        import_limit=1,
+        export_limit=30,
+        window_seconds=120,
+        now_fn=lambda: clock["now"],
+    )
+    monkeypatch.setattr(transactions_router.settings, "auth_rate_limit_window_seconds", 1)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "rl-window-decoupled-account")
+        category_id = _create_category(client, headers, "rl-window-decoupled-category", "income")
+        payload = {
+            "mode": "partial",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 1000,
+                    "date": "2026-12-04",
+                }
+            ],
+        }
+
+        first = client.post("/api/transactions/import", json=payload, headers=headers)
+        assert first.status_code == 200
+
+        second = client.post("/api/transactions/import", json=payload, headers=headers)
+        _assert_rate_limited_problem(second)
+        assert int(second.headers["retry-after"]) == 120
 
 
 def test_transactions_import_export_behavior_unchanged_under_limit(monkeypatch):

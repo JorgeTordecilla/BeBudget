@@ -139,7 +139,7 @@ def _validate_batch_size_or_400(item_count: int) -> None:
 
 
 def _transactions_rate_limit_or_429(request: Request, *, endpoint: str, identity: str) -> None:
-    window_seconds = max(1, settings.auth_rate_limit_window_seconds)
+    window_seconds = max(1, settings.transactions_rate_limit_window_seconds)
     if endpoint == "transactions_import":
         limit = max(1, settings.transactions_import_rate_limit_per_minute)
     else:

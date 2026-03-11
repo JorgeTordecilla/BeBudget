@@ -409,6 +409,20 @@ def test_settings_rejects_non_numeric_transactions_export_rate_limit(monkeypatch
         Settings()
 
 
+def test_settings_rejects_invalid_transactions_rate_limit_window(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS", "0")
+    with pytest.raises(ValueError, match="TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS"):
+        Settings()
+
+
+def test_settings_uses_transactions_rate_limit_window(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS", "90")
+    settings = Settings()
+    assert settings.transactions_rate_limit_window_seconds == 90
+
+
 def test_settings_rejects_invalid_rate_limit_trusted_proxies(monkeypatch):
     _set_minimum_config_env(monkeypatch)
     monkeypatch.setenv("RATE_LIMIT_TRUSTED_PROXIES", "not-a-cidr")
