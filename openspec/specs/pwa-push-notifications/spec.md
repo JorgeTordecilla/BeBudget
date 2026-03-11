@@ -89,7 +89,8 @@ Push payload and click handling MUST provide deterministic deep-link behavior fo
 
 #### Scenario: mark_paid action includes payment intent
 - **WHEN** user clicks `mark_paid` action
-- **THEN** navigation target SHALL append `action=pay` to bill URL.
+- **THEN** navigation target SHALL add `action=pay` to the bill URL as a valid query parameter
+- **AND** it SHALL produce a valid bills URL whether or not the base URL already contains query parameters.
 
 #### Scenario: dismiss action closes only
 - **WHEN** user clicks `dismiss` action

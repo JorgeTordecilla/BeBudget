@@ -157,6 +157,30 @@ describe("service worker handlers", () => {
     expect(openWindow).not.toHaveBeenCalled();
   });
 
+  it("mark_paid builds a valid bills url when the base path has no query string", async () => {
+    const { listeners, matchAll, openWindow } = await loadServiceWorker();
+    const clickHandler = listeners.notificationclick?.[0];
+    expect(clickHandler).toBeTypeOf("function");
+
+    const focus = vi.fn().mockResolvedValue(undefined);
+    const navigate = vi.fn().mockResolvedValue(undefined);
+    matchAll.mockResolvedValueOnce([{ url: "https://budgetbuddy.test/app/dashboard", focus, navigate }]);
+
+    const close = vi.fn();
+    const waitUntil = vi.fn();
+    clickHandler?.({
+      action: "mark_paid",
+      notification: { close, data: { url: "/app/bills" } },
+      waitUntil
+    });
+
+    expect(waitUntil).toHaveBeenCalledTimes(1);
+    await waitUntil.mock.calls[0][0];
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith("/app/bills?action=pay");
+    expect(openWindow).not.toHaveBeenCalled();
+  });
+
   it("body click focuses existing window and navigates to base url", async () => {
     const { listeners, matchAll, openWindow } = await loadServiceWorker();
     const clickHandler = listeners.notificationclick?.[0];

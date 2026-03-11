@@ -292,6 +292,27 @@ describe("AuthProvider", () => {
     expect(matchingCall).toBeTruthy();
   });
 
+  it("caps silent refresh delay when jwt expiry is unreasonably far in the future", async () => {
+    const nowMs = 1_700_000_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowMs);
+    const setTimeoutSpy = vi.spyOn(window, "setTimeout");
+    const token = createJwt(Math.floor(nowMs / 1000) + 86_400);
+    mockLogin.mockResolvedValueOnce({
+      user: { id: "u1", username: "demo", currency_code: "USD" },
+      access_token: token,
+      access_token_expires_in: 900
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await act(async () => {
+      await result.current.login("demo", "secret");
+    });
+
+    const matchingCall = setTimeoutSpy.mock.calls.find(([, delay]) => delay === 1_800_000);
+    expect(matchingCall).toBeTruthy();
+  });
+
   it("does not schedule silent refresh when jwt payload is malformed", async () => {
     vi.useFakeTimers();
     mockLogin.mockResolvedValueOnce({

@@ -7,7 +7,7 @@ import logging
 import os
 import time
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from http.cookies import SimpleCookie
 from threading import Barrier, BrokenBarrierError, Event, Lock, Thread
 
@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
 import app.routers.auth as auth_router
+import app.routers.analytics as analytics_router
 import app.routers.savings as savings_router
 import app.main as app_main
 import app.core.utils as core_utils
@@ -1503,7 +1504,7 @@ def _configure_transaction_rate_limit_for_test(
 
     monkeypatch.setattr(transactions_router.settings, "transactions_import_rate_limit_per_minute", import_limit)
     monkeypatch.setattr(transactions_router.settings, "transactions_export_rate_limit_per_minute", export_limit)
-    monkeypatch.setattr(transactions_router.settings, "auth_rate_limit_window_seconds", window_seconds)
+    monkeypatch.setattr(transactions_router.settings, "transactions_rate_limit_window_seconds", window_seconds)
     monkeypatch.setattr(transactions_router.settings, "rate_limit_trusted_proxies", trusted_proxies or [])
     monkeypatch.setattr(transactions_router, "_TRANSACTION_RATE_LIMITER", InMemoryRateLimiter(now_fn=now_fn))
 
@@ -1514,6 +1515,10 @@ def _configure_async_import_jobs_for_test(
     per_user_limit: int,
     queue_limit: int,
     worker_count: int,
+    terminal_ttl_seconds: int = 3600,
+    idempotency_ttl_seconds: int = 3600,
+    retained_terminal_cap: int = 5000,
+    now_fn=None,
 ):
     import app.routers.transactions as transactions_router
 
@@ -1521,6 +1526,10 @@ def _configure_async_import_jobs_for_test(
         per_user_limit=per_user_limit,
         queue_limit=queue_limit,
         worker_count=worker_count,
+        terminal_ttl_seconds=terminal_ttl_seconds,
+        idempotency_ttl_seconds=idempotency_ttl_seconds,
+        retained_terminal_cap=retained_terminal_cap,
+        now_fn=now_fn or utcnow,
     )
     monkeypatch.setattr(transactions_router, "_IMPORT_JOB_MANAGER", manager)
 
@@ -1801,6 +1810,45 @@ def test_transactions_export_rate_limit_untrusted_forwarded_headers_cannot_bypas
             },
         )
         _assert_rate_limited_problem(second)
+
+
+def test_transactions_rate_limit_window_is_decoupled_from_auth_window(monkeypatch):
+    import app.routers.transactions as transactions_router
+
+    clock = {"now": 1_000.0}
+    _configure_transaction_rate_limit_for_test(
+        monkeypatch,
+        import_limit=1,
+        export_limit=30,
+        window_seconds=120,
+        now_fn=lambda: clock["now"],
+    )
+    monkeypatch.setattr(transactions_router.settings, "auth_rate_limit_window_seconds", 1)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "rl-window-decoupled-account")
+        category_id = _create_category(client, headers, "rl-window-decoupled-category", "income")
+        payload = {
+            "mode": "partial",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 1000,
+                    "date": "2026-12-04",
+                }
+            ],
+        }
+
+        first = client.post("/api/transactions/import", json=payload, headers=headers)
+        assert first.status_code == 200
+
+        second = client.post("/api/transactions/import", json=payload, headers=headers)
+        _assert_rate_limited_problem(second)
+        assert int(second.headers["retry-after"]) == 120
 
 
 def test_transactions_import_export_behavior_unchanged_under_limit(monkeypatch):
@@ -2593,6 +2641,105 @@ def test_analytics_totals_are_integer_cents_and_enforce_currency_context():
             MONEY_CURRENCY_MISMATCH_TYPE,
             MONEY_CURRENCY_MISMATCH_TITLE,
         )
+
+
+def test_expected_income_totals_by_month_is_month_keyed_and_integer_cents():
+    class _Source:
+        def __init__(self, expected_amount_cents: int):
+            self.expected_amount_cents = expected_amount_cents
+
+    months = ["2026-01", "2026-02", "2026-03"]
+    active_sources = [_Source(150000), _Source(25000)]
+    totals = analytics_router._expected_income_totals_by_month(months, active_sources)
+
+    assert totals == {"2026-01": 175000, "2026-02": 175000, "2026-03": 175000}
+    for month in months:
+        assert isinstance(totals[month], int)
+
+
+def test_analytics_by_month_expected_income_is_sourced_from_month_map(monkeypatch):
+    def fake_expected_income_totals_by_month(months, active_sources):
+        return {month: {"2026-01": 1111, "2026-02": 2222}.get(month, 0) for month in months}
+
+    monkeypatch.setattr(analytics_router, "_expected_income_totals_by_month", fake_expected_income_totals_by_month)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "expected-month-map-account")
+        income_category_id = _create_category(client, headers, "expected-month-map-income", "income")
+
+        for payload in (
+            {"amount_cents": 10000, "date": "2026-01-12"},
+            {"amount_cents": 12000, "date": "2026-02-12"},
+        ):
+            response = client.post(
+                "/api/transactions",
+                json={
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": income_category_id,
+                    "amount_cents": payload["amount_cents"],
+                    "date": payload["date"],
+                },
+                headers=headers,
+            )
+            assert response.status_code == 201
+
+        by_month = client.get("/api/analytics/by-month?from=2026-01-01&to=2026-02-28", headers=headers)
+        assert by_month.status_code == 200
+        assert by_month.headers["content-type"].startswith(VENDOR)
+        rows = {item["month"]: item for item in by_month.json()["items"]}
+        assert rows["2026-01"]["expected_income_cents"] == 1111
+        assert rows["2026-02"]["expected_income_cents"] == 2222
+        assert rows["2026-01"]["expected_income_cents"] != rows["2026-02"]["expected_income_cents"]
+
+
+def test_analytics_by_month_expected_income_aligns_with_income_analytics():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "by-month-income-alignment-account")
+        income_category_id = _create_category(client, headers, "by-month-income-alignment-income", "income")
+        source_status, source_body = _create_income_source(
+            client,
+            headers,
+            name="Alignment Source",
+            expected_amount_cents=300000,
+        )
+        assert source_status == 201
+
+        for payload in (
+            {"amount_cents": 250000, "date": "2026-01-12"},
+            {"amount_cents": 260000, "date": "2026-02-12"},
+        ):
+            response = client.post(
+                "/api/transactions",
+                json={
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": income_category_id,
+                    "income_source_id": source_body["id"],
+                    "amount_cents": payload["amount_cents"],
+                    "date": payload["date"],
+                },
+                headers=headers,
+            )
+            assert response.status_code == 201
+
+        by_month = client.get("/api/analytics/by-month?from=2026-01-01&to=2026-02-28", headers=headers)
+        assert by_month.status_code == 200
+        assert by_month.headers["content-type"].startswith(VENDOR)
+        by_month_rows = {item["month"]: item for item in by_month.json()["items"]}
+
+        income_analytics = client.get("/api/analytics/income?from=2026-01-01&to=2026-02-28", headers=headers)
+        assert income_analytics.status_code == 200
+        assert income_analytics.headers["content-type"].startswith(VENDOR)
+        income_rows = {item["month"]: item for item in income_analytics.json()["items"]}
+
+        for month, row in by_month_rows.items():
+            assert row["expected_income_cents"] == income_rows[month]["expected_income_cents"]
+            assert isinstance(row["expected_income_cents"], int)
 
 
 def test_income_analytics_breakdown_includes_unassigned_income_rows():
@@ -3683,6 +3830,7 @@ def test_analytics_by_month_includes_rollover_in_from_prior_month():
             headers=headers,
         )
         assert by_month.status_code == 200
+        assert by_month.headers["content-type"].startswith(VENDOR)
         rows = {item["month"]: item for item in by_month.json()["items"]}
         assert rows["2026-02"]["rollover_in_cents"] == 6000
         assert rows["2026-03"]["rollover_in_cents"] == 0
@@ -3692,9 +3840,101 @@ def test_analytics_by_month_includes_rollover_in_from_prior_month():
             headers=headers,
         )
         assert january_only.status_code == 200
+        assert january_only.headers["content-type"].startswith(VENDOR)
         january_item = january_only.json()["items"][0]
         assert january_item["rollover_in_cents"] == 0
         assert isinstance(january_item["rollover_in_cents"], int)
+
+
+def test_analytics_by_month_rollover_uses_immediate_prior_calendar_month_when_sparse():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "rollover-sparse-account")
+        income_category_id = _create_category(client, headers, "rollover-sparse-income", "income")
+        expense_category_id = _create_category(client, headers, "rollover-sparse-expense", "expense")
+
+        for payload in (
+            {"type": "income", "category_id": income_category_id, "amount_cents": 9000, "date": "2026-01-10"},
+            {"type": "expense", "category_id": expense_category_id, "amount_cents": 2000, "date": "2026-01-11"},
+            {"type": "income", "category_id": income_category_id, "amount_cents": 5000, "date": "2026-03-10"},
+            {"type": "expense", "category_id": expense_category_id, "amount_cents": 1000, "date": "2026-03-11"},
+        ):
+            response = client.post(
+                "/api/transactions",
+                json={
+                    "type": payload["type"],
+                    "account_id": account_id,
+                    "category_id": payload["category_id"],
+                    "amount_cents": payload["amount_cents"],
+                    "date": payload["date"],
+                    "merchant": "Acme",
+                    "note": "rollover-sparse",
+                },
+                headers=headers,
+            )
+            assert response.status_code == 201
+
+        march_only = client.get(
+            "/api/analytics/by-month?from=2026-03-01&to=2026-03-31",
+            headers=headers,
+        )
+        assert march_only.status_code == 200
+        assert march_only.headers["content-type"].startswith(VENDOR)
+        item = march_only.json()["items"][0]
+        # February has no transactions, so the immediate previous calendar month net is zero.
+        assert item["month"] == "2026-03"
+        assert item["rollover_in_cents"] == 0
+        assert isinstance(item["rollover_in_cents"], int)
+
+
+def test_analytics_by_month_rollover_uses_shared_previous_month_helper(monkeypatch):
+    calls: list[str] = []
+
+    def _tracked_previous_month(month: str) -> str:
+        calls.append(month)
+        return core_utils.previous_month_yyyy_mm(month)
+
+    monkeypatch.setattr(analytics_router, "previous_month_yyyy_mm", _tracked_previous_month)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "rollover-helper-account")
+        income_category_id = _create_category(client, headers, "rollover-helper-income", "income")
+        expense_category_id = _create_category(client, headers, "rollover-helper-expense", "expense")
+
+        for payload in (
+            {"type": "income", "category_id": income_category_id, "amount_cents": 7000, "date": "2026-01-10"},
+            {"type": "expense", "category_id": expense_category_id, "amount_cents": 2000, "date": "2026-01-12"},
+            {"type": "income", "category_id": income_category_id, "amount_cents": 4000, "date": "2026-02-10"},
+            {"type": "expense", "category_id": expense_category_id, "amount_cents": 1000, "date": "2026-02-12"},
+        ):
+            response = client.post(
+                "/api/transactions",
+                json={
+                    "type": payload["type"],
+                    "account_id": account_id,
+                    "category_id": payload["category_id"],
+                    "amount_cents": payload["amount_cents"],
+                    "date": payload["date"],
+                    "merchant": "Acme",
+                    "note": "rollover-helper",
+                },
+                headers=headers,
+            )
+            assert response.status_code == 201
+
+        by_month = client.get(
+            "/api/analytics/by-month?from=2026-02-01&to=2026-02-28",
+            headers=headers,
+        )
+        assert by_month.status_code == 200
+        assert by_month.headers["content-type"].startswith(VENDOR)
+        item = by_month.json()["items"][0]
+        assert item["month"] == "2026-02"
+        assert item["rollover_in_cents"] == 5000
+        assert calls == ["2026-02"]
 
 
 def test_rollover_preview_and_apply_flow_with_idempotency():
@@ -4379,6 +4619,234 @@ def test_transactions_import_jobs_emit_rejection_logs(monkeypatch, caplog):
 
     messages = [record.getMessage() for record in caplog.records if record.name == "app.import_jobs"]
     assert any("event=import_job_rejected" in message for message in messages)
+
+
+def test_transactions_import_jobs_terminal_records_are_evicted_after_ttl(monkeypatch):
+    import app.routers.transactions as transactions_router
+
+    class _MutableClock:
+        def __init__(self):
+            self.current = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc)
+
+        def now(self):
+            return self.current
+
+        def advance(self, *, seconds: int):
+            self.current += timedelta(seconds=seconds)
+
+    clock = _MutableClock()
+    _configure_async_import_jobs_for_test(
+        monkeypatch,
+        per_user_limit=4,
+        queue_limit=10,
+        worker_count=0,
+        terminal_ttl_seconds=2,
+        idempotency_ttl_seconds=2,
+        retained_terminal_cap=10,
+        now_fn=clock.now,
+    )
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-ttl-account")
+        category_id = _create_category(client, headers, "job-ttl-income", "income")
+
+        submit = client.post(
+            "/api/transactions/import/jobs",
+            json={
+                "mode": "partial",
+                "items": [
+                    {
+                        "type": "income",
+                        "account_id": account_id,
+                        "category_id": category_id,
+                        "amount_cents": 5000,
+                        "date": "2026-11-07",
+                    }
+                ],
+            },
+            headers=headers,
+        )
+        assert submit.status_code == 202
+        assert submit.headers["content-type"].startswith(VENDOR)
+        job_id = submit.json()["job_id"]
+
+        transactions_router._IMPORT_JOB_MANAGER._process_job(job_id)
+        retained = client.get(
+            f"/api/transactions/import/jobs/{job_id}",
+            headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"},
+        )
+        assert retained.status_code == 200
+        assert retained.headers["content-type"].startswith(VENDOR)
+        assert retained.json()["status"] == "completed"
+
+        clock.advance(seconds=3)
+        evicted = client.get(
+            f"/api/transactions/import/jobs/{job_id}",
+            headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"},
+        )
+        assert evicted.status_code == 403
+        assert evicted.headers["content-type"].startswith(PROBLEM)
+        body = evicted.json()
+        assert body["type"] == FORBIDDEN_TYPE
+        assert body["title"] == FORBIDDEN_TITLE
+
+        manager = transactions_router._IMPORT_JOB_MANAGER
+        assert job_id not in manager._jobs
+
+
+def test_transactions_import_jobs_idempotency_ttl_boundaries(monkeypatch):
+    import app.routers.transactions as transactions_router
+
+    class _MutableClock:
+        def __init__(self):
+            self.current = datetime(2026, 11, 1, 13, 0, tzinfo=timezone.utc)
+
+        def now(self):
+            return self.current
+
+        def advance(self, *, seconds: int):
+            self.current += timedelta(seconds=seconds)
+
+    clock = _MutableClock()
+    _configure_async_import_jobs_for_test(
+        monkeypatch,
+        per_user_limit=10,
+        queue_limit=20,
+        worker_count=0,
+        terminal_ttl_seconds=120,
+        idempotency_ttl_seconds=10,
+        retained_terminal_cap=20,
+        now_fn=clock.now,
+    )
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-idem-ttl-account")
+        category_id = _create_category(client, headers, "job-idem-ttl-income", "income")
+
+        payload = {
+            "mode": "partial",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 5000,
+                    "date": "2026-11-08",
+                }
+            ],
+        }
+        headers_with_idem = {**headers, "Idempotency-Key": "idem-ttl"}
+
+        first = client.post("/api/transactions/import/jobs", json=payload, headers=headers_with_idem)
+        second = client.post("/api/transactions/import/jobs", json=payload, headers=headers_with_idem)
+        assert first.status_code == 202
+        assert second.status_code == 202
+        assert first.headers["content-type"].startswith(VENDOR)
+        assert second.headers["content-type"].startswith(VENDOR)
+        first_body = first.json()
+        second_body = second.json()
+        assert first_body["idempotency_reused"] is False
+        assert second_body["idempotency_reused"] is True
+        assert first_body["job_id"] == second_body["job_id"]
+
+        mismatch = client.post(
+            "/api/transactions/import/jobs",
+            json={
+                "mode": "partial",
+                "items": [
+                    {
+                        "type": "income",
+                        "account_id": account_id,
+                        "category_id": category_id,
+                        "amount_cents": 9999,
+                        "date": "2026-11-08",
+                    }
+                ],
+            },
+            headers=headers_with_idem,
+        )
+        assert mismatch.status_code == 409
+        assert mismatch.headers["content-type"].startswith(PROBLEM)
+
+        clock.advance(seconds=11)
+
+        fresh = client.post("/api/transactions/import/jobs", json=payload, headers=headers_with_idem)
+        assert fresh.status_code == 202
+        assert fresh.headers["content-type"].startswith(VENDOR)
+        assert fresh.json()["idempotency_reused"] is False
+        assert fresh.json()["job_id"] != first_body["job_id"]
+
+        manager = transactions_router._IMPORT_JOB_MANAGER
+        assert len(manager._idempotency) <= 1
+
+
+def test_transactions_import_jobs_retention_cap_bounds_memory_under_burst(monkeypatch, caplog):
+    import app.routers.transactions as transactions_router
+
+    class _MutableClock:
+        def __init__(self):
+            self.current = datetime(2026, 11, 1, 14, 0, tzinfo=timezone.utc)
+
+        def now(self):
+            return self.current
+
+        def advance(self, *, seconds: int):
+            self.current += timedelta(seconds=seconds)
+
+    clock = _MutableClock()
+    _configure_async_import_jobs_for_test(
+        monkeypatch,
+        per_user_limit=20,
+        queue_limit=100,
+        worker_count=0,
+        terminal_ttl_seconds=300,
+        idempotency_ttl_seconds=300,
+        retained_terminal_cap=2,
+        now_fn=clock.now,
+    )
+
+    with TestClient(app) as client, caplog.at_level(logging.INFO, logger="app.import_jobs"):
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "job-cap-account")
+        category_id = _create_category(client, headers, "job-cap-income", "income")
+
+        job_ids: list[str] = []
+        for day in range(9, 15):
+            submitted = client.post(
+                "/api/transactions/import/jobs",
+                json={
+                    "mode": "partial",
+                    "items": [
+                        {
+                            "type": "income",
+                            "account_id": account_id,
+                            "category_id": category_id,
+                            "amount_cents": 5000 + day,
+                            "date": f"2026-11-{day:02d}",
+                        }
+                    ],
+                },
+                headers=headers,
+            )
+            assert submitted.status_code == 202
+            assert submitted.headers["content-type"].startswith(VENDOR)
+            job_id = submitted.json()["job_id"]
+            job_ids.append(job_id)
+            transactions_router._IMPORT_JOB_MANAGER._process_job(job_id)
+            clock.advance(seconds=1)
+
+        manager = transactions_router._IMPORT_JOB_MANAGER
+        retained_terminal = [job for job in manager._jobs.values() if job.status in {"completed", "failed"}]
+        assert len(retained_terminal) <= 2
+        assert len(manager._jobs) <= 2
+
+    messages = [record.getMessage() for record in caplog.records if record.name == "app.import_jobs"]
+    assert any("event=import_job_cleanup" in message for message in messages)
 
 
 def test_transactions_export_returns_csv_headers_and_row_count():

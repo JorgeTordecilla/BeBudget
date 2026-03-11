@@ -13,9 +13,11 @@ export default function RequireAuth({ children }: RequireAuthProps): ReactElemen
   const location = useLocation();
   const { isAuthenticated, user, bootstrapSession, isBootstrapping } = useAuth();
   const [bootstrapAttempted, setBootstrapAttempted] = useState(false);
+  const hasRecoverableUser = user !== null;
+  const shouldShowBootstrapLoader = !hasRecoverableUser && (isBootstrapping || !bootstrapAttempted);
 
   useEffect(() => {
-    if (isAuthenticated || user || bootstrapAttempted || isBootstrapping) {
+    if (isAuthenticated || hasRecoverableUser || bootstrapAttempted || isBootstrapping) {
       return;
     }
     let active = true;
@@ -27,23 +29,15 @@ export default function RequireAuth({ children }: RequireAuthProps): ReactElemen
     return () => {
       active = false;
     };
-  }, [isAuthenticated, user, bootstrapAttempted, isBootstrapping, bootstrapSession]);
+  }, [isAuthenticated, hasRecoverableUser, bootstrapAttempted, isBootstrapping, bootstrapSession]);
 
-  if (isAuthenticated || user) {
+  if (shouldShowBootstrapLoader) {
+    return <SessionLoader />;
+  }
+
+  if (isAuthenticated || hasRecoverableUser) {
     return children;
   }
 
-  if (isBootstrapping) {
-    return <SessionLoader />;
-  }
-
-  if (!bootstrapAttempted) {
-    return <SessionLoader />;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
-  }
-
-  return children;
+  return <Navigate to="/login" replace state={{ from: location }} />;
 }

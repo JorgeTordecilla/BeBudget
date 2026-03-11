@@ -87,16 +87,32 @@ The frontend MUST recover expired access tokens through cookie-based refresh wit
 - **AND** it SHALL avoid parallel refresh storms
 
 ### Requirement: Route guard bootstraps session from refresh cookie
-Protected route access MUST attempt session recovery before redirecting unauthenticated users.
+Protected route access MUST attempt session recovery before redirecting unauthenticated users, and the guard decision order MUST remain deterministic: bootstrapping first, authenticated second, unauthenticated last.
 
 #### Scenario: Reload on protected route restores session
 - **WHEN** a user opens or reloads `/app/dashboard` without memory token but with valid refresh cookie
 - **THEN** `RequireAuth` SHALL attempt refresh bootstrap
 - **AND** it SHALL allow access if refresh succeeds
 
-#### Scenario: Guard redirects when bootstrap fails
-- **WHEN** protected route bootstrap refresh fails
+#### Scenario: Guard preserves optimistic access while cached user bootstrap is recoverable
+- **WHEN** `RequireAuth` receives `user != null` and `isAuthenticated == false` because auth state was hydrated from cached user storage before token restoration completes
+- **THEN** it SHALL NOT redirect to `/login`
+- **AND** it SHALL continue protected-route evaluation as a recoverable bootstrap state
+
+#### Scenario: Guard waits for bootstrap before redirecting unauthenticated users
+- **WHEN** protected-route auth state is still bootstrapping or no local bootstrap attempt has resolved yet
+- **THEN** `RequireAuth` SHALL render its loading guard state instead of redirecting
+- **AND** it SHALL defer the unauthenticated redirect decision until bootstrap resolution completes
+
+#### Scenario: Guard redirects only after bootstrap resolves unauthenticated
+- **WHEN** protected route bootstrap refresh fails and no authenticated session remains
 - **THEN** `RequireAuth` SHALL redirect to `/login`
+- **AND** it SHALL do so only after bootstrapping has resolved to an unauthenticated outcome
+
+#### Scenario: Guard exposes a single terminal protected-content path
+- **WHEN** `RequireAuth` evaluates protected-route state after bootstrap ordering is applied
+- **THEN** the component SHALL have one terminal render path for protected content
+- **AND** it SHALL have one terminal redirect path for unauthenticated access
 
 ### Requirement: Logout clears client and server session state
 Logout behavior MUST invalidate both browser session cookie state (server-side endpoint) and frontend memory state.

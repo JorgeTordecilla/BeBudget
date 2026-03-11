@@ -93,9 +93,15 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
     return;
   }
 
-  const targetUrl = action === "mark_paid" ? `${baseUrl}&action=pay` : baseUrl;
+  const targetUrl = action === "mark_paid" ? buildNotificationActionUrl(baseUrl, "pay") : baseUrl;
   event.waitUntil(openOrFocusWindow(targetUrl));
 });
+
+function buildNotificationActionUrl(baseUrl: string, action: string): string {
+  const targetUrl = new URL(baseUrl, self.location.origin);
+  targetUrl.searchParams.set("action", action);
+  return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+}
 
 async function openOrFocusWindow(url: string): Promise<void> {
   const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });

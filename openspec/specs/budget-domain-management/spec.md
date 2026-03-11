@@ -127,6 +127,18 @@ The backend MUST implement `/transactions` and `/transactions/{transaction_id}` 
 - **WHEN** a transaction write resolves to a money operation with a currency different from the authenticated user's `currency_code`
 - **THEN** the API SHALL reject with canonical validation `400` ProblemDetails
 
+### Requirement: Transactions import/export rate limiting is deterministic and policy-scoped
+Transaction import/export endpoints SHALL enforce deterministic rate limits using transaction-scoped policy settings independent from auth endpoint throttling controls.
+
+#### Scenario: Transaction rate-limit window is transaction-scoped
+- **WHEN** transaction import/export throttling is evaluated
+- **THEN** the rate-limit window SHALL be derived from transaction-specific configuration
+- **AND** SHALL NOT depend on auth rate-limit window configuration.
+
+#### Scenario: Auth window tuning does not alter transaction throttling window
+- **WHEN** auth rate-limit window configuration changes
+- **THEN** transaction import/export rate-limit window behavior SHALL remain unchanged unless transaction window configuration also changes.
+
 ### Requirement: Transactions support explicit income-source attribution
 Transaction domain behavior MUST support optional linkage to user-owned income sources for deterministic analytics attribution.
 

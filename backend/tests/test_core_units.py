@@ -225,6 +225,32 @@ def test_utcnow_uses_shared_clock_contract(monkeypatch):
     assert core_utils.utcnow() == fixed_now
 
 
+@pytest.mark.parametrize(
+    ("month", "expected"),
+    [
+        ("2026-08", "2026-07"),
+        ("2026-01", "2025-12"),
+    ],
+)
+def test_previous_month_yyyy_mm_returns_immediate_previous_month(month, expected):
+    assert core_utils.previous_month_yyyy_mm(month) == expected
+
+
+@pytest.mark.parametrize(
+    "month",
+    [
+        "",
+        "2026-1",
+        "2026-13",
+        "2026-00",
+        "abcd-ef",
+    ],
+)
+def test_previous_month_yyyy_mm_rejects_invalid_input(month):
+    with pytest.raises(ValueError):
+        core_utils.previous_month_yyyy_mm(month)
+
+
 def test_dependency_guards_and_current_user_paths(monkeypatch):
     assert _accepts_vendor_or_problem("*/*")
     assert _accepts_vendor_or_problem("application/vnd.budgetbuddy.v1+json")
@@ -407,6 +433,20 @@ def test_settings_rejects_non_numeric_transactions_export_rate_limit(monkeypatch
     monkeypatch.setenv("TRANSACTIONS_EXPORT_RATE_LIMIT_PER_MINUTE", "fast")
     with pytest.raises(ValueError, match="TRANSACTIONS_EXPORT_RATE_LIMIT_PER_MINUTE"):
         Settings()
+
+
+def test_settings_rejects_invalid_transactions_rate_limit_window(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS", "0")
+    with pytest.raises(ValueError, match="TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS"):
+        Settings()
+
+
+def test_settings_uses_transactions_rate_limit_window(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS", "90")
+    settings = Settings()
+    assert settings.transactions_rate_limit_window_seconds == 90
 
 
 def test_settings_rejects_invalid_rate_limit_trusted_proxies(monkeypatch):

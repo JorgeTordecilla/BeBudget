@@ -23,32 +23,26 @@ import { toLocalProblem } from "@/lib/problemDetails";
 import { optionQueryKeys } from "@/query/queryKeys";
 import { cn } from "@/lib/utils";
 
-const appLinks = [
-  { to: "/app/dashboard", label: "Dashboard" },
-  { to: "/app/analytics", label: "Analytics" },
-  { to: "/app/accounts", label: "Accounts" },
-  { to: "/app/categories", label: "Categories" },
-  { to: "/app/income-sources", label: "Income Sources" },
-  { to: "/app/bills", label: "Bills" },
-  { to: "/app/savings", label: "Savings" },
-  { to: "/app/budgets", label: "Budgets" },
-  { to: "/app/transactions", label: "Transactions" }
+type AppNavLink = {
+  to: string;
+  label: string;
+  mobileGroup: "primary" | "secondary";
+};
+
+const appNavLinks: AppNavLink[] = [
+  { to: "/app/dashboard", label: "Dashboard", mobileGroup: "primary" },
+  { to: "/app/analytics", label: "Analytics", mobileGroup: "primary" },
+  { to: "/app/accounts", label: "Accounts", mobileGroup: "secondary" },
+  { to: "/app/categories", label: "Categories", mobileGroup: "secondary" },
+  { to: "/app/income-sources", label: "Income Sources", mobileGroup: "secondary" },
+  { to: "/app/bills", label: "Bills", mobileGroup: "secondary" },
+  { to: "/app/savings", label: "Savings", mobileGroup: "secondary" },
+  { to: "/app/budgets", label: "Budgets", mobileGroup: "primary" },
+  { to: "/app/transactions", label: "Transactions", mobileGroup: "primary" }
 ];
 
-const mobilePrimaryLinks = [
-  { to: "/app/dashboard", label: "Dashboard" },
-  { to: "/app/transactions", label: "Transactions" },
-  { to: "/app/budgets", label: "Budgets" },
-  { to: "/app/analytics", label: "Analytics" }
-];
-
-const mobileSecondaryLinks = [
-  { to: "/app/accounts", label: "Accounts" },
-  { to: "/app/categories", label: "Categories" },
-  { to: "/app/income-sources", label: "Income Sources" },
-  { to: "/app/bills", label: "Bills" },
-  { to: "/app/savings", label: "Savings" }
-];
+const mobilePrimaryLinks = appNavLinks.filter((link) => link.mobileGroup === "primary");
+const mobileSecondaryLinks = appNavLinks.filter((link) => link.mobileGroup === "secondary");
 const mobileSectionTitles: Array<{ match: (path: string) => boolean; title: string }> = [
   { match: (path) => path.startsWith("/app/dashboard"), title: "Dashboard" },
   { match: (path) => path.startsWith("/app/transactions/import"), title: "Import transactions" },
@@ -274,7 +268,7 @@ export default function AppShell() {
                   <p className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">BudgetBuddy</p>
                 </div>
                 <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto pb-0.5" aria-label="Main">
-                  {appLinks.map((link) => (
+                  {appNavLinks.map((link) => (
                     <NavLink
                       key={link.to}
                       to={link.to}
