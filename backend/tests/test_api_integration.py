@@ -3888,6 +3888,55 @@ def test_analytics_by_month_rollover_uses_immediate_prior_calendar_month_when_sp
         assert isinstance(item["rollover_in_cents"], int)
 
 
+def test_analytics_by_month_rollover_uses_shared_previous_month_helper(monkeypatch):
+    calls: list[str] = []
+
+    def _tracked_previous_month(month: str) -> str:
+        calls.append(month)
+        return core_utils.previous_month_yyyy_mm(month)
+
+    monkeypatch.setattr(analytics_router, "previous_month_yyyy_mm", _tracked_previous_month)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "rollover-helper-account")
+        income_category_id = _create_category(client, headers, "rollover-helper-income", "income")
+        expense_category_id = _create_category(client, headers, "rollover-helper-expense", "expense")
+
+        for payload in (
+            {"type": "income", "category_id": income_category_id, "amount_cents": 7000, "date": "2026-01-10"},
+            {"type": "expense", "category_id": expense_category_id, "amount_cents": 2000, "date": "2026-01-12"},
+            {"type": "income", "category_id": income_category_id, "amount_cents": 4000, "date": "2026-02-10"},
+            {"type": "expense", "category_id": expense_category_id, "amount_cents": 1000, "date": "2026-02-12"},
+        ):
+            response = client.post(
+                "/api/transactions",
+                json={
+                    "type": payload["type"],
+                    "account_id": account_id,
+                    "category_id": payload["category_id"],
+                    "amount_cents": payload["amount_cents"],
+                    "date": payload["date"],
+                    "merchant": "Acme",
+                    "note": "rollover-helper",
+                },
+                headers=headers,
+            )
+            assert response.status_code == 201
+
+        by_month = client.get(
+            "/api/analytics/by-month?from=2026-02-01&to=2026-02-28",
+            headers=headers,
+        )
+        assert by_month.status_code == 200
+        assert by_month.headers["content-type"].startswith(VENDOR)
+        item = by_month.json()["items"][0]
+        assert item["month"] == "2026-02"
+        assert item["rollover_in_cents"] == 5000
+        assert calls == ["2026-02"]
+
+
 def test_rollover_preview_and_apply_flow_with_idempotency():
     with TestClient(app) as client:
         user = _register_user(client)

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.responses import vendor_response
 from app.core.money import validate_user_currency_for_money
+from app.core.utils import previous_month_yyyy_mm
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.errors import invalid_date_range_error
@@ -20,16 +21,6 @@ def _month_expr(db: Session):
     if dialect == "sqlite":
         return func.strftime("%Y-%m", Transaction.date)
     return func.to_char(Transaction.date, "YYYY-MM")
-
-
-def _previous_month(month: str) -> str:
-    year = int(month[:4])
-    month_num = int(month[5:7])
-    month_num -= 1
-    if month_num == 0:
-        month_num = 12
-        year -= 1
-    return f"{year:04d}-{month_num:02d}"
 
 
 @router.get("/by-month")
@@ -94,7 +85,7 @@ def analytics_by_month(
             "expense_total_cents": int(row.expense_total_cents),
             "expected_income_cents": int(expected_totals_by_month.get(row.month, 0)),
             "actual_income_cents": int(row.income_total_cents),
-            "rollover_in_cents": int(net_by_month.get(_previous_month(row.month), 0)),
+            "rollover_in_cents": int(net_by_month.get(previous_month_yyyy_mm(row.month), 0)),
             "budget_spent_cents": int(row.expense_total_cents),
             "budget_limit_cents": int(budget_by_month.get(row.month, 0)),
         }
