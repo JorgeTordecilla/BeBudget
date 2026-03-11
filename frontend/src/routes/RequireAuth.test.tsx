@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -7,6 +8,16 @@ import { AuthContext } from "@/auth/AuthContext";
 import RequireAuth from "@/routes/RequireAuth";
 
 const apiClientStub = {} as ApiClient;
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
 
 function renderWithAuth(value: Parameters<typeof AuthContext.Provider>[0]["value"]) {
   return render(
@@ -78,6 +89,57 @@ describe("RequireAuth", () => {
     expect(screen.getByText("Checking session...")).toBeInTheDocument();
   });
 
+  it("restores protected content after bootstrap succeeds from an unauthenticated start", async () => {
+    const bootstrap = createDeferred<boolean>();
+
+    function BootstrapSuccessHarness() {
+      const [value, setValue] = useState<Parameters<typeof AuthContext.Provider>[0]["value"]>({
+        apiClient: apiClientStub,
+        user: null,
+        accessToken: null,
+        isAuthenticated: false,
+        isBootstrapping: false,
+        login: async () => undefined,
+        register: async () => undefined,
+        logout: async () => undefined,
+        bootstrapSession: () =>
+          bootstrap.promise.then(() => {
+            setValue((current) => ({
+              ...current,
+              user: { id: "u1", username: "demo", currency_code: "USD" },
+              accessToken: "token",
+              isAuthenticated: true
+            }));
+            return true;
+          })
+      });
+
+      return (
+        <AuthContext.Provider value={value}>
+          <MemoryRouter initialEntries={["/app"]}>
+            <Routes>
+              <Route
+                path="/app"
+                element={(
+                  <RequireAuth>
+                    <div>Private area</div>
+                  </RequireAuth>
+                )}
+              />
+              <Route path="/login" element={<div>Login page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </AuthContext.Provider>
+      );
+    }
+
+    render(<BootstrapSuccessHarness />);
+    expect(screen.getByText("Checking session...")).toBeInTheDocument();
+    bootstrap.resolve(true);
+    await waitFor(() => expect(screen.getByText("Private area")).toBeInTheDocument());
+    expect(screen.queryByText("Login page")).not.toBeInTheDocument();
+  });
+
   it("renders protected content when authenticated", () => {
     renderWithAuth({
       apiClient: apiClientStub,
@@ -93,8 +155,9 @@ describe("RequireAuth", () => {
     expect(screen.getByText("Private area")).toBeInTheDocument();
   });
 
-  it("redirects to login when bootstrap fails", async () => {
-    const bootstrapSession = vi.fn(async () => false);
+  it("redirects to login only after bootstrap resolves unauthenticated", async () => {
+    const bootstrap = createDeferred<boolean>();
+    const bootstrapSession = vi.fn(() => bootstrap.promise);
     renderWithAuth({
       apiClient: apiClientStub,
       user: null,
@@ -106,6 +169,9 @@ describe("RequireAuth", () => {
       logout: async () => undefined,
       bootstrapSession
     });
+    expect(screen.getByText("Checking session...")).toBeInTheDocument();
+    expect(screen.queryByText("Login page")).not.toBeInTheDocument();
+    bootstrap.resolve(false);
     await waitFor(() => expect(screen.getByText("Login page")).toBeInTheDocument());
     expect(bootstrapSession).toHaveBeenCalledTimes(1);
   });
@@ -147,5 +213,3 @@ describe("RequireAuth", () => {
     expect(bootstrapSession).toHaveBeenCalledTimes(1);
   });
 });
-
-
