@@ -19,6 +19,7 @@ type AuthContextValue = {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 const BOOTSTRAP_RETRY_COOLDOWN_MS = 10000;
+const MAX_SILENT_REFRESH_DELAY_MS = 30 * 60 * 1000;
 const SESSION_STORAGE_KEY = "bb_session_user";
 
 type SessionState = {
@@ -103,7 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!exp) {
       return;
     }
-    const delayMs = Math.max(0, (exp - Date.now() / 1000 - 60) * 1000);
+    const delayMs = Math.min(
+      Math.max(0, (exp - Date.now() / 1000 - 60) * 1000),
+      MAX_SILENT_REFRESH_DELAY_MS
+    );
     silentRefreshTimerRef.current = setTimeout(() => {
       const activeClient = clientRef.current;
       if (!activeClient) {

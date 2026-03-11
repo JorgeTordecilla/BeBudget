@@ -8,6 +8,7 @@ import { AuthContext } from "@/auth/AuthContext";
 import RequireAuth from "@/routes/RequireAuth";
 
 const apiClientStub = {} as ApiClient;
+type AuthContextValue = NonNullable<Parameters<typeof AuthContext.Provider>[0]["value"]>;
 
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -93,7 +94,7 @@ describe("RequireAuth", () => {
     const bootstrap = createDeferred<boolean>();
 
     function BootstrapSuccessHarness() {
-      const [value, setValue] = useState<Parameters<typeof AuthContext.Provider>[0]["value"]>({
+      const [value, setValue] = useState<AuthContextValue>({
         apiClient: apiClientStub,
         user: null,
         accessToken: null,

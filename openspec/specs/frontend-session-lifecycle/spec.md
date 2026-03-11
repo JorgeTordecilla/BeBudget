@@ -122,12 +122,22 @@ Frontend production session behavior MUST remain predictable under cross-site co
 - **AND** SHALL avoid implying CSRF is already solved by this change.
 
 ### Requirement: Silent refresh SHALL be scheduled proactively from JWT expiry
-The frontend SHALL schedule refresh before token expiration using JWT `exp` metadata and deterministic timer replacement semantics.
+The frontend SHALL schedule refresh before token expiration using JWT `exp` metadata, deterministic timer replacement semantics, and a bounded maximum scheduling delay derived from client-decoded expiry data.
 
 #### Scenario: Access token with future expiry schedules refresh at exp minus sixty seconds
 - **WHEN** auth session receives a valid access token with numeric `exp`
-- **THEN** frontend SHALL schedule one timer with delay `max(0, (exp - now - 60) * 1000)`
+- **THEN** frontend SHALL schedule one timer with delay `min(max(0, (exp - now - 60) * 1000), MAX_SILENT_REFRESH_DELAY_MS)`
 - **AND** any previously scheduled timer SHALL be canceled first.
+
+#### Scenario: Far-future expiry is capped to a bounded maximum delay
+- **WHEN** auth session receives a valid access token whose decoded `exp` would produce a delay greater than `MAX_SILENT_REFRESH_DELAY_MS`
+- **THEN** frontend SHALL cap the scheduled delay to `MAX_SILENT_REFRESH_DELAY_MS`
+- **AND** it SHALL NOT defer silent refresh beyond that bounded maximum.
+
+#### Scenario: Normal expiry remains unaffected by the cap
+- **WHEN** auth session receives a valid access token whose computed delay is less than or equal to `MAX_SILENT_REFRESH_DELAY_MS`
+- **THEN** frontend SHALL use the computed delay derived from `exp`
+- **AND** it SHALL NOT alter standard token scheduling behavior.
 
 #### Scenario: Token reset cancels outstanding silent refresh timer
 - **WHEN** session transitions to `accessToken = null` (including logout)
