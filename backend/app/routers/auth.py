@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 import logging
 from threading import Lock
 from weakref import WeakValueDictionary
@@ -15,7 +15,7 @@ from app.core.errors import APIError
 from app.core.network import resolve_rate_limit_client_ip
 from app.core.rate_limit import InMemoryRateLimiter, RateLimiter, log_rate_limited
 from app.core.responses import vendor_response
-from app.core.utils import utcnow
+from app.core.utils import as_utc, utcnow
 from app.core.security import (
     clear_refresh_cookie,
     create_access_token,
@@ -54,12 +54,6 @@ def _user_lock(user_id: str) -> Lock:
             lock = Lock()
             _USER_LOCKS[user_id] = lock
         return lock
-
-
-def _as_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
 
 
 def _auth_rate_limit_or_429(request: Request, *, endpoint: str, identity: str) -> None:
@@ -115,7 +109,7 @@ def _enforce_refresh_origin_policy(request: Request) -> None:
 
 
 def _is_expired(refresh_row: RefreshToken) -> bool:
-    return _as_utc(refresh_row.expires_at) < utcnow()
+    return as_utc(refresh_row.expires_at) < utcnow()
 
 
 def _raise_revoked_or_reuse(
