@@ -207,6 +207,27 @@ describe("AppShell", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
   });
 
+  it("keeps the full authenticated route set available across mobile primary and overflow navigation", () => {
+    setupModalDataMocks();
+    renderShellAt(375);
+
+    for (const linkName of ["Dashboard", "Transactions", "Budgets", "Analytics"]) {
+      expect(screen.getByRole("link", { name: linkName })).toBeInTheDocument();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+
+    for (const [linkName, href] of [
+      ["Accounts", "/app/accounts"],
+      ["Categories", "/app/categories"],
+      ["Income Sources", "/app/income-sources"],
+      ["Bills", "/app/bills"],
+      ["Savings", "/app/savings"]
+    ] as const) {
+      expect(screen.getByRole("link", { name: linkName })).toHaveAttribute("href", href);
+    }
+  });
+
   it("uses standalone-safe bottom nav sizing when display-mode is standalone on mobile", () => {
     setupModalDataMocks();
     const matchMediaSpy = vi.spyOn(window, "matchMedia").mockImplementation((query: string) => ({

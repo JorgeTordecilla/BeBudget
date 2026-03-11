@@ -73,11 +73,16 @@ Frontend code MUST source backend base URL from Vite environment variables throu
 - **AND** they SHALL NOT hardcode backend URLs in route components
 
 ### Requirement: Mobile-first primary navigation
-The frontend SHALL provide persistent, thumb-friendly primary navigation for authenticated routes on small viewports while preserving an equivalent desktop navigation model on larger viewports.
+The frontend SHALL provide persistent, thumb-friendly primary navigation for authenticated routes on small viewports while preserving an equivalent desktop navigation model on larger viewports. Authenticated app shell route links SHALL be defined from one canonical route list, and any mobile primary versus overflow navigation groupings SHALL be derived from that source instead of being maintained as separate duplicated route arrays.
 
 #### Scenario: Primary route switching on mobile
 - **WHEN** an authenticated user is on a viewport below the desktop breakpoint
 - **THEN** the UI shows persistent primary navigation that allows direct access to Dashboard, Analytics, Accounts, Categories, Budgets, and Transactions without relying on wrapped header links
+
+#### Scenario: Mobile navigation groupings derive from the canonical route list
+- **WHEN** developers add, remove, or rename an authenticated app route in the shell navigation definition
+- **THEN** desktop navigation SHALL reflect that route from the canonical route list
+- **AND** mobile primary and overflow navigation collections SHALL be derived from the same canonical route definition rather than maintained as separate duplicated arrays
 
 #### Scenario: Mobile bottom navigation remains viewport-bounded across browsers
 - **WHEN** an authenticated user navigates on iOS Safari/Chrome/Brave or Android Chrome/Brave
