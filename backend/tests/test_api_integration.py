@@ -82,11 +82,7 @@ SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TYPE = "https://api.budgetbuddy.dev/problems
 SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TITLE = "Contribution amount must be greater than zero"
 SAVINGS_GOAL_ALREADY_COMPLETED_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-already-completed"
 SAVINGS_GOAL_ALREADY_COMPLETED_TITLE = "Savings goal is already completed"
-REFRESH_REVOKED_TYPE = "https://api.budgetbuddy.dev/problems/refresh-revoked"
-REFRESH_REUSE_DETECTED_TYPE = "https://api.budgetbuddy.dev/problems/refresh-reuse-detected"
 ORIGIN_NOT_ALLOWED_TYPE = "https://api.budgetbuddy.dev/problems/origin-not-allowed"
-REFRESH_REVOKED_TITLE = "Refresh token revoked"
-REFRESH_REUSE_DETECTED_TITLE = "Refresh token reuse detected"
 REQUEST_ID_HEADER = "x-request-id"
 REFRESH_COOKIE_NAME = "bb_refresh"
 CORS_DEV_ORIGIN = "http://localhost:5173"
@@ -371,24 +367,6 @@ def _assert_savings_problem(response, *, status: int, problem_type: str, title: 
     assert body["type"] == problem_type
     assert body["title"] == title
     assert body["status"] == status
-
-
-def _assert_refresh_revoked_problem(response, title: str):
-    assert response.status_code == 403
-    assert response.headers["content-type"].startswith(PROBLEM)
-    body = response.json()
-    assert body["type"] == REFRESH_REVOKED_TYPE
-    assert body["title"] == title
-    assert body["status"] == 403
-
-
-def _assert_refresh_reuse_detected_problem(response):
-    assert response.status_code == 403
-    assert response.headers["content-type"].startswith(PROBLEM)
-    body = response.json()
-    assert body["type"] == REFRESH_REUSE_DETECTED_TYPE
-    assert body["title"] == REFRESH_REUSE_DETECTED_TITLE
-    assert body["status"] == 403
 
 
 def _assert_request_id_header_present(response):
@@ -972,7 +950,43 @@ def test_refresh_token_rotation_blocks_reuse():
             "/api/auth/refresh",
             headers=_refresh_headers(user["refresh"], origin=CORS_DEV_ORIGIN),
         )
-        _assert_refresh_reuse_detected_problem(second_refresh_same_token)
+        assert second_refresh_same_token.status_code == 200
+        assert second_refresh_same_token.headers["content-type"].startswith(VENDOR)
+        assert _refresh_cookie_from_response(second_refresh_same_token) == new_refresh_token
+
+        db = SessionLocal()
+        try:
+            child_rows = (
+                db.query(RefreshToken)
+                .filter(RefreshToken.parent_hash == hash_refresh_token(user["refresh"]))
+                .all()
+            )
+            assert len(child_rows) == 1
+        finally:
+            db.close()
+
+
+def test_register_and_login_create_root_refresh_token_lineage():
+    with TestClient(app) as client:
+        registered = _register_user(client)
+        register_row = _refresh_row_by_plaintext_token(registered["refresh"])
+        assert register_row.family_id is not None
+        assert register_row.parent_hash is None
+        assert register_row.rotated_at is None
+        assert register_row.grace_until is None
+
+        login = client.post(
+            "/api/auth/login",
+            json={"username": registered["username"], "password": registered["password"]},
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert login.status_code == 200
+        login_row = _refresh_row_by_plaintext_token(_refresh_cookie_from_response(login))
+        assert login_row.family_id is not None
+        assert login_row.parent_hash is None
+        assert login_row.rotated_at is None
+        assert login_row.grace_until is None
+        assert login_row.family_id != register_row.family_id
 
 
 def test_refresh_with_allowed_origin_succeeds():
@@ -983,31 +997,11 @@ def test_refresh_with_allowed_origin_succeeds():
         assert response.headers["content-type"].startswith(VENDOR)
 
 
-def test_refresh_retries_once_after_transient_operational_error(monkeypatch):
-    original_get_by_hash = auth_router.SQLAlchemyRefreshTokenRepository.get_by_hash
-    failed_once = {"value": False}
+def test_refresh_returns_canonical_503_when_atomic_rotate_errors(monkeypatch):
+    def failing_rotate_atomically(self, token_hash: str, grace_seconds: int):
+        raise OperationalError("UPDATE refresh_tokens", {"token_hash": token_hash}, Exception("transient"))
 
-    def flaky_get_by_hash(self, token_hash: str):
-        if not failed_once["value"]:
-            failed_once["value"] = True
-            raise OperationalError("SELECT refresh_tokens", {"token_hash": token_hash}, Exception("transient"))
-        return original_get_by_hash(self, token_hash)
-
-    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "get_by_hash", flaky_get_by_hash)
-
-    with TestClient(app) as client:
-        user = _register_user(client)
-        response = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"], origin=CORS_DEV_ORIGIN))
-        assert response.status_code == 200
-        assert response.headers["content-type"].startswith(VENDOR)
-        assert failed_once["value"] is True
-
-
-def test_refresh_returns_canonical_503_after_repeated_operational_error(monkeypatch):
-    def failing_get_by_hash(self, token_hash: str):
-        raise OperationalError("SELECT refresh_tokens", {"token_hash": token_hash}, Exception("transient"))
-
-    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "get_by_hash", failing_get_by_hash)
+    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "rotate_atomically", failing_rotate_atomically)
 
     with TestClient(app) as client:
         user = _register_user(client)
@@ -1015,6 +1009,31 @@ def test_refresh_returns_canonical_503_after_repeated_operational_error(monkeypa
         _assert_service_unavailable_problem(response)
         assert "traceback" not in response.text.lower()
         assert "sqlalchemy" not in response.text.lower()
+
+
+def test_refresh_returns_canonical_503_when_grace_lookup_errors(monkeypatch):
+    original_rotate_atomically = auth_router.SQLAlchemyRefreshTokenRepository.rotate_atomically
+    call_state = {"rotated": False}
+
+    def wrapped_rotate_atomically(self, token_hash: str, grace_seconds: int):
+        if call_state["rotated"]:
+            return None
+        call_state["rotated"] = True
+        return original_rotate_atomically(self, token_hash, grace_seconds)
+
+    def failing_get_by_hash(self, token_hash: str):
+        raise OperationalError("SELECT refresh_tokens", {"token_hash": token_hash}, Exception("transient"))
+
+    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "rotate_atomically", wrapped_rotate_atomically)
+    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "get_by_hash", failing_get_by_hash)
+
+    with TestClient(app) as client:
+        user = _register_user(client)
+        first = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"], origin=CORS_DEV_ORIGIN))
+        assert first.status_code == 200
+
+        second = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"], origin=CORS_DEV_ORIGIN))
+        _assert_service_unavailable_problem(second)
 
 
 def test_refresh_with_disallowed_origin_returns_canonical_403():
@@ -1060,18 +1079,17 @@ def test_refresh_token_rotation_is_atomic_under_concurrency(monkeypatch):
 
     refresh_hash = hash_refresh_token(user_refresh)
     barrier = Barrier(2)
-    original_get_by_hash = auth_router.SQLAlchemyRefreshTokenRepository.get_by_hash
+    original_rotate_atomically = auth_router.SQLAlchemyRefreshTokenRepository.rotate_atomically
 
-    def synchronized_get_by_hash(self, token_hash: str):
-        row = original_get_by_hash(self, token_hash)
-        if token_hash == refresh_hash and row is not None and row.revoked_at is None:
+    def synchronized_rotate_atomically(self, token_hash: str, grace_seconds: int):
+        if token_hash == refresh_hash:
             try:
                 barrier.wait(timeout=2)
             except BrokenBarrierError:
                 pass
-        return row
+        return original_rotate_atomically(self, token_hash, grace_seconds)
 
-    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "get_by_hash", synchronized_get_by_hash)
+    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "rotate_atomically", synchronized_rotate_atomically)
 
     responses: list = [None, None]
 
@@ -1087,12 +1105,21 @@ def test_refresh_token_rotation_is_atomic_under_concurrency(monkeypatch):
     t2.join()
 
     status_codes = sorted([responses[0].status_code, responses[1].status_code])
-    assert status_codes == [200, 403]
+    assert status_codes == [200, 200]
+    assert responses[0].headers["content-type"].startswith(VENDOR)
+    assert responses[1].headers["content-type"].startswith(VENDOR)
+    assert _refresh_cookie_from_response(responses[0]) == _refresh_cookie_from_response(responses[1])
 
-    success = responses[0] if responses[0].status_code == 200 else responses[1]
-    failure = responses[0] if responses[0].status_code == 403 else responses[1]
-    assert success.headers["content-type"].startswith(VENDOR)
-    _assert_refresh_reuse_detected_problem(failure)
+    db = SessionLocal()
+    try:
+        child_rows = (
+            db.query(RefreshToken)
+            .filter(RefreshToken.parent_hash == refresh_hash)
+            .all()
+        )
+        assert len(child_rows) == 1
+    finally:
+        db.close()
 
 
 def test_refresh_with_expired_token_returns_401():
@@ -1165,7 +1192,35 @@ def test_logout_revokes_active_refresh_tokens():
         assert logout.status_code == 204
 
         refresh_after_logout = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"]))
-        _assert_refresh_revoked_problem(refresh_after_logout, REFRESH_REVOKED_TITLE)
+        _assert_unauthorized_problem(refresh_after_logout)
+
+
+def test_refresh_after_grace_revokes_family_and_child_token():
+    with TestClient(app) as client:
+        user = _register_user(client)
+
+        first_refresh = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"], origin=CORS_DEV_ORIGIN))
+        assert first_refresh.status_code == 200
+        child_refresh = _refresh_cookie_from_response(first_refresh)
+        parent_row = _refresh_row_by_plaintext_token(user["refresh"])
+        family_id = parent_row.family_id
+        assert family_id is not None
+
+        _expire_refresh_grace_period(user["refresh"])
+
+        replay = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"], origin=CORS_DEV_ORIGIN))
+        _assert_unauthorized_problem(replay)
+
+        db = SessionLocal()
+        try:
+            family_rows = db.query(RefreshToken).filter(RefreshToken.family_id == family_id).all()
+            assert family_rows
+            assert all(row.revoked_at is not None for row in family_rows)
+        finally:
+            db.close()
+
+        child_after_compromise = client.post("/api/auth/refresh", headers=_refresh_headers(child_refresh, origin=CORS_DEV_ORIGIN))
+        _assert_unauthorized_problem(child_after_compromise)
 
 
 def _user_id_from_refresh_token(refresh_hash: str) -> str:
@@ -1173,6 +1228,24 @@ def _user_id_from_refresh_token(refresh_hash: str) -> str:
     try:
         token_row = db.query(RefreshToken).filter(RefreshToken.token_hash == refresh_hash).one()
         return token_row.user_id
+    finally:
+        db.close()
+
+
+def _refresh_row_by_plaintext_token(refresh_token: str) -> RefreshToken:
+    db = SessionLocal()
+    try:
+        return db.query(RefreshToken).filter(RefreshToken.token_hash == hash_refresh_token(refresh_token)).one()
+    finally:
+        db.close()
+
+
+def _expire_refresh_grace_period(refresh_token: str) -> None:
+    db = SessionLocal()
+    try:
+        row = db.query(RefreshToken).filter(RefreshToken.token_hash == hash_refresh_token(refresh_token)).one()
+        row.grace_until = utcnow() - timedelta(seconds=1)
+        db.commit()
     finally:
         db.close()
 
@@ -1193,14 +1266,13 @@ def _active_refresh_count(user_id: str) -> int:
 def _refresh_during_logout(client: TestClient, user: dict[str, str], refresh_hash: str, monkeypatch):
     refresh_ready = Event()
     continue_refresh = Event()
-    original_get_by_hash = auth_router.SQLAlchemyRefreshTokenRepository.get_by_hash
+    original_rotate_atomically = auth_router.SQLAlchemyRefreshTokenRepository.rotate_atomically
     block_once_lock = Lock()
     block_once_state = {"blocked": False}
 
-    def synchronized_get_by_hash(self, token_hash: str):
-        row = original_get_by_hash(self, token_hash)
+    def synchronized_rotate_atomically(self, token_hash: str, grace_seconds: int):
         if token_hash != refresh_hash:
-            return row
+            return original_rotate_atomically(self, token_hash, grace_seconds)
         should_block = False
         with block_once_lock:
             if not block_once_state["blocked"]:
@@ -1209,9 +1281,9 @@ def _refresh_during_logout(client: TestClient, user: dict[str, str], refresh_has
         if should_block:
             refresh_ready.set()
             continue_refresh.wait(timeout=5)
-        return row
+        return original_rotate_atomically(self, token_hash, grace_seconds)
 
-    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "get_by_hash", synchronized_get_by_hash)
+    monkeypatch.setattr(auth_router.SQLAlchemyRefreshTokenRepository, "rotate_atomically", synchronized_rotate_atomically)
     responses: list = [None, None]
     return refresh_ready, continue_refresh, responses
 
@@ -1237,11 +1309,7 @@ def test_logout_blocks_refresh_in_flight_with_same_token(monkeypatch):
         continue_refresh.set()
         refresh_thread.join()
 
-        assert responses[0].status_code in (200, 403)
-        if responses[0].status_code == 403:
-            _assert_refresh_revoked_problem(responses[0], REFRESH_REVOKED_TITLE)
-        else:
-            assert responses[0].headers["content-type"].startswith(VENDOR)
+        _assert_unauthorized_problem(responses[0])
 
         assert _active_refresh_count(user_id) == 0
 
@@ -4359,11 +4427,13 @@ def test_audit_events_created_for_key_actions():
         assert first_refresh.status_code == 200
         rotated_refresh = _refresh_cookie_from_response(first_refresh)
 
-        reuse = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"]))
-        _assert_refresh_reuse_detected_problem(reuse)
+        grace_hit = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"]))
+        assert grace_hit.status_code == 200
+        assert _refresh_cookie_from_response(grace_hit) == rotated_refresh
 
-        logout = client.post("/api/auth/logout", headers=_refresh_headers(rotated_refresh))
-        assert logout.status_code == 204
+        _expire_refresh_grace_period(user["refresh"])
+        compromise = client.post("/api/auth/refresh", headers=_refresh_headers(user["refresh"]))
+        _assert_unauthorized_problem(compromise)
 
         audit = client.get(
             "/api/audit?limit=100",
@@ -4378,8 +4448,8 @@ def test_audit_events_created_for_key_actions():
         assert "transaction.update" in actions
         assert "transaction.archive" in actions
         assert "transaction.restore" in actions
-        assert "auth.refresh_token_reuse_detected" in actions
-        assert "auth.logout" in actions
+        assert "auth.refresh_grace_hit" in actions
+        assert "auth.refresh_token_family_revoked" in actions
 
 
 def test_audit_owner_only_pagination_and_sensitive_fields():

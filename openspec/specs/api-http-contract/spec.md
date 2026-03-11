@@ -170,15 +170,31 @@ Paginated list endpoints MUST document invalid cursor errors with `application/p
 - **THEN** invalid cursor `400` descriptions SHALL be consistent and use canonical invalid cursor language
 
 ### Requirement: Refresh token rotation and replay protection
-The backend MUST rotate refresh tokens on successful refresh and block reuse deterministically using cookie-based refresh transport.
+The backend MUST rotate refresh tokens on successful refresh and block reuse deterministically using cookie-based refresh transport, with token-family lineage and grace-window semantics.
 
 #### Scenario: Refresh rotates cookie and invalidates previous token
 - **WHEN** `POST /auth/refresh` succeeds using a valid `bb_refresh` cookie
-- **THEN** response SHALL return `200` with vendor JSON payload that excludes `refresh_token`, SHALL emit `Set-Cookie` for rotated `bb_refresh`, and the previous refresh token SHALL become unusable immediately
+- **THEN** response SHALL return `200` with vendor JSON payload that excludes `refresh_token`
+- **AND** response SHALL emit `Set-Cookie` for rotated `bb_refresh`
+- **AND** the presented parent token SHALL transition to rotated state and SHALL NOT be rotated again.
 
-#### Scenario: Refresh reuse is forbidden with canonical problem
-- **WHEN** a previously used (rotated) or revoked refresh token is presented through `bb_refresh` in `POST /auth/refresh`
-- **THEN** the API SHALL return `403` `application/problem+json` with canonical `type=https://api.budgetbuddy.dev/problems/refresh-reuse-detected`
+#### Scenario: Concurrent replay inside grace uses existing child token
+- **WHEN** a parent token already rotated by a near-simultaneous request is presented within configured grace period
+- **THEN** `POST /auth/refresh` SHALL return success semantics bound to the existing child token
+- **AND** it SHALL NOT mint an additional child token.
+
+#### Scenario: Replay outside grace triggers family compromise response
+- **WHEN** a rotated token is presented outside grace or a revoked refresh token is presented
+- **THEN** the backend SHALL revoke all active tokens in the compromised token family
+- **AND** `POST /auth/refresh` SHALL return canonical `401` `application/problem+json` unauthorized semantics.
+
+### Requirement: Refresh contract exposes grace-window configuration dependency
+Refresh replay semantics MUST be explicitly tied to bounded runtime grace-period configuration.
+
+#### Scenario: Grace period value governs replay acceptance window
+- **WHEN** `REFRESH_GRACE_PERIOD_SECONDS` is configured
+- **THEN** replay acceptance for rotated parent tokens SHALL be limited to that configured window
+- **AND** replay beyond that window SHALL follow compromise revocation semantics.
 
 ### Requirement: Transaction restore idempotency
 Transaction restore through patch MUST be idempotent.

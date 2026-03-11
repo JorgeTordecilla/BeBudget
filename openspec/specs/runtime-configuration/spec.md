@@ -153,3 +153,22 @@ The service MUST validate DB pool resilience runtime configuration at startup an
 - **WHEN** `DB_POOL_PRE_PING` and `DB_POOL_RECYCLE_SECONDS` are configured
 - **THEN** startup SHALL validate values
 - **AND** invalid recycle values SHALL fail startup with clear configuration errors
+
+### Requirement: Refresh grace-period configuration is validated and bounded
+Runtime configuration MUST expose and validate `REFRESH_GRACE_PERIOD_SECONDS` for refresh replay grace semantics.
+
+#### Scenario: Grace-period default is applied when not configured
+- **WHEN** `REFRESH_GRACE_PERIOD_SECONDS` is not explicitly set
+- **THEN** runtime SHALL default the value to `30` seconds.
+
+#### Scenario: Grace-period accepts explicit zero
+- **WHEN** `REFRESH_GRACE_PERIOD_SECONDS=0`
+- **THEN** runtime SHALL disable refresh replay grace handling while preserving rotation safety semantics.
+
+#### Scenario: Grace-period rejects out-of-range values
+- **WHEN** `REFRESH_GRACE_PERIOD_SECONDS` is negative or greater than `120`
+- **THEN** startup SHALL fail with a clear configuration error naming the invalid setting.
+
+#### Scenario: Grace-period configuration is safe to log
+- **WHEN** startup emits safe configuration diagnostics
+- **THEN** non-secret field output SHALL include the effective grace-period value.

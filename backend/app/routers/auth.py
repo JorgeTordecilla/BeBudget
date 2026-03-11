@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
+import hashlib
+import hmac
 import logging
-from threading import Lock
-from weakref import WeakValueDictionary
+import uuid
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import and_, update
@@ -30,8 +31,6 @@ from app.db import get_db
 from app.errors import (
     origin_not_allowed_error,
     rate_limited_error,
-    refresh_revoked_error,
-    refresh_reuse_detected_error,
     service_unavailable_error,
     unauthorized_error,
 )
@@ -41,19 +40,8 @@ from app.schemas import AuthSessionResponse, LoginRequest, RegisterRequest, User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 session_router = APIRouter(tags=["auth"])
-_USER_LOCKS_GUARD = Lock()
-_USER_LOCKS: WeakValueDictionary[str, Lock] = WeakValueDictionary()
 _AUTH_RATE_LIMITER: RateLimiter = InMemoryRateLimiter()
 _LOGGER = logging.getLogger("app.auth")
-
-
-def _user_lock(user_id: str) -> Lock:
-    with _USER_LOCKS_GUARD:
-        lock = _USER_LOCKS.get(user_id)
-        if lock is None:
-            lock = Lock()
-            _USER_LOCKS[user_id] = lock
-        return lock
 
 
 def _auth_rate_limit_or_429(request: Request, *, endpoint: str, identity: str) -> None:
@@ -114,44 +102,53 @@ def _is_expired(refresh_row: RefreshToken) -> bool:
     return as_utc(refresh_row.expires_at) < utcnow()
 
 
-def _raise_revoked_or_reuse(
+def _derive_child_refresh_token(parent_token: str, parent_row: RefreshToken) -> str:
+    rotated_at = as_utc(parent_row.rotated_at) if parent_row.rotated_at is not None else utcnow()
+    material = ":".join(
+        [
+            parent_token,
+            parent_row.user_id,
+            parent_row.family_id or "",
+            str(int(rotated_at.timestamp())),
+        ]
+    )
+    digest = hmac.new(
+        key=settings.jwt_secret.encode("utf-8"),
+        msg=material.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+    return f"rt_{digest}"
+
+
+def _create_root_refresh(user_id: str, refresh_token: str) -> RefreshToken:
+    return RefreshToken(
+        user_id=user_id,
+        token_hash=hash_refresh_token(refresh_token),
+        family_id=str(uuid.uuid4()),
+        parent_hash=None,
+        rotated_at=None,
+        grace_until=None,
+        expires_at=utcnow() + timedelta(seconds=settings.refresh_token_ttl_seconds),
+    )
+
+
+def _revoke_compromised_family(
+    *,
     refresh_repo: SQLAlchemyRefreshTokenRepository,
     refresh_row: RefreshToken,
-    *,
-    db: Session,
     request: Request,
+    db: Session,
 ) -> None:
-    reused_after_rotation = refresh_repo.has_newer_token(refresh_row.user_id, refresh_row.created_at)
-    if reused_after_rotation:
-        emit_audit_event(
-            db,
-            request=request,
-            user_id=refresh_row.user_id,
-            resource_type="auth_session",
-            resource_id=refresh_row.id,
-            action="auth.refresh_token_reuse_detected",
-        )
-        db.commit()
-        raise refresh_reuse_detected_error("Refresh token was already used and rotated")
-    raise refresh_revoked_error("Refresh token is revoked")
-
-
-def _revoke_refresh_token(db: Session, refresh_row: RefreshToken) -> tuple[datetime, bool]:
-    now = utcnow()
-    stmt = (
-        update(RefreshToken)
-        .where(
-            and_(
-                RefreshToken.id == refresh_row.id,
-                RefreshToken.revoked_at.is_(None),
-                RefreshToken.expires_at >= now,
-            )
-        )
-        .values(revoked_at=now)
-        .execution_options(synchronize_session=False)
+    refresh_repo.revoke_family(refresh_row.family_id, user_id=refresh_row.user_id)
+    emit_audit_event(
+        db,
+        request=request,
+        user_id=refresh_row.user_id,
+        resource_type="auth_session",
+        resource_id=refresh_row.family_id or refresh_row.user_id,
+        action="auth.refresh_token_family_revoked",
     )
-    result = db.execute(stmt)
-    return now, result.rowcount == 1
+    db.commit()
 
 
 def _active_refresh_token_or_401(db: Session, refresh_token: str) -> RefreshToken:
@@ -160,24 +157,6 @@ def _active_refresh_token_or_401(db: Session, refresh_token: str) -> RefreshToke
     if not refresh_row or _is_expired(refresh_row):
         raise unauthorized_error("Refresh token is invalid or expired")
     return refresh_row
-
-
-def _refresh_read_or_503(db: Session, read_fn, *, request: Request):
-    for attempt in (1, 2):
-        try:
-            return read_fn()
-        except OperationalError as exc:
-            db.rollback()
-            request_id = getattr(request.state, "request_id", "")
-            _LOGGER.warning(
-                "auth_refresh_db_operational_error request_id=%s attempt=%s path=%s error=%s",
-                request_id,
-                attempt,
-                request.url.path,
-                exc.__class__.__name__,
-            )
-            if attempt == 2:
-                raise service_unavailable_error("Service temporarily unavailable, please retry")
 
 
 @router.post("/register")
@@ -195,12 +174,7 @@ def register(payload: RegisterRequest, request: Request, db: Session = Depends(g
         raise APIError(status=409, title="Conflict", detail="Username already exists") from exc
 
     refresh_token = generate_refresh_token()
-    refresh = RefreshToken(
-        user_id=user.id,
-        token_hash=hash_refresh_token(refresh_token),
-        expires_at=utcnow() + timedelta(seconds=settings.refresh_token_ttl_seconds),
-    )
-    refresh_repo.add(refresh)
+    refresh_repo.add(_create_root_refresh(user.id, refresh_token))
     db.commit()
     response = vendor_response(_create_session_payload(user), status_code=201)
     set_refresh_cookie(response, refresh_token)
@@ -219,12 +193,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         raise unauthorized_error("User or password invalid")
 
     refresh_token = generate_refresh_token()
-    refresh = RefreshToken(
-        user_id=user.id,
-        token_hash=hash_refresh_token(refresh_token),
-        expires_at=utcnow() + timedelta(seconds=settings.refresh_token_ttl_seconds),
-    )
-    refresh_repo.add(refresh)
+    refresh_repo.add(_create_root_refresh(user.id, refresh_token))
     db.commit()
     response = vendor_response(_create_session_payload(user), status_code=200)
     set_refresh_cookie(response, refresh_token)
@@ -244,49 +213,80 @@ def refresh(request: Request, db: Session = Depends(get_db)):
     refresh_repo = SQLAlchemyRefreshTokenRepository(db)
 
     token_hash = hash_refresh_token(refresh_token)
-    # Optimistic pre-check before acquiring the per-user lock.
-    # Most refresh requests are valid and uncontended, so this fast path avoids
-    # lock overhead when the token is already missing or invalid.
-    refresh_row = _refresh_read_or_503(db, lambda: refresh_repo.get_by_hash(token_hash), request=request)
-    if not refresh_row:
-        raise unauthorized_error("Refresh token is invalid or expired")
+    request_started_at = utcnow()
 
-    user_id = refresh_row.user_id
-    with _user_lock(user_id):
-        # Re-fetch under lock to guard against refresh-token races.
-        # Another request may rotate or revoke this token between pre-check and
-        # lock acquisition, so we validate current DB state again.
-        refresh_row = _refresh_read_or_503(db, lambda: refresh_repo.get_by_hash(token_hash), request=request)
-        if not refresh_row:
-            raise unauthorized_error("Refresh token is invalid or expired")
-        if _is_expired(refresh_row):
-            raise unauthorized_error("Refresh token is invalid or expired")
-        if refresh_row.revoked_at is not None:
-            _raise_revoked_or_reuse(refresh_repo, refresh_row, db=db, request=request)
-
-        user = _refresh_read_or_503(db, lambda: user_repo.get_by_id(refresh_row.user_id), request=request)
-        if not user:
-            raise unauthorized_error("Refresh token is invalid or expired")
-
-        _, revoked = _revoke_refresh_token(db, refresh_row)
-        if not revoked:
-            current_row = _refresh_read_or_503(db, lambda: refresh_repo.get_by_hash(token_hash), request=request)
-            if not current_row or _is_expired(current_row):
+    try:
+        rotated_parent = refresh_repo.rotate_atomically(token_hash, settings.refresh_grace_period_seconds)
+        if rotated_parent is not None:
+            if as_utc(rotated_parent.expires_at) <= request_started_at or _is_expired(rotated_parent):
+                db.rollback()
                 raise unauthorized_error("Refresh token is invalid or expired")
-            _raise_revoked_or_reuse(refresh_repo, current_row, db=db, request=request)
+            user = user_repo.get_by_id(rotated_parent.user_id)
+            if not user:
+                db.rollback()
+                raise unauthorized_error("Refresh token is invalid or expired")
 
-        new_refresh_token = generate_refresh_token()
-        refresh_repo.add(
-            RefreshToken(
-                user_id=user.id,
-                token_hash=hash_refresh_token(new_refresh_token),
-                expires_at=utcnow() + timedelta(seconds=settings.refresh_token_ttl_seconds),
+            child_refresh_token = _derive_child_refresh_token(refresh_token, rotated_parent)
+            refresh_repo.add(
+                RefreshToken(
+                    user_id=user.id,
+                    token_hash=hash_refresh_token(child_refresh_token),
+                    family_id=rotated_parent.family_id,
+                    parent_hash=rotated_parent.token_hash,
+                    rotated_at=None,
+                    grace_until=None,
+                    expires_at=utcnow() + timedelta(seconds=settings.refresh_token_ttl_seconds),
+                )
             )
+            db.commit()
+            response = vendor_response(_create_session_payload(user), status_code=200)
+            set_refresh_cookie(response, child_refresh_token)
+            return response
+
+        current_row = refresh_repo.get_by_hash(token_hash)
+        if not current_row or _is_expired(current_row):
+            raise unauthorized_error("Refresh token is invalid or expired")
+
+        now = utcnow()
+        within_grace = (
+            current_row.rotated_at is not None
+            and current_row.grace_until is not None
+            and as_utc(current_row.grace_until) > now
         )
-        db.commit()
-        response = vendor_response(_create_session_payload(user), status_code=200)
-        set_refresh_cookie(response, new_refresh_token)
-        return response
+        if within_grace:
+            child = refresh_repo.get_child_of(token_hash)
+            if child and child.revoked_at is None and not _is_expired(child):
+                user = user_repo.get_by_id(child.user_id)
+                if not user:
+                    db.rollback()
+                    raise unauthorized_error("Refresh token is invalid or expired")
+                child_refresh_token = _derive_child_refresh_token(refresh_token, current_row)
+                if hash_refresh_token(child_refresh_token) == child.token_hash:
+                    emit_audit_event(
+                        db,
+                        request=request,
+                        user_id=current_row.user_id,
+                        resource_type="auth_session",
+                        resource_id=current_row.id,
+                        action="auth.refresh_grace_hit",
+                    )
+                    db.commit()
+                    response = vendor_response(_create_session_payload(user), status_code=200)
+                    set_refresh_cookie(response, child_refresh_token)
+                    return response
+
+        _revoke_compromised_family(refresh_repo=refresh_repo, refresh_row=current_row, request=request, db=db)
+        raise unauthorized_error("Refresh token is invalid or expired")
+    except OperationalError as exc:
+        db.rollback()
+        request_id = getattr(request.state, "request_id", "")
+        _LOGGER.warning(
+            "auth_refresh_db_operational_error request_id=%s path=%s error=%s",
+            request_id,
+            request.url.path,
+            exc.__class__.__name__,
+        )
+        raise service_unavailable_error("Service temporarily unavailable, please retry")
 
 
 @router.post("/logout", status_code=204)
@@ -299,37 +299,35 @@ def logout(
         raise unauthorized_error("Refresh token is invalid or expired")
 
     refresh_row = _active_refresh_token_or_401(db, refresh_token)
-    with _user_lock(refresh_row.user_id):
-        refresh_row = _active_refresh_token_or_401(db, refresh_token)
-        if refresh_row.revoked_at is not None:
-            raise refresh_revoked_error("Refresh token is revoked")
+    if refresh_row.revoked_at is not None:
+        raise unauthorized_error("Refresh token is invalid or expired")
 
-        now = utcnow()
-        stmt = (
-            update(RefreshToken)
-            .where(
-                and_(
-                    RefreshToken.user_id == refresh_row.user_id,
-                    RefreshToken.revoked_at.is_(None),
-                )
+    now = utcnow()
+    stmt = (
+        update(RefreshToken)
+        .where(
+            and_(
+                RefreshToken.user_id == refresh_row.user_id,
+                RefreshToken.revoked_at.is_(None),
             )
-            .values(revoked_at=now)
-            .execution_options(synchronize_session=False)
         )
-        db.execute(stmt)
-        emit_audit_event(
-            db,
-            request=request,
-            user_id=refresh_row.user_id,
-            resource_type="auth_session",
-            resource_id=refresh_row.user_id,
-            action="auth.logout",
-            created_at=now,
-        )
-        db.commit()
-        response = Response(status_code=204)
-        clear_refresh_cookie(response)
-        return response
+        .values(revoked_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    db.execute(stmt)
+    emit_audit_event(
+        db,
+        request=request,
+        user_id=refresh_row.user_id,
+        resource_type="auth_session",
+        resource_id=refresh_row.user_id,
+        action="auth.logout",
+        created_at=now,
+    )
+    db.commit()
+    response = Response(status_code=204)
+    clear_refresh_cookie(response)
+    return response
 
 
 @session_router.get("/me")

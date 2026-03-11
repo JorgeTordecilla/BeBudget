@@ -1,6 +1,6 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 from sqlalchemy.orm import Session
 
 from app.models.enums import CategoryType, TransactionType
@@ -31,9 +31,53 @@ class SQLAlchemyRefreshTokenRepository:
     def add(self, refresh_token: RefreshToken) -> None:
         self.db.add(refresh_token)
 
-    def has_newer_token(self, user_id: str, created_after: datetime) -> bool:
-        stmt = select(RefreshToken.id).where(RefreshToken.user_id == user_id, RefreshToken.created_at > created_after).limit(1)
-        return self.db.scalar(stmt) is not None
+    def rotate_atomically(self, token_hash: str, grace_seconds: int) -> RefreshToken | None:
+        now = datetime.now(tz=UTC)
+        stmt = (
+            update(RefreshToken)
+            .where(
+                RefreshToken.token_hash == token_hash,
+                RefreshToken.revoked_at.is_(None),
+                RefreshToken.expires_at > now,
+                RefreshToken.rotated_at.is_(None),
+            )
+            .values(
+                rotated_at=now,
+                grace_until=now + timedelta(seconds=max(0, grace_seconds)),
+            )
+            .returning(RefreshToken)
+            .execution_options(synchronize_session=False)
+        )
+        return self.db.execute(stmt).scalars().first()
+
+    def get_child_of(self, parent_hash: str) -> RefreshToken | None:
+        stmt = (
+            select(RefreshToken)
+            .where(RefreshToken.parent_hash == parent_hash)
+            .order_by(RefreshToken.created_at.desc())
+            .limit(1)
+        )
+        return self.db.scalar(stmt)
+
+    def revoke_family(self, family_id: str | None, *, user_id: str | None = None) -> int:
+        now = datetime.now(tz=UTC)
+        if family_id:
+            stmt = (
+                update(RefreshToken)
+                .where(RefreshToken.family_id == family_id, RefreshToken.revoked_at.is_(None))
+                .values(revoked_at=now)
+                .execution_options(synchronize_session=False)
+            )
+            return self.db.execute(stmt).rowcount or 0
+        if user_id:
+            stmt = (
+                update(RefreshToken)
+                .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
+                .values(revoked_at=now)
+                .execution_options(synchronize_session=False)
+            )
+            return self.db.execute(stmt).rowcount or 0
+        return 0
 
     def list_active_by_user(self, user_id: str) -> list[RefreshToken]:
         stmt = select(RefreshToken).where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))

@@ -8,6 +8,17 @@ from app.db import Base
 from app.models.enums import AccountType, CategoryType, IncomeFrequency, TransactionMood, TransactionType
 
 
+def _value_enum(enum_cls: type[object], *, name: str) -> SAEnum:
+    return SAEnum(
+        enum_cls,
+        name=name,
+        native_enum=False,
+        create_constraint=True,
+        validate_strings=True,
+        values_callable=lambda members: [member.value for member in members],
+    )
+
+
 class Account(Base):
     __tablename__ = "accounts"
     __table_args__ = (
@@ -18,10 +29,7 @@ class Account(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    type: Mapped[AccountType] = mapped_column(
-        SAEnum(AccountType, name="ck_accounts_type_enum", native_enum=False, create_constraint=True, validate_strings=True),
-        nullable=False,
-    )
+    type: Mapped[AccountType] = mapped_column(_value_enum(AccountType, name="ck_accounts_type_enum"), nullable=False)
     initial_balance_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -44,10 +52,7 @@ class Category(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    type: Mapped[CategoryType] = mapped_column(
-        SAEnum(CategoryType, name="ck_categories_type_enum", native_enum=False, create_constraint=True, validate_strings=True),
-        nullable=False,
-    )
+    type: Mapped[CategoryType] = mapped_column(_value_enum(CategoryType, name="ck_categories_type_enum"), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz=UTC), nullable=False)
@@ -68,10 +73,7 @@ class Transaction(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    type: Mapped[TransactionType] = mapped_column(
-        SAEnum(TransactionType, name="ck_transactions_type_enum", native_enum=False, create_constraint=True, validate_strings=True),
-        nullable=False,
-    )
+    type: Mapped[TransactionType] = mapped_column(_value_enum(TransactionType, name="ck_transactions_type_enum"), nullable=False)
     account_id: Mapped[str] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
     category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)
     income_source_id: Mapped[str | None] = mapped_column(
@@ -82,7 +84,7 @@ class Transaction(Base):
     merchant: Mapped[str | None] = mapped_column(String(160), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     mood: Mapped[TransactionMood | None] = mapped_column(
-        SAEnum(TransactionMood, name="ck_transactions_mood_enum", native_enum=False, create_constraint=True, validate_strings=True),
+        _value_enum(TransactionMood, name="ck_transactions_mood_enum"),
         nullable=True,
     )
     is_impulse: Mapped[bool | None] = mapped_column(nullable=True)
@@ -115,7 +117,7 @@ class IncomeSource(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     expected_amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     frequency: Mapped[IncomeFrequency] = mapped_column(
-        SAEnum(IncomeFrequency, name="ck_income_sources_frequency_enum", native_enum=False, create_constraint=True, validate_strings=True),
+        _value_enum(IncomeFrequency, name="ck_income_sources_frequency_enum"),
         nullable=False,
         default=IncomeFrequency.MONTHLY,
     )

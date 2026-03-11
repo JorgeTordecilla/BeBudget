@@ -8,6 +8,17 @@ from app.db import Base
 from app.models.enums import SavingsGoalStatus
 
 
+def _value_enum(enum_cls: type[object], *, name: str) -> SAEnum:
+    return SAEnum(
+        enum_cls,
+        name=name,
+        native_enum=False,
+        create_constraint=True,
+        validate_strings=True,
+        values_callable=lambda members: [member.value for member in members],
+    )
+
+
 class SavingsGoal(Base):
     __tablename__ = "savings_goals"
     __table_args__ = (
@@ -24,7 +35,7 @@ class SavingsGoal(Base):
     deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[SavingsGoalStatus] = mapped_column(
-        SAEnum(SavingsGoalStatus, name="ck_savings_goals_status_enum", native_enum=False, create_constraint=True, validate_strings=True),
+        _value_enum(SavingsGoalStatus, name="ck_savings_goals_status_enum"),
         nullable=False,
         default=SavingsGoalStatus.ACTIVE,
     )
