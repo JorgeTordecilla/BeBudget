@@ -303,10 +303,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
               examples:
-                refresh-revoked:
-                  $ref: '#/components/examples/Problem403RefreshRevoked'
-                refresh-reuse-detected:
-                  $ref: '#/components/examples/Problem403RefreshReuseDetected'
                 origin-not-allowed:
                   $ref: '#/components/examples/Problem403OriginNotAllowed'
         '503':
@@ -3688,12 +3684,6 @@ components:
   - type: https://api.budgetbuddy.dev/problems/invalid-date-range
     title: Invalid date range
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/refresh-revoked
-    title: Refresh token revoked
-    status: 403
-  - type: https://api.budgetbuddy.dev/problems/refresh-reuse-detected
-    title: Refresh token reuse detected
-    status: 403
   - type: https://api.budgetbuddy.dev/problems/origin-not-allowed
     title: Forbidden
     status: 403
@@ -5495,20 +5485,6 @@ components:
         title: Forbidden
         status: 403
         detail: Resource is not owned by authenticated user.
-    Problem403RefreshRevoked:
-      summary: Canonical 403 refresh revoked
-      value:
-        type: https://api.budgetbuddy.dev/problems/refresh-revoked
-        title: Refresh token revoked
-        status: 403
-        detail: Refresh session has been revoked.
-    Problem403RefreshReuseDetected:
-      summary: Canonical 403 refresh reuse detected
-      value:
-        type: https://api.budgetbuddy.dev/problems/refresh-reuse-detected
-        title: Refresh token reuse detected
-        status: 403
-        detail: Refresh token was already used and rotated.
     Problem403OriginNotAllowed:
       summary: Canonical 403 origin not allowed
       value:

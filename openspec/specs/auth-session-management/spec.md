@@ -46,19 +46,54 @@ The backend MUST implement `POST /auth/login` validating credentials, returning 
 - **AND** credential verification against stored hash SHALL NOT execute.
 
 ### Requirement: Refresh token flow
-The backend MUST implement `POST /auth/refresh` with cookie-based refresh-token verification, expiration checks, revocation checks, and token rotation.
+The backend MUST implement `POST /auth/refresh` with cookie-based refresh-token verification, token-family lineage checks, atomic rotation, grace-window replay handling, and deterministic compromise response behavior.
 
-#### Scenario: Refresh success
-- **WHEN** a valid active refresh token is provided via `bb_refresh` cookie
-- **THEN** the API SHALL return `200` with new access-token payload fields and SHALL rotate `bb_refresh` cookie
+#### Scenario: Refresh success rotates parent token atomically
+- **WHEN** a valid active refresh token is provided via `bb_refresh` cookie and has not been rotated yet
+- **THEN** the system SHALL atomically mark the presented token as rotated
+- **AND** the system SHALL create exactly one child refresh token in the same token family
+- **AND** the API SHALL return `200` with new access-token payload fields and SHALL set `bb_refresh` to the child token.
 
 #### Scenario: Refresh invalid or expired token
 - **WHEN** the `bb_refresh` cookie is missing, malformed, unknown, or expired
 - **THEN** the API SHALL return `401` as `ProblemDetails`
 
-#### Scenario: Refresh revoked token
-- **WHEN** the refresh token represented by `bb_refresh` is revoked or otherwise disallowed
-- **THEN** the API SHALL return `403` as `ProblemDetails`
+#### Scenario: Concurrent refresh within grace returns child token
+- **WHEN** a recently rotated parent token is presented again before `grace_until`
+- **THEN** the system SHALL locate the existing child token by parent linkage
+- **AND** the API SHALL return success semantics using that child token without creating an additional child token.
+
+#### Scenario: Replay after grace revokes token family
+- **WHEN** a rotated parent token is presented after its grace window or a revoked refresh token is presented
+- **THEN** the system SHALL revoke all active tokens in the token family
+- **AND** the API SHALL return canonical `401` unauthorized `ProblemDetails`.
+
+#### Scenario: Legacy row without family metadata uses fallback revocation
+- **WHEN** replay compromise is detected for a token whose `family_id` is null
+- **THEN** the system SHALL revoke all active refresh tokens for that token's `user_id` as legacy fallback behavior.
+
+### Requirement: Refresh token lineage metadata is persisted
+Refresh session state MUST persist lineage metadata needed for token-family replay protection.
+
+#### Scenario: Register creates root refresh token lineage
+- **WHEN** `POST /auth/register` succeeds
+- **THEN** created refresh-token state SHALL include a non-empty `family_id`
+- **AND** `parent_hash` SHALL be null
+- **AND** `rotated_at` and `grace_until` SHALL be null.
+
+#### Scenario: Login creates root refresh token lineage
+- **WHEN** `POST /auth/login` succeeds
+- **THEN** created refresh-token state SHALL include a non-empty `family_id`
+- **AND** `parent_hash` SHALL be null
+- **AND** `rotated_at` and `grace_until` SHALL be null.
+
+### Requirement: Refresh flow removes process-local lock dependency
+Refresh-session correctness MUST not depend on in-process locking primitives.
+
+#### Scenario: Multi-worker safety does not depend on in-memory user locks
+- **WHEN** refresh requests are served by different workers or replicas
+- **THEN** replay protection and rotation correctness SHALL be enforced by database state transitions
+- **AND** behavior SHALL NOT rely on process-local lock maps.
 
 ### Requirement: Logout revokes refresh token
 The backend MUST implement `POST /auth/logout` to revoke the refresh session represented by `bb_refresh` and expire the cookie deterministically.
@@ -118,15 +153,15 @@ Auth throttling behavior MUST support deterministic verification in integration 
 - **THEN** throttling outcomes SHALL be deterministic and reproducible without timing flakiness
 
 ### Requirement: Auth session security events are auditable
-Authentication lifecycle flows MUST emit audit events for logout and refresh-token reuse detection.
+Authentication lifecycle flows MUST emit audit events for logout, grace-window replay acceptance, and token-family compromise revocation.
 
 #### Scenario: Logout emits audit event
 - **WHEN** `POST /auth/logout` succeeds for an authenticated user
 - **THEN** the system SHALL persist an audit event linked to `request_id`, `user_id`, and logout action
 
-#### Scenario: Refresh token reuse emits security audit event
-- **WHEN** refresh-token reuse is detected in `POST /auth/refresh`
-- **THEN** the system SHALL persist an audit event representing the security action without storing token secrets
+#### Scenario: Refresh grace-hit and family-revocation events are auditable
+- **WHEN** refresh replay is accepted within grace or a token family is revoked in `POST /auth/refresh`
+- **THEN** the system SHALL persist corresponding auth/security audit events without storing token secrets
 
 ### Requirement: Auth audit emission does not change session contract semantics
 Adding audit writes MUST NOT change existing auth endpoint functional outcomes.

@@ -5,16 +5,16 @@ Define normalized, safe, and queryable audit trail behavior for mutation and aut
 ## ADDED Requirements
 
 ### Requirement: Audit events are persisted for mutation actions
-The backend MUST persist an audit event whenever a tracked mutation or security action completes.
+The backend MUST persist an audit event whenever a tracked mutation or auth security action completes.
 
 #### Scenario: Domain mutations emit audit events
 - **WHEN** accounts, categories, or transactions perform create, update, archive, or restore operations
 - **THEN** the system SHALL persist one audit event per successful action
 
 #### Scenario: Auth security actions emit audit events
-- **WHEN** `POST /auth/logout` succeeds or refresh-token reuse is detected in `POST /auth/refresh`
-- **THEN** the system SHALL persist an audit event with the corresponding auth/security action
-- **AND** automated backend regression coverage SHALL verify that refresh-token reuse persists `auth.refresh_token_reuse_detected` in owner-visible audit history
+- **WHEN** `POST /auth/logout` succeeds, refresh replay is accepted within grace, or token-family compromise revocation is executed in `POST /auth/refresh`
+- **THEN** the system SHALL persist corresponding auth/security audit events
+- **AND** regression coverage SHALL verify `auth.refresh_grace_hit` and `auth.refresh_token_family_revoked` are owner-visible in audit history.
 
 ### Requirement: Audit event envelope is normalized and traceable
 Each audit event MUST store normalized identity and trace fields for deterministic investigation.

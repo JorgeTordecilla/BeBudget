@@ -397,6 +397,19 @@ def test_auth_rate_limit_contract_mappings_exist():
 
     assert "503" in refresh_responses
     assert "application/problem+json" in refresh_responses["503"]["content"]
+    assert set(refresh_responses["403"]["content"]["application/problem+json"]["examples"].keys()) == {"origin-not-allowed"}
+    assert "401" in refresh_responses
+    assert "application/problem+json" in refresh_responses["401"]["content"]
+
+    refresh_problem_types = {
+        item["type"]
+        for item in catalog
+        if item["type"] in {
+            "https://api.budgetbuddy.dev/problems/refresh-revoked",
+            "https://api.budgetbuddy.dev/problems/refresh-reuse-detected",
+        }
+    }
+    assert refresh_problem_types == set()
 
 
 def test_auth_password_policy_contract_matches_runtime_schema():

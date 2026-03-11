@@ -3,6 +3,7 @@ import json
 import logging
 import time
 from datetime import UTC, date, datetime, timedelta
+from threading import Barrier, BrokenBarrierError, Thread
 from types import SimpleNamespace
 
 import jwt
@@ -12,6 +13,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from starlette.requests import Request
 
+import app.core.audit as audit_core
+import app.core.network as network_core
+import app.routers.auth as auth_router
 from app.core.config import Settings
 from app.core.errors import APIError, register_exception_handlers
 from app.core.network import resolve_rate_limit_client_ip
@@ -26,7 +30,7 @@ from app.core.security import (
 import app.db.session as db_session
 from app.dependencies import _accepts_vendor_or_problem, enforce_accept_header, enforce_content_type, get_current_user
 from app.db import SessionLocal, get_migration_revision_state
-from app.models import Account, Budget, Category, RefreshToken, Transaction, User
+from app.models import Account, AuditEvent, Budget, Category, RefreshToken, Transaction, User
 from app.repositories import (
     SQLAlchemyAccountRepository,
     SQLAlchemyBudgetRepository,
@@ -82,6 +86,37 @@ def _request_with_client(path: str, client_host: str, method: str = "GET", heade
         "client": (client_host, 50000),
     }
     return Request(scope)
+
+
+def test_safe_resource_id_filters_blank_token_and_secret_values():
+    assert audit_core._safe_resource_id(None) is None
+    assert audit_core._safe_resource_id("   ") is None
+    assert audit_core._safe_resource_id("Bearer secret-token") is None
+    assert audit_core._safe_resource_id("refresh_token_family") is None
+    assert audit_core._safe_resource_id("x" * 80) == "x" * 64
+
+
+def test_emit_audit_event_defaults_unknown_request_id_and_preserves_created_at():
+    created_at = datetime.now(tz=UTC) - timedelta(minutes=1)
+    db = SessionLocal()
+    try:
+        audit_core.emit_audit_event(
+            db,
+            request=None,
+            user_id="user-1",
+            resource_type="auth_session",
+            resource_id="family-1",
+            action="auth.refresh_token_family_revoked",
+            created_at=created_at,
+        )
+        db.commit()
+        row = db.scalar(select(AuditEvent).where(AuditEvent.user_id == "user-1"))
+        assert row is not None
+        assert row.request_id == "unknown"
+        assert row.resource_id == "family-1"
+        assert row.created_at.replace(tzinfo=UTC) == created_at
+    finally:
+        db.close()
 
 
 class _DB:
@@ -520,6 +555,76 @@ def test_build_engine_keeps_sqlite_behavior(monkeypatch):
     assert "pool_recycle" not in kwargs
 
 
+def test_is_database_ready_false_on_connection_error(monkeypatch):
+    class BrokenEngine:
+        def connect(self):
+            raise RuntimeError("db down")
+
+    monkeypatch.setattr(db_session, "engine", BrokenEngine())
+    assert db_session.is_database_ready() is False
+
+
+def test_get_migration_revision_state_reports_ok_and_fail(monkeypatch):
+    class FakeScript:
+        def __init__(self, heads):
+            self._heads = heads
+
+        def get_heads(self):
+            return self._heads
+
+    class FakeConn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeEngine:
+        def connect(self):
+            return FakeConn()
+
+    class FakeMigrationContext:
+        def __init__(self, revision):
+            self._revision = revision
+
+        def get_current_revision(self):
+            return self._revision
+
+    monkeypatch.setattr("app.db.session.ScriptDirectory.from_config", lambda _cfg: FakeScript(["head-1"]))
+    monkeypatch.setattr("app.db.session.MigrationContext.configure", lambda _conn: FakeMigrationContext("head-1"))
+    monkeypatch.setattr(db_session, "engine", FakeEngine())
+    assert db_session.get_migration_revision_state() == ("ok", "head-1", "head-1")
+
+    monkeypatch.setattr("app.db.session.MigrationContext.configure", lambda _conn: FakeMigrationContext("old-rev"))
+    assert db_session.get_migration_revision_state() == ("fail", "old-rev", "head-1")
+
+
+def test_get_migration_revision_state_reports_unknown_when_revisions_missing(monkeypatch):
+    class FakeScript:
+        def get_heads(self):
+            return []
+
+    class FakeConn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class FakeEngine:
+        def connect(self):
+            return FakeConn()
+
+    class FakeMigrationContext:
+        def get_current_revision(self):
+            return None
+
+    monkeypatch.setattr("app.db.session.ScriptDirectory.from_config", lambda _cfg: FakeScript())
+    monkeypatch.setattr("app.db.session.MigrationContext.configure", lambda _conn: FakeMigrationContext())
+    monkeypatch.setattr(db_session, "engine", FakeEngine())
+    assert db_session.get_migration_revision_state() == ("unknown", None, None)
+
+
 def test_settings_refresh_origin_missing_mode_defaults_by_environment(monkeypatch):
     _set_minimum_config_env(monkeypatch)
     monkeypatch.delenv("AUTH_REFRESH_MISSING_ORIGIN_MODE", raising=False)
@@ -544,6 +649,67 @@ def test_settings_refresh_origin_allowlist_defaults_to_cors(monkeypatch):
     monkeypatch.delenv("AUTH_REFRESH_ALLOWED_ORIGINS", raising=False)
     settings = Settings()
     assert settings.auth_refresh_allowed_origins == ["http://localhost:5173", "https://app.example.com"]
+
+
+def test_parse_forwarded_client_ip_skips_invalid_candidates():
+    assert network_core._parse_forwarded_client_ip("garbage, 203.0.113.9") == "203.0.113.9"
+    assert network_core._parse_forwarded_client_ip("garbage,also-bad") is None
+
+
+def test_is_trusted_proxy_rejects_invalid_peer_and_matches_config(monkeypatch):
+    monkeypatch.setattr(network_core.settings, "rate_limit_trusted_proxies", ["10.0.0.0/8"])
+    assert network_core._is_trusted_proxy("not-an-ip") is False
+    assert network_core._is_trusted_proxy("10.1.2.3") is True
+    assert network_core._is_trusted_proxy("203.0.113.5") is False
+
+
+def test_resolve_rate_limit_client_ip_uses_peer_when_needed(monkeypatch):
+    monkeypatch.setattr(network_core.settings, "rate_limit_trusted_proxies", ["10.0.0.0/8"])
+    trusted_request = _request_with_client("/refresh", "10.1.2.3", headers={"x-forwarded-for": "bad, 198.51.100.10"})
+    assert resolve_rate_limit_client_ip(trusted_request) == "198.51.100.10"
+
+    untrusted_request = _request_with_client("/refresh", "203.0.113.20", headers={"x-forwarded-for": "198.51.100.10"})
+    assert resolve_rate_limit_client_ip(untrusted_request) == "203.0.113.20"
+
+    no_client_request = Request(
+        {
+            "type": "http",
+            "http_version": "1.1",
+            "method": "GET",
+            "path": "/refresh",
+            "raw_path": b"/refresh",
+            "query_string": b"",
+            "headers": [],
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "client": None,
+        }
+    )
+    monkeypatch.setattr(network_core.settings, "rate_limit_trusted_proxies", [])
+    assert resolve_rate_limit_client_ip(no_client_request) == "unknown"
+
+
+def test_settings_refresh_grace_period_defaults_and_accepts_zero(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.delenv("REFRESH_GRACE_PERIOD_SECONDS", raising=False)
+    settings = Settings()
+    assert settings.refresh_grace_period_seconds == 30
+    assert settings.safe_log_fields()["refresh_grace_period_seconds"] == 30
+
+    monkeypatch.setenv("REFRESH_GRACE_PERIOD_SECONDS", "0")
+    zero_grace = Settings()
+    assert zero_grace.refresh_grace_period_seconds == 0
+
+
+def test_settings_refresh_grace_period_rejects_out_of_range_values(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("REFRESH_GRACE_PERIOD_SECONDS", "-1")
+    with pytest.raises(ValueError, match="REFRESH_GRACE_PERIOD_SECONDS"):
+        Settings()
+
+    monkeypatch.setenv("REFRESH_GRACE_PERIOD_SECONDS", "121")
+    with pytest.raises(ValueError, match="REFRESH_GRACE_PERIOD_SECONDS"):
+        Settings()
 
 
 def test_bootstrap_happy_path_creates_demo_user_and_minimal_seed(monkeypatch):
@@ -676,11 +842,67 @@ def test_generic_error_logging_hides_stacktrace_in_production(monkeypatch, caplo
     assert all(record.exc_info is None for record in app_error_records)
 
 
+def test_auth_origin_policy_short_circuits_when_cookie_not_none(monkeypatch):
+    monkeypatch.setattr(auth_router.settings, "refresh_cookie_samesite", "lax")
+    auth_router._enforce_refresh_origin_policy(_request("/api/auth/refresh"))
+
+
+def test_active_refresh_token_or_401_rejects_missing_or_expired_rows():
+    db = SessionLocal()
+    try:
+        with pytest.raises(APIError) as exc_info:
+            auth_router._active_refresh_token_or_401(db, "missing-token")
+        assert exc_info.value.status == 401
+        assert exc_info.value.detail == "Refresh token is invalid or expired"
+
+        user = User(username="expired_refresh_user", password_hash="hash", currency_code="USD")
+        db.add(user)
+        db.flush()
+        db.add(
+            RefreshToken(
+                user_id=user.id,
+                token_hash=auth_router.hash_refresh_token("expired-token"),
+                family_id="family-expired",
+                expires_at=datetime.now(tz=UTC) - timedelta(minutes=1),
+            )
+        )
+        db.commit()
+
+        with pytest.raises(APIError) as expired_exc:
+            auth_router._active_refresh_token_or_401(db, "expired-token")
+        assert expired_exc.value.status == 401
+        assert expired_exc.value.detail == "Refresh token is invalid or expired"
+    finally:
+        db.close()
+
+
+def test_register_returns_conflict_when_username_exists(monkeypatch):
+    monkeypatch.setattr(auth_router, "_auth_rate_limit_or_429", lambda *args, **kwargs: None)
+    db = SessionLocal()
+    try:
+        existing = User(username="duplicate_user", password_hash="hash", currency_code="USD")
+        db.add(existing)
+        db.commit()
+
+        request = _request("/api/auth/register", method="POST")
+        payload = auth_router.RegisterRequest(username="duplicate_user", password="StrongPwd123!", currency_code="USD")
+        with pytest.raises(APIError) as exc_info:
+            auth_router.register(payload, request, db)
+        assert exc_info.value.status == 409
+        assert exc_info.value.title == "Conflict"
+    finally:
+        db.close()
+
+
 def test_repository_protocol_shapes_are_implemented():
     # Ensure protocol contracts are imported/exercised and concrete repos expose required methods.
     protocol_to_impl = [
         (UserRepository, SQLAlchemyUserRepository, ["get_by_id", "get_by_username", "add"]),
-        (RefreshTokenRepository, SQLAlchemyRefreshTokenRepository, ["get_by_hash", "add", "has_newer_token", "list_active_by_user"]),
+        (
+            RefreshTokenRepository,
+            SQLAlchemyRefreshTokenRepository,
+            ["get_by_hash", "add", "rotate_atomically", "get_child_of", "revoke_family", "list_active_by_user"],
+        ),
         (AccountRepository, SQLAlchemyAccountRepository, ["get_owned", "list_for_user", "add"]),
         (BudgetRepository, SQLAlchemyBudgetRepository, ["get_owned", "list_for_user_month_range", "add"]),
         (CategoryRepository, SQLAlchemyCategoryRepository, ["get_owned", "list_for_user", "add"]),
@@ -764,6 +986,8 @@ def _seed_refresh_tokens(db, user: User):
     token_old = RefreshToken(
         user_id=user.id,
         token_hash="token-old",
+        family_id="family-1",
+        parent_hash=None,
         expires_at=datetime.now(tz=UTC) + timedelta(days=1),
         created_at=datetime.now(tz=UTC) - timedelta(minutes=10),
         revoked_at=datetime.now(tz=UTC),
@@ -771,6 +995,8 @@ def _seed_refresh_tokens(db, user: User):
     token_new_active = RefreshToken(
         user_id=user.id,
         token_hash="token-new",
+        family_id="family-1",
+        parent_hash="token-old",
         expires_at=datetime.now(tz=UTC) + timedelta(days=1),
         created_at=datetime.now(tz=UTC),
     )
@@ -833,8 +1059,74 @@ def _assert_refresh_repo(refresh_repo: SQLAlchemyRefreshTokenRepository, user: U
     assert refresh_repo.get_by_hash("missing") is None
     active = refresh_repo.list_active_by_user(user.id)
     assert [row.token_hash for row in active] == ["token-new"]
-    assert refresh_repo.has_newer_token(user.id, token_old.created_at) is True
-    assert refresh_repo.has_newer_token(user.id, token_new_active.created_at + timedelta(seconds=1)) is False
+    child = refresh_repo.get_child_of("token-old")
+    assert child is not None
+    assert child.token_hash == "token-new"
+    assert refresh_repo.revoke_family("family-1") == 1
+    active_after_revoke = refresh_repo.list_active_by_user(user.id)
+    assert active_after_revoke == []
+
+
+def test_refresh_repository_rotate_atomically_is_idempotent_under_concurrency():
+    from app.db import Base, engine
+
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        user = User(username="refresh_repo_user", password_hash="hash", currency_code="USD")
+        db.add(user)
+        db.flush()
+        refresh = RefreshToken(
+            user_id=user.id,
+            token_hash="rotate-me",
+            family_id="family-concurrency",
+            parent_hash=None,
+            expires_at=datetime.now(tz=UTC) + timedelta(days=1),
+        )
+        db.add(refresh)
+        db.commit()
+    finally:
+        db.close()
+
+    barrier = Barrier(2)
+    results: list[RefreshToken | None] = [None, None]
+    errors: list[Exception] = []
+
+    def run_rotate(index: int) -> None:
+        local_db = SessionLocal()
+        try:
+            try:
+                barrier.wait(timeout=2)
+            except BrokenBarrierError:
+                pass
+            repo = SQLAlchemyRefreshTokenRepository(local_db)
+            results[index] = repo.rotate_atomically("rotate-me", 30)
+            local_db.commit()
+        except Exception as exc:  # pragma: no cover - assertion surfaces thread failures
+            errors.append(exc)
+        finally:
+            local_db.close()
+
+    threads = [Thread(target=run_rotate, args=(0,)), Thread(target=run_rotate, args=(1,))]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert errors == []
+    assert sum(1 for result in results if result is not None) == 1
+
+    verification_db = SessionLocal()
+    try:
+        row = verification_db.scalar(select(RefreshToken).where(RefreshToken.token_hash == "rotate-me"))
+        if row is None:
+            all_hashes = list(verification_db.scalars(select(RefreshToken.token_hash)))
+            raise AssertionError(f"expected rotate-me row, found hashes={all_hashes}")
+        assert row is not None
+        assert row.rotated_at is not None
+        assert row.grace_until is not None
+    finally:
+        verification_db.close()
 
 
 def _assert_budget_repo(budget_repo: SQLAlchemyBudgetRepository, user: User, budget_a: Budget, budget_b: Budget, budget_other: Budget):

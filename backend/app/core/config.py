@@ -31,6 +31,17 @@ def _env_positive_int(name: str, default: str, *, minimum: int = 1) -> int:
     return value
 
 
+def _env_bounded_int(name: str, default: str, *, minimum: int, maximum: int) -> int:
+    raw = os.getenv(name, default)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be an integer between {minimum} and {maximum}") from exc
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be an integer between {minimum} and {maximum}")
+    return value
+
+
 class Settings:
     database_url: str
     jwt_secret: str
@@ -39,6 +50,7 @@ class Settings:
     access_token_expires_in: int
     refresh_token_expires_days: int
     refresh_token_ttl_seconds: int
+    refresh_grace_period_seconds: int
     refresh_cookie_name: str
     refresh_cookie_path: str
     refresh_cookie_secure: bool
@@ -92,6 +104,7 @@ class Settings:
         self.refresh_token_expires_days = int(os.getenv("REFRESH_TOKEN_EXPIRES_DAYS", "30"))
         default_refresh_ttl = str(self.refresh_token_expires_days * 24 * 60 * 60)
         self.refresh_token_ttl_seconds = int(os.getenv("REFRESH_TOKEN_TTL_SECONDS", default_refresh_ttl))
+        self.refresh_grace_period_seconds = _env_bounded_int("REFRESH_GRACE_PERIOD_SECONDS", "30", minimum=0, maximum=120)
         self.refresh_cookie_name = os.getenv("REFRESH_COOKIE_NAME", "bb_refresh").strip() or "bb_refresh"
         self.refresh_cookie_path = os.getenv("REFRESH_COOKIE_PATH", "/api/auth").strip() or "/api/auth"
         self.refresh_cookie_secure = _env_bool("REFRESH_COOKIE_SECURE", True)
@@ -200,6 +213,7 @@ class Settings:
             "refresh_cookie_secure": self.refresh_cookie_secure,
             "refresh_cookie_samesite": self.refresh_cookie_samesite,
             "refresh_cookie_domain_configured": self.refresh_cookie_domain is not None,
+            "refresh_grace_period_seconds": self.refresh_grace_period_seconds,
             "auth_register_rate_limit_per_minute": self.auth_register_rate_limit_per_minute,
             "migrations_strict": self.migrations_strict,
             "log_level": self.log_level,
