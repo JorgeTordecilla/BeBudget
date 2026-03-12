@@ -23,7 +23,7 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, stored: str) -> bool:
     try:
         return _PASSWORD_CONTEXT.verify(password, stored)
-    except Exception:
+    except (TypeError, ValueError):
         return False
 
 
