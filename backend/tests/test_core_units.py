@@ -160,6 +160,7 @@ def test_cursor_helpers_roundtrip_and_errors():
 
 def test_password_and_token_security_paths(monkeypatch):
     hashed = hash_password("StrongPwd123!")
+    assert hashed.startswith("$argon2id$")
     assert verify_password("StrongPwd123!", hashed) is True
     assert verify_password("wrong", hashed) is False
     assert verify_password("wrong", "invalid-format") is False

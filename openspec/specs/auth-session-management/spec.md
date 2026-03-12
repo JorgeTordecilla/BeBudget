@@ -16,6 +16,11 @@ The backend MUST implement `POST /auth/register` with schema validation for `Reg
 - **THEN** the API SHALL return `400` as `ProblemDetails`
 - **AND** user creation SHALL NOT occur.
 
+#### Scenario: Register stores Argon2id password hash
+- **WHEN** `POST /auth/register` succeeds
+- **THEN** persisted user password material SHALL be stored as Argon2id hash format
+- **AND** plaintext password material SHALL NOT be persisted.
+
 #### Scenario: Register over threshold returns canonical throttle response
 - **WHEN** a client exceeds configured register limits within the active rate-limit window
 - **THEN** `POST /auth/register` SHALL return canonical `429` ProblemDetails
@@ -39,6 +44,15 @@ The backend MUST implement `POST /auth/login` validating credentials, returning 
 #### Scenario: Login invalid credentials
 - **WHEN** credentials are invalid
 - **THEN** the API SHALL return `401` as `ProblemDetails`
+
+#### Scenario: Login verifies credentials with Argon2id
+- **WHEN** `POST /auth/login` receives credentials for an existing user
+- **THEN** password verification SHALL use Argon2id hash verification against stored password hashes.
+
+#### Scenario: Non-Argon2id or malformed stored hash is rejected
+- **WHEN** stored password hash material is malformed or does not match supported Argon2id format
+- **THEN** login credential verification SHALL fail safely
+- **AND** the API SHALL return canonical invalid-credentials behavior.
 
 #### Scenario: Login password policy is enforced before credential verification
 - **WHEN** a login request includes a password that does not meet policy (min 8, uppercase, lowercase, number, special)

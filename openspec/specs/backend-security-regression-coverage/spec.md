@@ -15,6 +15,11 @@ The backend MUST maintain explicit regression coverage for the highest-risk auth
 - **WHEN** configured login threshold is exceeded within the active limiter window
 - **THEN** automated backend tests SHALL verify that further login attempts are blocked with canonical `429` behavior
 
+#### Scenario: Argon2id password hash verification path is covered
+- **WHEN** backend auth unit tests execute
+- **THEN** tests SHALL verify that valid Argon2id password hashes authenticate successfully
+- **AND** invalid or malformed hash material fails verification safely.
+
 #### Scenario: Negative transaction amount is covered
 - **WHEN** `POST /transactions` provides a negative `amount_cents`
 - **THEN** automated backend tests SHALL verify that the write is rejected with canonical money-validation `400` behavior enforced by money-domain validation

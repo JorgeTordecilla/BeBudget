@@ -793,6 +793,27 @@ def test_auth_lifecycle_and_204_logout():
         assert "Max-Age=0" in logout_cookie_header
 
 
+def test_login_rejects_malformed_stored_password_hash_with_canonical_unauthorized():
+    with TestClient(app) as client:
+        user = _register_user(client)
+
+        db = SessionLocal()
+        try:
+            row = db.query(User).filter(User.username == user["username"]).one()
+            row.password_hash = "invalid-format"
+            db.commit()
+        finally:
+            db.close()
+
+        response = client.post(
+            "/api/auth/login",
+            json={"username": user["username"], "password": user["password"]},
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        _assert_unauthorized_problem(response)
+        _assert_request_id_header_present(response)
+
+
 def test_register_rejects_password_that_violates_policy():
     with TestClient(app) as client:
         response = client.post(

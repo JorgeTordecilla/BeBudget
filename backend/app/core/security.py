@@ -1,28 +1,30 @@
 import hashlib
-import hmac
 import secrets
 import time
 
 import jwt
 from fastapi.responses import Response
 from jwt.exceptions import InvalidTokenError
+from passlib.context import CryptContext
 
 from app.core.config import settings
 
+_PASSWORD_CONTEXT = CryptContext(
+    schemes=["argon2"],
+    deprecated="auto",
+    argon2__type="ID",
+)
+
 
 def hash_password(password: str) -> str:
-    salt = secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 200_000)
-    return f"{salt}${digest.hex()}"
+    return _PASSWORD_CONTEXT.hash(password)
 
 
 def verify_password(password: str, stored: str) -> bool:
     try:
-        salt, hash_hex = stored.split("$", 1)
-    except ValueError:
+        return _PASSWORD_CONTEXT.verify(password, stored)
+    except Exception:
         return False
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 200_000)
-    return hmac.compare_digest(digest.hex(), hash_hex)
 
 
 def create_access_token(user_id: str) -> str:
