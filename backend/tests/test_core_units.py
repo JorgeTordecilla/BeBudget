@@ -450,6 +450,20 @@ def test_settings_uses_transactions_rate_limit_window(monkeypatch):
     assert settings.transactions_rate_limit_window_seconds == 90
 
 
+def test_settings_rejects_invalid_transactions_import_async_shutdown_timeout(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("TRANSACTIONS_IMPORT_ASYNC_SHUTDOWN_TIMEOUT_SECONDS", "0")
+    with pytest.raises(ValueError, match="TRANSACTIONS_IMPORT_ASYNC_SHUTDOWN_TIMEOUT_SECONDS"):
+        Settings()
+
+
+def test_settings_uses_transactions_import_async_shutdown_timeout(monkeypatch):
+    _set_minimum_config_env(monkeypatch)
+    monkeypatch.setenv("TRANSACTIONS_IMPORT_ASYNC_SHUTDOWN_TIMEOUT_SECONDS", "3.5")
+    settings = Settings()
+    assert settings.transactions_import_async_shutdown_timeout_seconds == 3.5
+
+
 def test_settings_rejects_invalid_rate_limit_trusted_proxies(monkeypatch):
     _set_minimum_config_env(monkeypatch)
     monkeypatch.setenv("RATE_LIMIT_TRUSTED_PROXIES", "not-a-cidr")

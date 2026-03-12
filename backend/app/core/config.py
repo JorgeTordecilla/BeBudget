@@ -31,6 +31,17 @@ def _env_positive_int(name: str, default: str, *, minimum: int = 1) -> int:
     return value
 
 
+def _env_positive_float(name: str, default: str, *, minimum: float = 0.0) -> float:
+    raw = os.getenv(name, default)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a number > {minimum}") from exc
+    if value <= minimum:
+        raise ValueError(f"{name} must be a number > {minimum}")
+    return value
+
+
 def _env_bounded_int(name: str, default: str, *, minimum: int, maximum: int) -> int:
     raw = os.getenv(name, default)
     try:
@@ -68,6 +79,7 @@ class Settings:
     transactions_import_async_terminal_ttl_seconds: int
     transactions_import_async_idempotency_ttl_seconds: int
     transactions_import_async_retained_terminal_cap: int
+    transactions_import_async_shutdown_timeout_seconds: float
     transactions_rate_limit_window_seconds: int
     auth_rate_limit_window_seconds: int
     auth_rate_limit_lock_enabled: bool
@@ -152,6 +164,10 @@ class Settings:
         self.transactions_import_async_retained_terminal_cap = _env_positive_int(
             "TRANSACTIONS_IMPORT_ASYNC_RETAINED_TERMINAL_CAP",
             "5000",
+        )
+        self.transactions_import_async_shutdown_timeout_seconds = _env_positive_float(
+            "TRANSACTIONS_IMPORT_ASYNC_SHUTDOWN_TIMEOUT_SECONDS",
+            "5.0",
         )
         self.transactions_rate_limit_window_seconds = _env_positive_int(
             "TRANSACTIONS_RATE_LIMIT_WINDOW_SECONDS",
@@ -248,6 +264,7 @@ class Settings:
             "transactions_import_async_terminal_ttl_seconds": self.transactions_import_async_terminal_ttl_seconds,
             "transactions_import_async_idempotency_ttl_seconds": self.transactions_import_async_idempotency_ttl_seconds,
             "transactions_import_async_retained_terminal_cap": self.transactions_import_async_retained_terminal_cap,
+            "transactions_import_async_shutdown_timeout_seconds": self.transactions_import_async_shutdown_timeout_seconds,
             "vapid_configured": bool(self.vapid_private_key and self.vapid_public_key and self.vapid_contact),
             "push_test_token_configured": bool(self.push_test_token),
         }

@@ -19,6 +19,11 @@ The backend MUST accept import requests without tying up API request threads for
 - **WHEN** a terminal import job exceeds configured retention and is evicted
 - **THEN** status lookup SHALL be treated as not available by the same canonical path used for unknown/non-owned jobs.
 
+#### Scenario: Worker startup and shutdown are tied to application lifespan
+- **WHEN** the API process starts and later enters shutdown lifecycle
+- **THEN** import workers SHALL be started and stopped through explicit lifecycle hooks
+- **AND** service termination SHALL NOT rely on daemon-thread implicit process kill behavior.
+
 ### Requirement: Backend enforces backpressure under high concurrency
 Import traffic spikes MUST degrade gracefully and keep core API available.
 

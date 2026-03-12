@@ -1555,6 +1555,90 @@ def _configure_async_import_jobs_for_test(
     monkeypatch.setattr(transactions_router, "_IMPORT_JOB_MANAGER", manager)
 
 
+def test_app_lifespan_starts_and_stops_import_workers(monkeypatch):
+    import app.main as app_main
+
+    calls: list[tuple[str, float | None]] = []
+    monkeypatch.setattr(
+        app_main,
+        "start_import_job_workers",
+        lambda: calls.append(("start", None)),
+    )
+    monkeypatch.setattr(
+        app_main,
+        "shutdown_import_job_workers",
+        lambda *, timeout_seconds=None: calls.append(("stop", timeout_seconds)),
+    )
+
+    with TestClient(app_main.app) as client:
+        response = client.get("/api/health")
+        assert response.status_code == 200
+
+    assert calls[0] == ("start", None)
+    assert calls[1][0] == "stop"
+    assert calls[1][1] == app_main.settings.transactions_import_async_shutdown_timeout_seconds
+
+
+def test_import_job_manager_shutdown_wakes_idle_workers_and_exits():
+    import app.routers.transactions as transactions_router
+
+    manager = transactions_router._ImportJobManager(
+        per_user_limit=3,
+        queue_limit=10,
+        worker_count=1,
+        terminal_ttl_seconds=3600,
+        idempotency_ttl_seconds=3600,
+        retained_terminal_cap=100,
+    )
+    manager.start_workers()
+    manager.shutdown(timeout_seconds=1)
+
+    assert manager._workers_started is False
+    assert manager._stop_requested is False
+    assert manager._workers == []
+
+
+def test_import_job_manager_shutdown_uses_bounded_join_for_non_terminating_worker(caplog):
+    import app.routers.transactions as transactions_router
+
+    class _FakeWorker:
+        def __init__(self, name: str):
+            self.name = name
+            self.join_timeouts: list[float | None] = []
+
+        def join(self, timeout: float | None = None) -> None:
+            self.join_timeouts.append(timeout)
+            time.sleep(0.01)
+
+        def is_alive(self) -> bool:
+            return True
+
+    manager = transactions_router._ImportJobManager(
+        per_user_limit=3,
+        queue_limit=10,
+        worker_count=0,
+        terminal_ttl_seconds=3600,
+        idempotency_ttl_seconds=3600,
+        retained_terminal_cap=100,
+    )
+    fake = _FakeWorker("fake-import-worker")
+    manager._workers_started = True
+    manager._workers = [fake]  # type: ignore[list-item]
+
+    started_at = time.perf_counter()
+    with caplog.at_level(logging.INFO, logger="app.import_jobs"):
+        manager.shutdown(timeout_seconds=0.05)
+    elapsed = time.perf_counter() - started_at
+
+    assert elapsed < 0.5
+    assert fake.join_timeouts
+    assert fake.join_timeouts[0] is not None
+    assert fake.join_timeouts[0] <= 0.05
+    assert manager._workers_started is True
+    assert manager._stop_requested is True
+    assert any("event=import_job_workers_shutdown" in record.getMessage() for record in caplog.records)
+
+
 def test_auth_login_rate_limit_exceeded_returns_canonical_429(monkeypatch):
     _configure_auth_rate_limit_for_test(monkeypatch, login_limit=1, refresh_limit=30, window_seconds=60)
 

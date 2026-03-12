@@ -6,6 +6,7 @@ import io
 from collections import deque
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from time import monotonic
 from threading import Condition, Lock, Thread
 from typing import Callable, Iterator, Literal
 from uuid import UUID, uuid4
@@ -266,15 +267,49 @@ class _ImportJobManager:
         self._idempotency_by_job: dict[str, set[tuple[str, str]]] = {}
         self._running = 0
         self._workers_started = False
+        self._workers: list[Thread] = []
+        self._stop_requested = False
 
     def start_workers(self) -> None:
         with self._condition:
-            if self._workers_started:
+            self._workers = [worker for worker in self._workers if worker.is_alive()]
+            if self._workers_started and self._workers:
                 return
+            self._stop_requested = False
             self._workers_started = True
             for index in range(self._worker_count):
-                thread = Thread(target=self._worker_loop, name=f"import-job-worker-{index + 1}", daemon=True)
+                thread = Thread(target=self._worker_loop, name=f"import-job-worker-{index + 1}", daemon=False)
                 thread.start()
+                self._workers.append(thread)
+
+    def shutdown(self, *, timeout_seconds: float = 5.0) -> None:
+        timeout = max(0.0, float(timeout_seconds))
+        with self._condition:
+            if not self._workers_started and not self._workers:
+                return
+            self._stop_requested = True
+            workers = list(self._workers)
+            self._condition.notify_all()
+
+        deadline = monotonic() + timeout
+        for worker in workers:
+            remaining = max(0.0, deadline - monotonic())
+            worker.join(timeout=remaining)
+
+        still_alive = [worker.name for worker in workers if worker.is_alive()]
+        with self._condition:
+            self._workers = [worker for worker in workers if worker.is_alive()]
+            self._workers_started = bool(self._workers)
+            if not self._workers:
+                self._stop_requested = False
+
+        _IMPORT_LOGGER.info(
+            "event=import_job_workers_shutdown requested=%s joined=%s alive=%s timeout_seconds=%s",
+            len(workers),
+            len(workers) - len(still_alive),
+            len(still_alive),
+            timeout,
+        )
 
     def _payload_digest(self, payload: TransactionImportRequest) -> str:
         raw = json.dumps(payload.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
@@ -383,6 +418,8 @@ class _ImportJobManager:
         with self._condition:
             now = self._now()
             self._cleanup_locked(now=now)
+            if self._stop_requested:
+                raise rate_limited_error("Import workers are shutting down, retry later", retry_after=1)
             if normalized_key:
                 lookup_key = (user_id, normalized_key)
                 idempotency_ref = self._idempotency.get(lookup_key)
@@ -458,9 +495,13 @@ class _ImportJobManager:
         while True:
             with self._condition:
                 self._cleanup_locked()
-                while not self._queue:
+                while not self._queue and not self._stop_requested:
                     self._condition.wait()
                     self._cleanup_locked()
+                if self._stop_requested and not self._queue:
+                    return
+                if not self._queue:
+                    continue
                 job_id = self._queue.popleft()
                 job = self._jobs.get(job_id)
                 if job is None:
@@ -535,8 +576,22 @@ _IMPORT_JOB_MANAGER = _ImportJobManager(
 )
 
 
-def _get_import_job_manager() -> _ImportJobManager:
+def start_import_job_workers() -> None:
     _IMPORT_JOB_MANAGER.start_workers()
+
+
+def shutdown_import_job_workers(*, timeout_seconds: float | None = None) -> None:
+    _IMPORT_JOB_MANAGER.shutdown(
+        timeout_seconds=(
+            settings.transactions_import_async_shutdown_timeout_seconds
+            if timeout_seconds is None
+            else timeout_seconds
+        )
+    )
+
+
+def _get_import_job_manager() -> _ImportJobManager:
+    start_import_job_workers()
     return _IMPORT_JOB_MANAGER
 
 

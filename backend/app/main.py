@@ -28,7 +28,11 @@ from app.routers.income_sources import router as income_sources_router
 from app.routers.push import router as push_router
 from app.routers.rollover import router as rollover_router
 from app.routers.savings import router as savings_router
-from app.routers.transactions import router as transactions_router
+from app.routers.transactions import (
+    router as transactions_router,
+    shutdown_import_job_workers,
+    start_import_job_workers,
+)
 
 logger = logging.getLogger("app.startup")
 readiness_logger = logging.getLogger("app.readiness")
@@ -51,7 +55,11 @@ async def lifespan(_app: FastAPI):
         safe["refresh_cookie_domain_configured"],
         safe["migrations_strict"],
     )
-    yield
+    start_import_job_workers()
+    try:
+        yield
+    finally:
+        shutdown_import_job_workers(timeout_seconds=settings.transactions_import_async_shutdown_timeout_seconds)
 
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)

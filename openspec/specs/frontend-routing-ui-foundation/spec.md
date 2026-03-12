@@ -4,11 +4,16 @@
 TBD - created by archiving change hu-fe-01-frontend-skeleton-routing-ui-system. Update Purpose after archive.
 ## Requirements
 ### Requirement: Frontend workspace bootstrap is standardized
-The system MUST provide a frontend project scaffold in `frontend/` using Vite + React + TypeScript with strict-mode-compatible defaults.
+The system MUST provide a frontend project scaffold in `frontend/` using Vite + React + TypeScript with strict-mode-compatible defaults, and the runtime entrypoint MUST fail fast with a clear bootstrap error when the required `#root` mount element is missing.
 
 #### Scenario: Frontend workspace is available in monorepo
 - **WHEN** developers inspect the monorepo after applying this change
 - **THEN** `frontend/` SHALL contain a runnable Vite React TypeScript project skeleton
+
+#### Scenario: Missing root mount element aborts bootstrap clearly
+- **WHEN** the frontend entrypoint initializes and `document.getElementById("root")` returns `null`
+- **THEN** the application SHALL stop before calling `ReactDOM.createRoot`
+- **AND** it SHALL raise a clear bootstrap error identifying the missing `#root` mount element
 
 ### Requirement: Public and private routes are explicitly separated
 Frontend routing MUST define public and private route boundaries with deterministic redirect behavior.
