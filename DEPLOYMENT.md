@@ -36,6 +36,12 @@ API responses enforce baseline browser-facing security headers:
 - `Cross-Origin-Opener-Policy: same-origin`
 - `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'`
 
+Fingerprinting hardening policy:
+
+- `Server` header must be suppressed at the service boundary.
+- `X-Powered-By` header must be suppressed at the service boundary.
+- Runtime and edge/proxy must both be configured to prevent reintroduction during platform changes.
+
 ### 1.2 Connectivity and readiness
 
 Assuming API base URL is `http://localhost:8000`:
@@ -55,6 +61,14 @@ Expected:
 ### 2.1 Apply application release
 
 Deploy the target app version/image using your platform workflow.
+
+If running Uvicorn directly, include header hardening flags:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-server-header
+```
+
+At edge/proxy level (Nginx/CDN/gateway), explicitly remove or overwrite `Server` and ensure `X-Powered-By` is not added.
 
 ### 2.2 Apply migrations
 

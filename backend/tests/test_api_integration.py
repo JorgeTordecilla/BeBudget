@@ -98,6 +98,8 @@ def _assert_security_headers_present(response):
         response.headers.get("content-security-policy")
         == "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
     )
+    assert "server" not in response.headers
+    assert "x-powered-by" not in response.headers
 
 
 def _register_user(client: TestClient):

@@ -123,7 +123,7 @@ Runtime configuration MUST enforce strict CORS origin policy in production envir
 - **THEN** runtime SHALL use that explicit allowlist for CORS enforcement
 
 ### Requirement: Security header policy is deterministic
-Runtime behavior MUST apply a consistent baseline security-header policy across API responses.
+Runtime behavior MUST apply a consistent baseline security-header policy across API responses and MUST suppress fingerprinting headers that disclose infrastructure identity at the service boundary.
 
 #### Scenario: Header policy is applied without endpoint-specific drift
 - **WHEN** API responses are emitted across different routers/status codes
@@ -132,6 +132,16 @@ Runtime behavior MUST apply a consistent baseline security-header policy across 
 #### Scenario: Header policy is documented for operations and support
 - **WHEN** deployment/operational documentation is reviewed
 - **THEN** it SHALL explicitly describe which security headers are enforced and why
+
+#### Scenario: Server fingerprinting header is suppressed
+- **WHEN** an API response is emitted from the service boundary
+- **THEN** the `Server` header SHALL be absent
+- **AND** if an upstream runtime/proxy would emit it by default, deployment configuration MUST override/suppress it.
+
+#### Scenario: Powered-by fingerprinting header is suppressed
+- **WHEN** an API response is emitted from the service boundary
+- **THEN** the `X-Powered-By` header SHALL be absent
+- **AND** runtime and edge configuration MUST prevent reintroduction during platform changes.
 
 ### Requirement: Bootstrap execution is environment-safe by default
 Runtime configuration MUST prevent bootstrap seeding in production unless explicitly enabled.
