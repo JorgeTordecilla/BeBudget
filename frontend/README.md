@@ -10,34 +10,36 @@ Use `.env.example` as the baseline.
 - `VITE_SENTRY_DSN` (optional): Sentry DSN for runtime error reporting.
 - Optional feature flags: `VITE_FEATURE_IMPORT`, `VITE_FEATURE_AUDIT`.
 
-## Netlify Production Checklist
+## Vercel Production Checklist
 
-1. Set Netlify environment variables:
+1. Set Vercel environment variables:
    - `VITE_API_BASE_URL=/api`
    - `VITE_APP_ENV=production`
-   - `API_PROXY_TARGET=https://<your-render-service>/api`
+   - `API_ORIGIN=https://<your-render-service>`
    - optional `VITE_SENTRY_DSN`
-2. Ensure Netlify config is versioned:
-   - `netlify.toml` defines build/publish, SPA redirect, and security headers.
-   - Build command generates `dist/_redirects` using `API_PROXY_TARGET`.
-   - Legacy fallback remains compatible via `public/_redirects`.
+2. Ensure Vercel config is versioned:
+   - `vercel.ts` defines rewrites and security headers.
+   - `/api` and `/api/:path*` rewrites are defined before SPA fallback.
+   - SPA fallback remains last: `/(.*) -> /index.html`.
 3. Validate deep-link refresh:
    - `/app/dashboard`
    - `/app/transactions`
    - `/app/budgets`
 4. Validate release metadata:
    - `VITE_RELEASE` is set from CI (commit SHA/tag).
+5. Ensure environment separation:
+   - Preview and Production must use distinct `API_ORIGIN` values as needed.
 
 ## Production Auth Requirements
 
 For refresh-cookie cross-site auth to work, backend configuration must satisfy:
 
-- CORS origin allowlist includes the Netlify frontend domain.
+- CORS origin allowlist includes the Vercel frontend domain.
 - `Access-Control-Allow-Credentials: true`.
 - Refresh cookie flags:
   - `HttpOnly`
   - `Secure`
-  - `SameSite=Lax` (when using Netlify `/api` same-origin proxy strategy)
+  - `SameSite=Lax` (when using Vercel `/api` same-origin rewrite strategy)
   - `Domain` omitted (host-only cookie)
 
 Frontend behavior:
@@ -47,9 +49,10 @@ Frontend behavior:
 
 ## Release Checklist (Operator)
 
-1. Confirm Netlify env vars:
+1. Confirm Vercel env vars:
    - `VITE_API_BASE_URL`
    - `VITE_APP_ENV=production`
+   - `API_ORIGIN=<https-origin-without-path>`
    - `VITE_RELEASE=<sha-or-tag>`
    - optional: `VITE_SENTRY_DSN`, feature flags
 2. Confirm CI quality checks are green:
@@ -63,7 +66,7 @@ Frontend behavior:
 5. Confirm error correlation:
    - `ProblemDetails` + `X-Request-Id` visible in UI error surfaces.
 6. Rollback pointer:
-   - redeploy previous Netlify release and restore prior env values.
+   - redeploy previous Vercel production release and restore prior env values.
 7. Use detailed checklist:
    - `docs/release-checklist.md`
 
@@ -78,7 +81,7 @@ Frontend behavior:
 3. Check rate limits:
    - On `429`, UI shows retry guidance and `Retry-After` when provided.
 4. Cross-site cookie mismatch:
-   - verify backend allowlist contains the exact Netlify origin
+   - verify backend allowlist contains the exact Vercel origin
    - verify `Access-Control-Allow-Credentials: true`
    - verify refresh cookie has `HttpOnly; Secure; SameSite=Lax; Path=/api/auth`
    - verify `REFRESH_COOKIE_DOMAIN` is empty/unset

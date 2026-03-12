@@ -2,26 +2,26 @@
 
 ## Environment
 
-- [ ] `VITE_API_BASE_URL=/api` (Netlify proxy path).
+- [ ] `VITE_API_BASE_URL=/api` (same-origin frontend API path).
 - [ ] `VITE_APP_ENV=production`.
-- [ ] `API_PROXY_TARGET=https://<render-service>/api`.
+- [ ] `API_ORIGIN=https://<render-service>` (origin only, no `/api` path).
 - [ ] `VITE_RELEASE` is set to commit SHA or tag.
 - [ ] Optional flags and telemetry DSN values are set intentionally.
+- [ ] Vercel Preview and Production env scopes are configured intentionally.
 
-## Netlify Deploy
+## Vercel Deploy
 
-- [ ] `netlify.toml` is present and includes build/publish configuration.
-- [ ] API proxy rule is present and ordered before SPA fallback:
-      `/api/* -> API_PROXY_TARGET/:splat (200, force=true)`.
-- [ ] Build command generated `dist/_redirects` using `API_PROXY_TARGET`.
-- [ ] SPA redirect fallback is active (`/* -> /index.html 200`).
+- [ ] `vercel.ts` is present and includes framework/output, rewrites, and headers.
+- [ ] API rewrites are present and ordered before SPA fallback:
+      `/api` and `/api/:path*` -> `${API_ORIGIN}/api...`.
+- [ ] SPA fallback rewrite is last (`/(.*) -> /index.html`).
 - [ ] Security headers are active (`nosniff`, `Referrer-Policy`, `Permissions-Policy`, CSP baseline).
 
 ## Cross-Site Auth Compatibility
 
 - [ ] Login from deployed frontend sets `bb_refresh` cookie.
 - [ ] Refresh rotates cookie and keeps session active.
-- [ ] Backend CORS allowlist contains exact Netlify origin.
+- [ ] Backend CORS allowlist contains exact Vercel origin.
 - [ ] Backend sends `Access-Control-Allow-Credentials: true`.
 - [ ] Render env `REFRESH_COOKIE_SAMESITE=lax`.
 - [ ] Render env `REFRESH_COOKIE_DOMAIN` is empty/unset.
@@ -45,5 +45,5 @@
 
 ## Rollback
 
-- [ ] Previous Netlify deploy is identified.
+- [ ] Previous Vercel production deploy is identified.
 - [ ] Rollback owner and command path are documented in release notes.
