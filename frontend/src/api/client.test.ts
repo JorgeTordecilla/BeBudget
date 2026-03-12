@@ -7,7 +7,7 @@ vi.mock("@/components/errors/problemToastStore", () => ({
   publishProblemToast
 }));
 
-import { createApiClient } from "@/api/client";
+import { createApiClient, resetPageLifecycleForTests } from "@/api/client";
 import { ApiProblemError, OfflineMutationError } from "@/api/errors";
 import type { User } from "@/api/types";
 
@@ -17,6 +17,7 @@ function makeUser(): User {
 
 describe("api client refresh behavior", () => {
   beforeEach(() => {
+    resetPageLifecycleForTests();
     vi.restoreAllMocks();
     publishProblemToast.mockClear();
     window.dispatchEvent(new Event("pageshow"));
@@ -413,6 +414,48 @@ describe("api client refresh behavior", () => {
 
     expect(response.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("can reset page lifecycle state between instances", async () => {
+    const firstFetch = vi.fn<typeof fetch>().mockResolvedValue(new Response("unauthorized", { status: 401 }));
+    const firstClient = createApiClient(
+      {
+        getAccessToken: () => "old-token",
+        setSession: () => undefined,
+        clearSession: () => undefined
+      },
+      { fetchImpl: firstFetch, baseUrl: "http://test.local/api", onAuthFailure: () => undefined }
+    );
+
+    window.dispatchEvent(new Event("beforeunload"));
+    const firstResponse = await firstClient.request("/protected", { method: "GET" });
+    expect(firstResponse.status).toBe(401);
+    expect(firstFetch).toHaveBeenCalledTimes(1);
+
+    resetPageLifecycleForTests();
+
+    const secondFetch = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          user: makeUser(),
+          access_token: "token-fresh",
+          access_token_expires_in: 900
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    const secondClient = createApiClient(
+      {
+        getAccessToken: () => null,
+        setSession: () => undefined,
+        clearSession: () => undefined
+      },
+      { fetchImpl: secondFetch, baseUrl: "http://test.local/api", onAuthFailure: () => undefined }
+    );
+
+    const refreshed = await secondClient.refresh();
+    expect(refreshed?.access_token).toBe("token-fresh");
+    expect(secondFetch).toHaveBeenCalledTimes(1);
   });
 
   it("throws on login failure and on me failure", async () => {
