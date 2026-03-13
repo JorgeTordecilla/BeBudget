@@ -65,7 +65,7 @@ backend\.venv\Scripts\python.exe tools\generate_sdks.py --check
 
 Salidas:
 - `sdk/typescript/src/`
-- `sdk/python/budgetbuddy_sdk/`
+- `sdk/python/bebudget_sdk/`
 
 ## Flujo OpenSpec
 - Cambios activos: `openspec/changes/<change-name>/`

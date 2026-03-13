@@ -4,8 +4,8 @@ import { downloadBlob, resolveCsvFilename } from "@/utils/download";
 
 describe("download utils", () => {
   it("resolves filename from content-disposition utf8", () => {
-    const name = resolveCsvFilename("attachment; filename*=UTF-8''budgetbuddy-export.csv");
-    expect(name).toBe("budgetbuddy-export.csv");
+    const name = resolveCsvFilename("attachment; filename*=UTF-8''bebudget-export.csv");
+    expect(name).toBe("bebudget-export.csv");
   });
 
   it("resolves quoted filename", () => {
@@ -16,7 +16,7 @@ describe("download utils", () => {
   it("falls back to deterministic timestamp format", () => {
     const now = new Date("2026-02-27T15:08:00Z");
     const name = resolveCsvFilename(null, now);
-    expect(name).toMatch(/^budgetbuddy-transactions-\d{8}-\d{4}\.csv$/);
+    expect(name).toMatch(/^bebudget-transactions-\d{8}-\d{4}\.csv$/);
   });
 
   it("downloads blob through object URL and anchor click", () => {

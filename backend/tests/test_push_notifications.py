@@ -134,7 +134,7 @@ def test_send_push_returns_false_on_410(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "pywebpush", types.SimpleNamespace(WebPushException=_WebPushException, webpush=_webpush))
     monkeypatch.setattr(settings, "vapid_private_key", "private")
-    monkeypatch.setattr(settings, "vapid_contact", "mailto:dev@budgetbuddy.app")
+    monkeypatch.setattr(settings, "vapid_contact", "mailto:dev@bebudget.app")
 
     subscription = types.SimpleNamespace(endpoint="https://push.example/subscriptions/device-003", p256dh="k1", auth="k2")
     assert send_push(subscription, {"title": "hello"}) is False

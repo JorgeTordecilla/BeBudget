@@ -58,7 +58,7 @@ describe("push api wrappers", () => {
   it("throws when vapid endpoint fails", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({
-        type: "https://budgetbuddy.app/problems/push-vapid-key-failed",
+        type: "https://api.bebudget.dev/problems/push-vapid-key-failed",
         title: "Push VAPID key failed",
         status: 500,
         detail: "failed",
@@ -76,7 +76,7 @@ describe("push api wrappers", () => {
   it("throws when subscribe fails", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({
-        type: "https://budgetbuddy.app/problems/push-subscribe-failed",
+        type: "https://api.bebudget.dev/problems/push-subscribe-failed",
         title: "Push subscribe failed",
         status: 400,
         detail: "invalid",
@@ -99,7 +99,7 @@ describe("push api wrappers", () => {
   it("throws when unsubscribe fails", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({
-        type: "https://budgetbuddy.app/problems/push-unsubscribe-failed",
+        type: "https://api.bebudget.dev/problems/push-unsubscribe-failed",
         title: "Push unsubscribe failed",
         status: 401,
         detail: "unauthorized",

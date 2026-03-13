@@ -29,17 +29,13 @@ Fail-fast rules already enforced by startup:
 - `REFRESH_COOKIE_SAMESITE=lax` is the recommended production baseline
 - `REFRESH_COOKIE_SAMESITE=none` still requires `REFRESH_COOKIE_SECURE=true`
 - CORS remains credentials-enabled with explicit allowlist; exposed headers are limited to `X-Request-Id` and `Retry-After`
-- Runtime accepts legacy `BUDGETBUDDY_CORS_ORIGINS` as temporary alias, but `BEBUDGET_CORS_ORIGINS` is canonical.
+- Runtime requires canonical `BEBUDGET_CORS_ORIGINS` (legacy aliases are no longer supported).
 
 ### 1.4 Rebrand migration notes (Phase 2)
 
 - Canonical success media type: `application/vnd.bebudget.v1+json`.
 - Canonical problem namespace: `https://api.bebudget.dev/problems/*`.
-- Legacy compatibility:
-  - Requests using `application/vnd.budgetbuddy.v1+json` are still accepted during migration window.
-  - Legacy env key `BUDGETBUDDY_CORS_ORIGINS` is still read when canonical key is absent.
-- Planned removal timeline:
-  - Remove legacy media-type/env aliases after client/operator migration window is closed.
+- Legacy compatibility: removed. Only canonical BeBudget contract identifiers are supported.
 
 Push notes:
 

@@ -8,7 +8,7 @@ function fallbackFilename(now: Date): string {
   const dd = pad2(now.getDate());
   const hh = pad2(now.getHours());
   const min = pad2(now.getMinutes());
-  return `budgetbuddy-transactions-${yyyy}${mm}${dd}-${hh}${min}.csv`;
+  return `bebudget-transactions-${yyyy}${mm}${dd}-${hh}${min}.csv`;
 }
 
 export function resolveCsvFilename(contentDisposition: string | null, now = new Date()): string {

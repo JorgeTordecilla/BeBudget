@@ -62,7 +62,7 @@ function createSwGlobal() {
     }),
     registration: { showNotification },
     clients: { matchAll, openWindow },
-    location: { origin: "https://budgetbuddy.test" },
+    location: { origin: "https://bebudget.test" },
     skipWaiting
   };
 
@@ -140,7 +140,7 @@ describe("service worker handlers", () => {
 
     const focus = vi.fn().mockResolvedValue(undefined);
     const navigate = vi.fn().mockResolvedValue(undefined);
-    matchAll.mockResolvedValueOnce([{ url: "https://budgetbuddy.test/app/dashboard", focus, navigate }]);
+    matchAll.mockResolvedValueOnce([{ url: "https://bebudget.test/app/dashboard", focus, navigate }]);
 
     const close = vi.fn();
     const waitUntil = vi.fn();
@@ -164,7 +164,7 @@ describe("service worker handlers", () => {
 
     const focus = vi.fn().mockResolvedValue(undefined);
     const navigate = vi.fn().mockResolvedValue(undefined);
-    matchAll.mockResolvedValueOnce([{ url: "https://budgetbuddy.test/app/dashboard", focus, navigate }]);
+    matchAll.mockResolvedValueOnce([{ url: "https://bebudget.test/app/dashboard", focus, navigate }]);
 
     const close = vi.fn();
     const waitUntil = vi.fn();
@@ -188,7 +188,7 @@ describe("service worker handlers", () => {
 
     const focus = vi.fn().mockResolvedValue(undefined);
     const navigate = vi.fn().mockResolvedValue(undefined);
-    matchAll.mockResolvedValueOnce([{ url: "https://budgetbuddy.test/app/dashboard", focus, navigate }]);
+    matchAll.mockResolvedValueOnce([{ url: "https://bebudget.test/app/dashboard", focus, navigate }]);
 
     const close = vi.fn();
     const waitUntil = vi.fn();
