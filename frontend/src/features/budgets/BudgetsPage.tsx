@@ -24,8 +24,8 @@ import { Card, CardContent } from "@/ui/card";
 import { currentIsoMonth } from "@/utils/dates";
 import { centsToInputValue, formatCents, parseMoneyInputToCents } from "@/utils/money";
 
-const BUDGET_MONTH_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/budget-month-invalid";
-const MONEY_AMOUNT_PREFIX = "https://api.budgetbuddy.dev/problems/money-amount-";
+const BUDGET_MONTH_INVALID_TYPE = "https://api.bebudget.dev/problems/budget-month-invalid";
+const MONEY_AMOUNT_PREFIX = "https://api.bebudget.dev/problems/money-amount-";
 
 type BudgetFieldErrors = {
   month?: string;
@@ -419,3 +419,4 @@ export default function BudgetsPage() {
     </section>
   );
 }
+

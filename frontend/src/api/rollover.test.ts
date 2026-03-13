@@ -29,7 +29,7 @@ describe("rollover api wrappers", () => {
 
     const firstCall = fetchMock.mock.calls[0];
     expect(String(firstCall?.[0])).toContain("/rollover/preview?month=2026-02");
-    expect(new Headers(firstCall?.[1]?.headers).get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(new Headers(firstCall?.[1]?.headers).get("Accept")).toBe("application/vnd.bebudget.v1+json");
   });
 
   it("applies rollover and propagates ProblemDetails errors", async () => {
@@ -49,7 +49,7 @@ describe("rollover api wrappers", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            type: "https://api.budgetbuddy.dev/problems/rollover-no-surplus",
+            type: "https://api.bebudget.dev/problems/rollover-no-surplus",
             title: "Rollover has no surplus",
             status: 422,
           }),
@@ -74,3 +74,5 @@ describe("rollover api wrappers", () => {
     ).rejects.toMatchObject({ status: 422 });
   });
 });
+
+

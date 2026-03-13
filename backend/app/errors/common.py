@@ -4,11 +4,11 @@ NOT_FOUND_TYPE = "about:blank"
 NOT_FOUND_TITLE = "Not Found"
 NOT_FOUND_STATUS = 404
 
-INVALID_CURSOR_TYPE = "https://api.budgetbuddy.dev/problems/invalid-cursor"
+INVALID_CURSOR_TYPE = "https://api.bebudget.dev/problems/invalid-cursor"
 INVALID_CURSOR_TITLE = "Invalid cursor"
 INVALID_CURSOR_STATUS = 400
 
-INVALID_DATE_RANGE_TYPE = "https://api.budgetbuddy.dev/problems/invalid-date-range"
+INVALID_DATE_RANGE_TYPE = "https://api.bebudget.dev/problems/invalid-date-range"
 INVALID_DATE_RANGE_TITLE = "Invalid date range"
 INVALID_DATE_RANGE_STATUS = 400
 
@@ -38,3 +38,4 @@ def invalid_date_range_error(detail: str | None = None) -> "APIError":
         detail=detail,
         type_=INVALID_DATE_RANGE_TYPE,
     )
+

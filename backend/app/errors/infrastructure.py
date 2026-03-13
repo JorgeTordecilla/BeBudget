@@ -1,10 +1,10 @@
 from app.errors._helpers import make_api_error
 
-RATE_LIMITED_TYPE = "https://api.budgetbuddy.dev/problems/rate-limited"
+RATE_LIMITED_TYPE = "https://api.bebudget.dev/problems/rate-limited"
 RATE_LIMITED_TITLE = "Too Many Requests"
 RATE_LIMITED_STATUS = 429
 
-SERVICE_UNAVAILABLE_TYPE = "https://api.budgetbuddy.dev/problems/service-unavailable"
+SERVICE_UNAVAILABLE_TYPE = "https://api.bebudget.dev/problems/service-unavailable"
 SERVICE_UNAVAILABLE_TITLE = "Service Unavailable"
 SERVICE_UNAVAILABLE_STATUS = 503
 
@@ -27,3 +27,4 @@ def service_unavailable_error(detail: str | None = None) -> "APIError":
         detail=detail,
         type_=SERVICE_UNAVAILABLE_TYPE,
     )
+

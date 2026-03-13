@@ -258,7 +258,7 @@ describe("TransactionsImportPage", () => {
     vi.mocked(createAccount).mockRejectedValueOnce(
       new ApiProblemError(
         {
-          type: "https://api.budgetbuddy.dev/problems/account-name-conflict",
+          type: "https://api.bebudget.dev/problems/account-name-conflict",
           title: "Account name conflict",
           status: 409,
           detail: "Account already exists"
@@ -318,3 +318,4 @@ describe("TransactionsImportPage", () => {
     expect(screen.getByRole("link", { name: "Back to transactions" })).toHaveAttribute("href", "/app/transactions");
   });
 });
+

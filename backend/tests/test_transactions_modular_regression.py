@@ -3,7 +3,7 @@ import uuid
 
 from app.main import app
 
-VENDOR = "application/vnd.budgetbuddy.v1+json"
+VENDOR = "application/vnd.bebudget.v1+json"
 
 
 def _register_user(client: TestClient):
@@ -130,3 +130,4 @@ def test_transactions_import_export_contract_regression_after_modular_split():
         assert exported.status_code == 200
         assert exported.headers["content-type"].startswith("text/csv")
         assert "date,type,account,category,amount_cents,merchant,note,mood,is_impulse" in exported.text.splitlines()[0]
+

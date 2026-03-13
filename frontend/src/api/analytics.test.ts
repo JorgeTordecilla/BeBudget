@@ -58,7 +58,7 @@ describe("analytics api wrappers", () => {
     expect(String(secondCall?.[0])).toContain("/analytics/by-category?from=2026-02-01&to=2026-02-28");
     expect(String(thirdCall?.[0])).toContain("/analytics/income?from=2026-02-01&to=2026-02-28");
     expect(String(fourthCall?.[0])).toContain("/analytics/impulse-summary?from=2026-02-01&to=2026-02-28");
-    expect(new Headers(firstCall?.[1]?.headers).get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(new Headers(firstCall?.[1]?.headers).get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(new Headers(firstCall?.[1]?.headers).get("Authorization")).toBe("Bearer access-123");
     expect(firstCall?.[1]?.credentials).toBe("include");
   });
@@ -129,3 +129,4 @@ describe("analytics api wrappers", () => {
     } satisfies Partial<ApiProblemError & { retryAfter: string }>);
   });
 });
+

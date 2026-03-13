@@ -6,7 +6,7 @@ describe("mapTransactionProblem", () => {
   it("maps category-type-mismatch to deterministic detail", () => {
     const mapped = mapTransactionProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/category-type-mismatch",
+        type: "https://api.bebudget.dev/problems/category-type-mismatch",
         title: "Conflict",
         status: 409
       },
@@ -21,7 +21,7 @@ describe("mapTransactionProblem", () => {
   it("maps fallback title from status when title is empty", () => {
     const mapped = mapTransactionProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/not-acceptable",
+        type: "https://api.bebudget.dev/problems/not-acceptable",
         title: "",
         status: 406
       },
@@ -41,7 +41,7 @@ describe("mapTransactionProblem", () => {
   it("maps archived account and category details", () => {
     const accountMapped = mapTransactionProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/account-archived",
+        type: "https://api.bebudget.dev/problems/account-archived",
         title: "Account archived",
         status: 409
       },
@@ -50,7 +50,7 @@ describe("mapTransactionProblem", () => {
     );
     const categoryMapped = mapTransactionProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/category-archived",
+        type: "https://api.bebudget.dev/problems/category-archived",
         title: "Category archived",
         status: 409
       },
@@ -80,7 +80,7 @@ describe("mapBudgetProblem", () => {
   it("maps budget duplicate to deterministic detail", () => {
     const mapped = mapBudgetProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/budget-duplicate",
+        type: "https://api.bebudget.dev/problems/budget-duplicate",
         title: "Budget already exists",
         status: 409
       },
@@ -94,7 +94,7 @@ describe("mapBudgetProblem", () => {
   it("maps category archived and not-owned conflicts to deterministic detail", () => {
     const archived = mapBudgetProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/category-archived",
+        type: "https://api.bebudget.dev/problems/category-archived",
         title: "Category is archived",
         status: 409
       },
@@ -103,7 +103,7 @@ describe("mapBudgetProblem", () => {
     );
     const notOwned = mapBudgetProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/category-not-owned",
+        type: "https://api.bebudget.dev/problems/category-not-owned",
         title: "Category not owned",
         status: 409
       },
@@ -118,7 +118,7 @@ describe("mapBudgetProblem", () => {
   it("maps budget month invalid and money amount errors", () => {
     const monthInvalid = mapBudgetProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/budget-month-invalid",
+        type: "https://api.bebudget.dev/problems/budget-month-invalid",
         title: "",
         status: 400
       },
@@ -127,7 +127,7 @@ describe("mapBudgetProblem", () => {
     );
     const moneyInvalid = mapBudgetProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/money-amount-out-of-range",
+        type: "https://api.bebudget.dev/problems/money-amount-out-of-range",
         title: "",
         status: 400
       },
@@ -158,7 +158,7 @@ describe("mapAnalyticsProblem", () => {
   it("maps invalid-date-range to deterministic detail", () => {
     const mapped = mapAnalyticsProblem(
       {
-        type: "https://api.budgetbuddy.dev/problems/invalid-date-range",
+        type: "https://api.bebudget.dev/problems/invalid-date-range",
         title: "",
         status: 400
       },
@@ -176,3 +176,4 @@ describe("mapAnalyticsProblem", () => {
     expect(mapAnalyticsProblem(null, 429, "Failed").title).toBe("Too Many Requests");
   });
 });
+

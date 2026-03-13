@@ -1,3 +1,3 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
-export const SPEC_SHA256 = 'c24c2a234d0155910e7daec46257e669b2565532d71cc95d84c23ac7ab9e4df5';
+export const SPEC_SHA256 = 'a8222dc57383f30508cb423e46f3761802b63c9b8b9ce009281fcdad55f15f2f';
 export * from './client';

@@ -30,7 +30,7 @@ describe("budgets api wrappers", () => {
     const call = fetchMock.mock.calls[0];
     expect(String(call?.[0])).toContain("/budgets?from=2026-02&to=2026-04");
     const headers = new Headers(call?.[1]?.headers);
-    expect(headers.get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(headers.get("Authorization")).toBe("Bearer access-123");
     expect(call?.[1]?.credentials).toBe("include");
   });
@@ -102,7 +102,7 @@ describe("budgets api wrappers", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/budget-duplicate",
+          type: "https://api.bebudget.dev/problems/budget-duplicate",
           title: "Budget already exists",
           status: 409,
           detail: "A budget already exists for this month and category."
@@ -157,3 +157,5 @@ describe("budgets api wrappers", () => {
     await expect(archiveBudget(client, "b1")).rejects.toMatchObject({ status: 403 });
   });
 });
+
+

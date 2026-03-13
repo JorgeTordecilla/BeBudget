@@ -1,7 +1,6 @@
 {
-  "generator_name": "budgetbuddy-ts-sdkgen",
+  "generator_name": "bebudget-ts-sdkgen",
   "generator_version": "1.0.0",
   "output_dir": "sdk/typescript",
   "entrypoint": "src/index.ts"
 }
-

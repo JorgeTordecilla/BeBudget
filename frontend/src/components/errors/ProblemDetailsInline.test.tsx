@@ -15,7 +15,7 @@ describe("ProblemDetailsInline", () => {
         error={
           new ApiProblemError(
             {
-              type: "https://api.budgetbuddy.dev/problems/forbidden",
+              type: "https://api.bebudget.dev/problems/forbidden",
               title: "Forbidden",
               status: 403
             },
@@ -34,3 +34,4 @@ describe("ProblemDetailsInline", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
+

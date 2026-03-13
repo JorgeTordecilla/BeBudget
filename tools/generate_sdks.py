@@ -60,7 +60,7 @@ def _ts_client(spec_hash: str, ts_cfg: dict, ops: list[Operation]) -> str:
         "  defaultHeaders?: Record<string, string>;",
         "}",
         "",
-        "export class BudgetBuddyClient {",
+        "export class BeBudgetClient {",
         "  private readonly baseUrl: string;",
         "  private readonly defaultHeaders: Record<string, string>;",
         "",
@@ -72,7 +72,7 @@ def _ts_client(spec_hash: str, ts_cfg: dict, ops: list[Operation]) -> str:
         "  private async request(method: HttpMethod, path: string, body?: JsonValue, headers?: Record<string, string>): Promise<Response> {",
         "    const finalHeaders: Record<string, string> = { ...this.defaultHeaders, ...(headers ?? {}) };",
         "    if (body !== undefined && !finalHeaders['content-type']) {",
-        "      finalHeaders['content-type'] = 'application/vnd.budgetbuddy.v1+json';",
+        "      finalHeaders['content-type'] = 'application/vnd.bebudget.v1+json';",
         "    }",
         "    const res = await fetch(`${this.baseUrl}${path}`, {",
         "      method,",
@@ -96,6 +96,8 @@ def _ts_client(spec_hash: str, ts_cfg: dict, ops: list[Operation]) -> str:
 
     lines.append("}")
     lines.append("")
+    lines.append("export { BeBudgetClient as BudgetBuddyClient };")
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -116,7 +118,7 @@ def _py_client(spec_hash: str, py_cfg: dict, ops: list[Operation]) -> str:
         "",
         "",
         "@dataclass(slots=True)",
-        "class BudgetBuddyClient:",
+        "class BeBudgetClient:",
         "    base_url: str",
         "    default_headers: dict[str, str] = field(default_factory=dict)",
         "",
@@ -127,7 +129,7 @@ def _py_client(spec_hash: str, py_cfg: dict, ops: list[Operation]) -> str:
         "        data = None",
         "        if body is not None:",
         "            data = json.dumps(body).encode('utf-8')",
-        "            all_headers.setdefault('content-type', 'application/vnd.budgetbuddy.v1+json')",
+        "            all_headers.setdefault('content-type', 'application/vnd.bebudget.v1+json')",
         "        req = Request(f\"{self.base_url.rstrip('/')}\" + path, data=data, method=method, headers=all_headers)",
         "        with urlopen(req) as response:  # nosec B310 - expected SDK HTTP operation",
         "            return response.status, response.read()",
@@ -149,13 +151,14 @@ def _py_client(spec_hash: str, py_cfg: dict, ops: list[Operation]) -> str:
 def _py_init(spec_hash: str) -> str:
     return "\n".join(
         [
-            '"""Generated BudgetBuddy Python SDK."""',
+            '"""Generated BeBudget Python SDK."""',
             "",
-            'from .client import BudgetBuddyClient',
+            'from .client import BeBudgetClient',
+            "BudgetBuddyClient = BeBudgetClient",
             "",
             f'SPEC_SHA256 = "{spec_hash}"',
             "",
-            '__all__ = ["BudgetBuddyClient", "SPEC_SHA256"]',
+            '__all__ = ["BeBudgetClient", "BudgetBuddyClient", "SPEC_SHA256"]',
             "",
         ]
     )
@@ -261,4 +264,5 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
+
 

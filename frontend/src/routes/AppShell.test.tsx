@@ -291,6 +291,8 @@ describe("AppShell", () => {
               <Route path="accounts" element={<div>Accounts view</div>} />
               <Route path="categories" element={<div>Categories view</div>} />
               <Route path="income-sources" element={<div>Income Sources view</div>} />
+              <Route path="bills" element={<div>Bills view</div>} />
+              <Route path="savings" element={<div>Savings view</div>} />
             </Route>
           </Routes>
         </MemoryRouter>
@@ -308,6 +310,83 @@ describe("AppShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "More" }));
     fireEvent.click(screen.getByRole("link", { name: "Income Sources" }));
     expect(await screen.findByText("Income Sources view")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(screen.getByRole("link", { name: "Bills" }));
+    expect(await screen.findByText("Bills view")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(screen.getByRole("link", { name: "Savings" }));
+    expect(await screen.findByText("Savings view")).toBeInTheDocument();
+  });
+
+  it("prevents context menu and handles touch-focus events on mobile overflow controls", async () => {
+    setupModalDataMocks();
+    renderShellAt(375);
+
+    const moreButton = screen.getByRole("button", { name: "More" });
+    const moreContext = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    moreButton.dispatchEvent(moreContext);
+    expect(moreContext.defaultPrevented).toBe(true);
+    fireEvent.focus(moreButton);
+    fireEvent.pointerDown(moreButton);
+
+    fireEvent.click(moreButton);
+    const accountsLink = await screen.findByRole("link", { name: "Accounts" });
+    const logoutButton = screen.getByRole("button", { name: "Logout" });
+
+    const linkContext = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    accountsLink.dispatchEvent(linkContext);
+    expect(linkContext.defaultPrevented).toBe(true);
+    fireEvent.focus(accountsLink);
+    fireEvent.pointerDown(accountsLink);
+
+    const logoutContext = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    logoutButton.dispatchEvent(logoutContext);
+    expect(logoutContext.defaultPrevented).toBe(true);
+    fireEvent.focus(logoutButton);
+    fireEvent.pointerDown(logoutButton);
+  });
+
+  it("logs out from mobile overflow menu and navigates to login", async () => {
+    setupModalDataMocks();
+    const logout = vi.fn(async () => undefined);
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 375
+    });
+    window.dispatchEvent(new Event("resize"));
+    renderWithQueryClient(
+      <AuthContext.Provider
+        value={{
+          apiClient: apiClientStub,
+          user: { id: "u1", username: "demo", currency_code: "USD" },
+          accessToken: "token",
+          isAuthenticated: true,
+          isBootstrapping: false,
+          login: async () => undefined,
+          register: async () => undefined,
+          logout,
+          bootstrapSession: async () => true
+        }}
+      >
+        <MemoryRouter initialEntries={["/app/dashboard"]}>
+          <Routes>
+            <Route path="/app" element={<AppShell />}>
+              <Route path="dashboard" element={<div>Dashboard view</div>} />
+            </Route>
+            <Route path="/login" element={<div>Login page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Logout" }));
+
+    await waitFor(() => expect(screen.getByText("Login page")).toBeInTheDocument());
+    expect(logout).toHaveBeenCalledTimes(1);
   });
 
   it("reflows shell controls when crossing mobile to tablet breakpoint", () => {
@@ -468,7 +547,7 @@ describe("AppShell", () => {
     vi.mocked(listAccounts)
       .mockRejectedValueOnce(
         new ApiProblemError(403, {
-          type: "https://api.budgetbuddy.dev/problems/forbidden",
+          type: "https://api.bebudget.dev/problems/forbidden",
           title: "Forbidden",
           status: 403,
           detail: "Not allowed"
@@ -746,3 +825,4 @@ describe("AppShell", () => {
     expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
   });
 });
+

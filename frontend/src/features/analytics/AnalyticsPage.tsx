@@ -185,7 +185,7 @@ export default function AnalyticsPage() {
 
   const hasInvalidDateRangeError =
     combinedError instanceof ApiProblemError &&
-    combinedError.problem.type === "https://api.budgetbuddy.dev/problems/invalid-date-range";
+    combinedError.problem.type === "https://api.bebudget.dev/problems/invalid-date-range";
   const isLoading = monthQuery.isLoading || categoryQuery.isLoading;
 
   return (
@@ -411,3 +411,4 @@ export default function AnalyticsPage() {
     </section>
   );
 }
+

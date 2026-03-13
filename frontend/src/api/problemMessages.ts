@@ -1,13 +1,13 @@
 import type { ProblemDetails } from "@/api/types";
 
-const CATEGORY_TYPE_MISMATCH_TYPE = "https://api.budgetbuddy.dev/problems/category-type-mismatch";
-const ACCOUNT_ARCHIVED_TYPE = "https://api.budgetbuddy.dev/problems/account-archived";
-const CATEGORY_ARCHIVED_TYPE = "https://api.budgetbuddy.dev/problems/category-archived";
-const BUDGET_DUPLICATE_TYPE = "https://api.budgetbuddy.dev/problems/budget-duplicate";
-const BUDGET_MONTH_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/budget-month-invalid";
-const CATEGORY_NOT_OWNED_TYPE = "https://api.budgetbuddy.dev/problems/category-not-owned";
-const MONEY_AMOUNT_PREFIX = "https://api.budgetbuddy.dev/problems/money-amount-";
-const INVALID_DATE_RANGE_TYPE = "https://api.budgetbuddy.dev/problems/invalid-date-range";
+const CATEGORY_TYPE_MISMATCH_TYPE = "https://api.bebudget.dev/problems/category-type-mismatch";
+const ACCOUNT_ARCHIVED_TYPE = "https://api.bebudget.dev/problems/account-archived";
+const CATEGORY_ARCHIVED_TYPE = "https://api.bebudget.dev/problems/category-archived";
+const BUDGET_DUPLICATE_TYPE = "https://api.bebudget.dev/problems/budget-duplicate";
+const BUDGET_MONTH_INVALID_TYPE = "https://api.bebudget.dev/problems/budget-month-invalid";
+const CATEGORY_NOT_OWNED_TYPE = "https://api.bebudget.dev/problems/category-not-owned";
+const MONEY_AMOUNT_PREFIX = "https://api.bebudget.dev/problems/money-amount-";
+const INVALID_DATE_RANGE_TYPE = "https://api.bebudget.dev/problems/invalid-date-range";
 
 const STATUS_FALLBACK_TITLE: Record<number, string> = {
   400: "Invalid request",
@@ -117,3 +117,4 @@ export function mapAnalyticsProblem(problem: ProblemDetails | null, status: numb
     title: normalized.title || STATUS_FALLBACK_TITLE[normalized.status] || fallbackTitle
   };
 }
+

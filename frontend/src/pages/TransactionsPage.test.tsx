@@ -289,7 +289,7 @@ describe("TransactionsPage", () => {
   it("shows specific 409 mismatch message", async () => {
     vi.mocked(updateTransaction).mockRejectedValueOnce(
       new ApiProblemError(409, {
-        type: "https://api.budgetbuddy.dev/problems/category-type-mismatch",
+        type: "https://api.bebudget.dev/problems/category-type-mismatch",
         title: "Category type mismatch",
         status: 409
       })
@@ -712,7 +712,7 @@ describe("TransactionsPage", () => {
   it("shows retry-after guidance when export returns 429", async () => {
     vi.mocked(exportTransactionsCsv).mockRejectedValueOnce(
       new ApiProblemError(429, {
-        type: "https://api.budgetbuddy.dev/problems/rate-limited",
+        type: "https://api.bebudget.dev/problems/rate-limited",
         title: "Too Many Requests",
         status: 429,
         detail: "Too many requests. Try again in 30 seconds."
@@ -727,3 +727,4 @@ describe("TransactionsPage", () => {
     expect(await screen.findByText("Rate limited. Try again later.")).toBeInTheDocument();
   });
 });
+

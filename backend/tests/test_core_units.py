@@ -260,8 +260,8 @@ def test_previous_month_yyyy_mm_rejects_invalid_input(month):
 
 def test_dependency_guards_and_current_user_paths(monkeypatch):
     assert _accepts_vendor_or_problem("*/*")
-    assert _accepts_vendor_or_problem("application/vnd.budgetbuddy.v1+json")
-    assert not _accepts_vendor_or_problem("application/vnd.budgetbuddy.v1+json;q=0")
+    assert _accepts_vendor_or_problem("application/vnd.bebudget.v1+json")
+    assert not _accepts_vendor_or_problem("application/vnd.bebudget.v1+json;q=0")
     assert not _accepts_vendor_or_problem("application/xml")
 
     # Path ignored (outside API).
@@ -319,7 +319,7 @@ def test_api_error_logging_includes_structured_operational_fields(caplog):
             status=401,
             title="Unauthorized",
             detail="Bearer abc.def.ghi",
-            type_="https://api.budgetbuddy.dev/problems/unauthorized",
+            type_="https://api.bebudget.dev/problems/unauthorized",
         )
 
     with TestClient(app) as client, caplog.at_level(logging.WARNING, logger="app.errors"):
@@ -332,7 +332,7 @@ def test_api_error_logging_includes_structured_operational_fields(caplog):
     assert any("request_id=req-unit-001" in message for message in messages)
     assert any("path=/boom" in message for message in messages)
     assert any("status=401" in message for message in messages)
-    assert any("problem_type=https://api.budgetbuddy.dev/problems/unauthorized" in message for message in messages)
+    assert any("problem_type=https://api.bebudget.dev/problems/unauthorized" in message for message in messages)
 
 
 def test_settings_fail_fast_for_missing_critical_database_url(monkeypatch):
@@ -1369,3 +1369,5 @@ def test_import_job_manager_idempotency_conflict_on_payload_mismatch():
     with pytest.raises(APIError) as exc:
         manager.submit(user_id="user-1", payload=second, idempotency_key="same")
     assert exc.value.status == 409
+
+

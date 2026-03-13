@@ -14,7 +14,7 @@ from app.db import SessionLocal
 from app.models import Account, Bill, Category, PushSubscription, User
 from app.cli import send_bill_reminders as reminders_cli
 
-VENDOR = "application/vnd.budgetbuddy.v1+json"
+VENDOR = "application/vnd.bebudget.v1+json"
 
 
 def _register_user(client: TestClient) -> dict[str, str]:
@@ -289,3 +289,4 @@ def test_upsert_subscription_uses_sqlite_fallback_branch(monkeypatch):
     assert updated.user_id == "user-3"
     assert updated.p256dh == "p-key-updated"
     assert updated.auth == "a-key-updated"
+

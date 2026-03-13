@@ -34,7 +34,7 @@ In production, startup validation MUST reject insecure runtime combinations.
 - **THEN** startup SHALL fail with a clear configuration error
 
 #### Scenario: Production rejects wildcard CORS origins
-- **WHEN** environment is production and `BUDGETBUDDY_CORS_ORIGINS` contains `*`
+- **WHEN** environment is production and `BEBUDGET_CORS_ORIGINS` contains `*`
 - **THEN** startup SHALL fail with a clear configuration error
 
 #### Scenario: Cookie security flags are coherence-validated
@@ -80,7 +80,7 @@ Runtime configuration MUST expose explicit settings for refresh-origin policy an
 #### Scenario: Refresh origin allowlist is configurable
 - **WHEN** operators configure `AUTH_REFRESH_ALLOWED_ORIGINS`
 - **THEN** refresh origin guard SHALL use that allowlist for `POST /auth/refresh`
-- **AND** default behavior MAY derive from `BUDGETBUDDY_CORS_ORIGINS` when not explicitly set
+- **AND** default behavior MAY derive from `BEBUDGET_CORS_ORIGINS` when not explicitly set
 
 #### Scenario: Missing-origin mode is configurable
 - **WHEN** operators configure `AUTH_REFRESH_MISSING_ORIGIN_MODE`
@@ -195,3 +195,4 @@ Runtime configuration MUST expose and validate `REFRESH_GRACE_PERIOD_SECONDS` fo
 #### Scenario: Grace-period configuration is safe to log
 - **WHEN** startup emits safe configuration diagnostics
 - **THEN** non-secret field output SHALL include the effective grace-period value.
+

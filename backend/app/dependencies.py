@@ -3,7 +3,7 @@ from typing import Iterator
 from fastapi import Depends, Header, Request
 from sqlalchemy.orm import Session
 
-from app.core.constants import API_PREFIX, BODY_METHODS, CSV_TEXT, PROBLEM_JSON, VENDOR_JSON
+from app.core.constants import API_PREFIX, BODY_METHODS, CSV_TEXT, PROBLEM_JSON, SUPPORTED_VENDOR_MEDIA_TYPES
 from app.core.errors import APIError
 from app.core.security import decode_access_token
 from app.db import get_db
@@ -54,7 +54,7 @@ def _accepts_media_types(accept: str, *, supported: set[str]) -> bool:
 
 
 def _accepts_vendor_or_problem(accept: str) -> bool:
-    return _accepts_media_types(accept, supported={VENDOR_JSON, PROBLEM_JSON})
+    return _accepts_media_types(accept, supported={*SUPPORTED_VENDOR_MEDIA_TYPES, PROBLEM_JSON})
 
 
 def enforce_accept_header(request: Request) -> None:
@@ -69,7 +69,7 @@ def enforce_accept_header(request: Request) -> None:
         return
 
     accept = request.headers.get("accept", "*/*")
-    supported = {VENDOR_JSON, PROBLEM_JSON}
+    supported = {*SUPPORTED_VENDOR_MEDIA_TYPES, PROBLEM_JSON}
     if request.url.path == f"{API_PREFIX}/transactions/export":
         supported = {CSV_TEXT, PROBLEM_JSON}
     if not _accepts_media_types(accept, supported=supported):
@@ -88,7 +88,7 @@ def enforce_content_type(request: Request) -> None:
         return
 
     content_type = _parse_media_type(request.headers.get("content-type", ""))
-    if content_type != VENDOR_JSON:
+    if content_type not in SUPPORTED_VENDOR_MEDIA_TYPES:
         raise APIError(status=400, title="Invalid request", detail="Unsupported Content-Type")
 
 

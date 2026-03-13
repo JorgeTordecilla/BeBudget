@@ -16,7 +16,7 @@ describe("ProblemDetailsToast", () => {
       presentation: "toast",
       requestId: "req-toast",
       status: 429,
-      type: "https://api.budgetbuddy.dev/problems/rate-limited",
+      type: "https://api.bebudget.dev/problems/rate-limited",
       retryAfter: "30"
     });
 
@@ -27,3 +27,4 @@ describe("ProblemDetailsToast", () => {
     expect(writeText).toHaveBeenCalledWith("req-toast");
   });
 });
+

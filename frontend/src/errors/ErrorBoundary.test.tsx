@@ -20,7 +20,7 @@ describe("ErrorBoundary", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     setLastRequestId("req-boundary");
-    setLastProblemType("https://api.budgetbuddy.dev/problems/forbidden", "req-boundary");
+    setLastProblemType("https://api.bebudget.dev/problems/forbidden", "req-boundary");
 
     render(
       <ErrorBoundary>
@@ -37,3 +37,4 @@ describe("ErrorBoundary", () => {
     consoleSpy.mockRestore();
   });
 });
+

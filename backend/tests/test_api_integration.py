@@ -29,65 +29,65 @@ from app.db import SessionLocal
 from app.core.utils import as_utc, utcnow
 from app.models import Account, MonthlyRollover, RefreshToken, Transaction, User
 
-VENDOR = "application/vnd.budgetbuddy.v1+json"
+VENDOR = "application/vnd.bebudget.v1+json"
 PROBLEM = "application/problem+json"
-MISMATCH_TYPE = "https://api.budgetbuddy.dev/problems/category-type-mismatch"
+MISMATCH_TYPE = "https://api.bebudget.dev/problems/category-type-mismatch"
 MISMATCH_TITLE = "Category type mismatch"
-UNAUTHORIZED_TYPE = "https://api.budgetbuddy.dev/problems/unauthorized"
+UNAUTHORIZED_TYPE = "https://api.bebudget.dev/problems/unauthorized"
 UNAUTHORIZED_TITLE = "Unauthorized"
-FORBIDDEN_TYPE = "https://api.budgetbuddy.dev/problems/forbidden"
+FORBIDDEN_TYPE = "https://api.bebudget.dev/problems/forbidden"
 FORBIDDEN_TITLE = "Forbidden"
-NOT_ACCEPTABLE_TYPE = "https://api.budgetbuddy.dev/problems/not-acceptable"
+NOT_ACCEPTABLE_TYPE = "https://api.bebudget.dev/problems/not-acceptable"
 NOT_ACCEPTABLE_TITLE = "Not Acceptable"
-CATEGORY_ARCHIVED_TYPE = "https://api.budgetbuddy.dev/problems/category-archived"
+CATEGORY_ARCHIVED_TYPE = "https://api.bebudget.dev/problems/category-archived"
 CATEGORY_ARCHIVED_TITLE = "Category is archived"
-INVALID_CURSOR_TYPE = "https://api.budgetbuddy.dev/problems/invalid-cursor"
+INVALID_CURSOR_TYPE = "https://api.bebudget.dev/problems/invalid-cursor"
 INVALID_CURSOR_TITLE = "Invalid cursor"
-INVALID_DATE_RANGE_TYPE = "https://api.budgetbuddy.dev/problems/invalid-date-range"
+INVALID_DATE_RANGE_TYPE = "https://api.bebudget.dev/problems/invalid-date-range"
 INVALID_DATE_RANGE_TITLE = "Invalid date range"
-MONEY_AMOUNT_NOT_INTEGER_TYPE = "https://api.budgetbuddy.dev/problems/money-amount-not-integer"
+MONEY_AMOUNT_NOT_INTEGER_TYPE = "https://api.bebudget.dev/problems/money-amount-not-integer"
 MONEY_AMOUNT_NOT_INTEGER_TITLE = "Money amount must be an integer"
-MONEY_AMOUNT_OUT_OF_RANGE_TYPE = "https://api.budgetbuddy.dev/problems/money-amount-out-of-range"
+MONEY_AMOUNT_OUT_OF_RANGE_TYPE = "https://api.bebudget.dev/problems/money-amount-out-of-range"
 MONEY_AMOUNT_OUT_OF_RANGE_TITLE = "Money amount is out of safe range"
-MONEY_AMOUNT_SIGN_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/money-amount-sign-invalid"
+MONEY_AMOUNT_SIGN_INVALID_TYPE = "https://api.bebudget.dev/problems/money-amount-sign-invalid"
 MONEY_AMOUNT_SIGN_INVALID_TITLE = "Money amount sign is invalid"
-MONEY_CURRENCY_MISMATCH_TYPE = "https://api.budgetbuddy.dev/problems/money-currency-mismatch"
+MONEY_CURRENCY_MISMATCH_TYPE = "https://api.bebudget.dev/problems/money-currency-mismatch"
 MONEY_CURRENCY_MISMATCH_TITLE = "Money currency mismatch"
-IMPORT_BATCH_LIMIT_EXCEEDED_TYPE = "https://api.budgetbuddy.dev/problems/import-batch-limit-exceeded"
+IMPORT_BATCH_LIMIT_EXCEEDED_TYPE = "https://api.bebudget.dev/problems/import-batch-limit-exceeded"
 IMPORT_BATCH_LIMIT_EXCEEDED_TITLE = "Import batch limit exceeded"
-RATE_LIMITED_TYPE = "https://api.budgetbuddy.dev/problems/rate-limited"
+RATE_LIMITED_TYPE = "https://api.bebudget.dev/problems/rate-limited"
 RATE_LIMITED_TITLE = "Too Many Requests"
-SERVICE_UNAVAILABLE_TYPE = "https://api.budgetbuddy.dev/problems/service-unavailable"
+SERVICE_UNAVAILABLE_TYPE = "https://api.bebudget.dev/problems/service-unavailable"
 SERVICE_UNAVAILABLE_TITLE = "Service Unavailable"
-BUDGET_DUPLICATE_TYPE = "https://api.budgetbuddy.dev/problems/budget-duplicate"
+BUDGET_DUPLICATE_TYPE = "https://api.bebudget.dev/problems/budget-duplicate"
 BUDGET_DUPLICATE_TITLE = "Budget already exists"
-CATEGORY_NOT_OWNED_TYPE = "https://api.budgetbuddy.dev/problems/category-not-owned"
+CATEGORY_NOT_OWNED_TYPE = "https://api.bebudget.dev/problems/category-not-owned"
 CATEGORY_NOT_OWNED_TITLE = "Category is not owned by authenticated user"
-BUDGET_MONTH_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/budget-month-invalid"
+BUDGET_MONTH_INVALID_TYPE = "https://api.bebudget.dev/problems/budget-month-invalid"
 BUDGET_MONTH_INVALID_TITLE = "Budget month format is invalid"
-TRANSACTION_MOOD_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/transaction-mood-invalid"
+TRANSACTION_MOOD_INVALID_TYPE = "https://api.bebudget.dev/problems/transaction-mood-invalid"
 TRANSACTION_MOOD_INVALID_TITLE = "Transaction mood value is invalid"
-BILL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.budgetbuddy.dev/problems/bill-category-type-mismatch"
+BILL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.bebudget.dev/problems/bill-category-type-mismatch"
 BILL_CATEGORY_TYPE_MISMATCH_TITLE = "Bill category must be of type expense"
-BILL_DUE_DAY_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/bill-due-day-invalid"
+BILL_DUE_DAY_INVALID_TYPE = "https://api.bebudget.dev/problems/bill-due-day-invalid"
 BILL_DUE_DAY_INVALID_TITLE = "Bill due day must be between 1 and 31"
-BILL_ALREADY_PAID_TYPE = "https://api.budgetbuddy.dev/problems/bill-already-paid"
+BILL_ALREADY_PAID_TYPE = "https://api.bebudget.dev/problems/bill-already-paid"
 BILL_ALREADY_PAID_TITLE = "Bill already paid for this month"
-BILL_INACTIVE_FOR_MONTH_TYPE = "https://api.budgetbuddy.dev/problems/bill-inactive-for-month"
+BILL_INACTIVE_FOR_MONTH_TYPE = "https://api.bebudget.dev/problems/bill-inactive-for-month"
 BILL_INACTIVE_FOR_MONTH_TITLE = "Bill is inactive for this month"
-SAVINGS_GOAL_INVALID_TARGET_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-invalid-target"
+SAVINGS_GOAL_INVALID_TARGET_TYPE = "https://api.bebudget.dev/problems/savings-goal-invalid-target"
 SAVINGS_GOAL_INVALID_TARGET_TITLE = "Savings goal target must be greater than zero"
-SAVINGS_GOAL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-category-type-mismatch"
+SAVINGS_GOAL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.bebudget.dev/problems/savings-goal-category-type-mismatch"
 SAVINGS_GOAL_CATEGORY_TYPE_MISMATCH_TITLE = "Savings goal category must be of type expense"
-SAVINGS_GOAL_DEADLINE_PAST_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-deadline-past"
+SAVINGS_GOAL_DEADLINE_PAST_TYPE = "https://api.bebudget.dev/problems/savings-goal-deadline-past"
 SAVINGS_GOAL_DEADLINE_PAST_TITLE = "Savings goal deadline cannot be in the past"
-SAVINGS_GOAL_NOT_ACTIVE_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-not-active"
+SAVINGS_GOAL_NOT_ACTIVE_TYPE = "https://api.bebudget.dev/problems/savings-goal-not-active"
 SAVINGS_GOAL_NOT_ACTIVE_TITLE = "Savings goal is not active and cannot receive contributions"
-SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TYPE = "https://api.budgetbuddy.dev/problems/savings-contribution-invalid-amount"
+SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TYPE = "https://api.bebudget.dev/problems/savings-contribution-invalid-amount"
 SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TITLE = "Contribution amount must be greater than zero"
-SAVINGS_GOAL_ALREADY_COMPLETED_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-already-completed"
+SAVINGS_GOAL_ALREADY_COMPLETED_TYPE = "https://api.bebudget.dev/problems/savings-goal-already-completed"
 SAVINGS_GOAL_ALREADY_COMPLETED_TITLE = "Savings goal is already completed"
-ORIGIN_NOT_ALLOWED_TYPE = "https://api.budgetbuddy.dev/problems/origin-not-allowed"
+ORIGIN_NOT_ALLOWED_TYPE = "https://api.bebudget.dev/problems/origin-not-allowed"
 REQUEST_ID_HEADER = "x-request-id"
 REFRESH_COOKIE_NAME = "bb_refresh"
 CORS_DEV_ORIGIN = "http://localhost:5173"
@@ -532,7 +532,7 @@ def test_accept_header_rejects_partial_media_type_match():
         response = client.post(
             "/api/auth/register",
             json={"username": "abc_124", "password": "StrongPwd123!", "currency_code": "USD"},
-            headers={"accept": "application/vnd.budgetbuddy.v1+json-foo", "content-type": VENDOR},
+            headers={"accept": "application/vnd.bebudget.v1+json-foo", "content-type": VENDOR},
         )
         assert response.status_code == 406
         assert response.headers["content-type"].startswith(PROBLEM)
@@ -562,7 +562,7 @@ def test_content_type_rejects_partial_media_type_match():
         response = client.post(
             "/api/auth/register",
             json={"username": "abc_125", "password": "StrongPwd123!", "currency_code": "USD"},
-            headers={"accept": VENDOR, "content-type": "application/vnd.budgetbuddy.v1+json-foo"},
+            headers={"accept": VENDOR, "content-type": "application/vnd.bebudget.v1+json-foo"},
         )
         assert response.status_code == 400
         assert response.headers["content-type"].startswith(PROBLEM)
@@ -2489,7 +2489,7 @@ def test_create_transaction_fails_when_account_is_archived():
         assert create_tx.status_code == 409
         assert create_tx.headers["content-type"].startswith(PROBLEM)
         body = create_tx.json()
-        assert body["type"] == "https://api.budgetbuddy.dev/problems/account-archived"
+        assert body["type"] == "https://api.bebudget.dev/problems/account-archived"
         assert body["title"] == "Account is archived"
         assert body["status"] == 409
 
@@ -4240,7 +4240,7 @@ def test_rollover_preview_and_apply_flow_with_idempotency():
         )
         assert duplicate_apply.status_code == 409
         assert duplicate_apply.headers["content-type"].startswith(PROBLEM)
-        assert duplicate_apply.json()["type"] == "https://api.budgetbuddy.dev/problems/rollover-already-applied"
+        assert duplicate_apply.json()["type"] == "https://api.bebudget.dev/problems/rollover-already-applied"
 
         deficit_preview = client.get(
             "/api/rollover/preview?month=2026-01",
@@ -4259,7 +4259,7 @@ def test_rollover_preview_and_apply_flow_with_idempotency():
         )
         assert no_surplus.status_code == 422
         assert no_surplus.headers["content-type"].startswith(PROBLEM)
-        assert no_surplus.json()["type"] == "https://api.budgetbuddy.dev/problems/rollover-no-surplus"
+        assert no_surplus.json()["type"] == "https://api.bebudget.dev/problems/rollover-no-surplus"
 
 
 def test_rollover_apply_requires_auth_and_income_category():
@@ -6126,3 +6126,5 @@ def test_savings_goal_status_actions_idempotency_and_auth_rules():
 
         unauthenticated = client.get("/api/savings-goals", headers={"accept": VENDOR})
         _assert_unauthorized_problem(unauthenticated)
+
+

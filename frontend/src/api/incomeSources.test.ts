@@ -84,7 +84,7 @@ describe("income sources api wrappers", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/conflict",
+          type: "https://api.bebudget.dev/problems/conflict",
           title: "Conflict",
           status: 409,
           detail: "Income source name already exists"
@@ -107,3 +107,4 @@ describe("income sources api wrappers", () => {
     } satisfies Partial<ApiProblemError>);
   });
 });
+
