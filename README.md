@@ -1,6 +1,6 @@
-# BudgetBuddy
+# BeBudget
 
-Monorepo de BudgetBuddy con backend API contract-first, frontend web y generación de SDKs.
+Monorepo de BeBudget con backend API contract-first, frontend web y generación de SDKs.
 
 ## Stack
 - Backend: FastAPI, SQLAlchemy, Pytest

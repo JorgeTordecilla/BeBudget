@@ -23,8 +23,8 @@ export default defineConfig({
         "shortcut-income.png"
       ],
       manifest: {
-        name: "BudgetBuddy",
-        short_name: "BudgetBuddy",
+        name: "BeBudget",
+        short_name: "BeBudget",
         description: "Tu asistente de presupuesto personal",
         theme_color: "#ffffff",
         background_color: "#ffffff",

@@ -1,4 +1,4 @@
-# BudgetBuddy Frontend
+# BeBudget Frontend
 
 ## Environment Variables
 

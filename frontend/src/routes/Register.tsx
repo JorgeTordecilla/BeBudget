@@ -103,7 +103,7 @@ export default function Register() {
     <div className="flex min-h-[100svh] items-center justify-center p-6 md:min-h-screen">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Create your BudgetBuddy account</CardTitle>
+          <CardTitle>Create your BeBudget account</CardTitle>
           <CardDescription>Register to start tracking your finances.</CardDescription>
         </CardHeader>
         <CardContent>

@@ -1,7 +1,7 @@
 schema: spec-driven
 
 context: |
-  Project: BudgetBuddy contract-first platform (backend + frontend).
+  Project: BeBudget contract-first platform (backend + frontend).
   Primary API contract source: backend/openapi.yaml.
   Mirror contract for OpenSpec reference: openspec/specs/openapi.yaml.
 

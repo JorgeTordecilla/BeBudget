@@ -99,7 +99,7 @@ export default function Login() {
     <div className="flex min-h-[100svh] items-center justify-center p-6 md:min-h-screen">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Welcome to BudgetBuddy</CardTitle>
+          <CardTitle>Welcome to BeBudget</CardTitle>
           <CardDescription>Sign in to continue.</CardDescription>
         </CardHeader>
         <CardContent>

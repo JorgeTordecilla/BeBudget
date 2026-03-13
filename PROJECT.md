@@ -1,7 +1,7 @@
 # Project
 
 ## Name
-BudgetBuddy
+BeBudget
 
 ## Goal
 Implement and maintain a contract-first personal finance platform where behavior is driven by OpenAPI and refined through OpenSpec changes.
