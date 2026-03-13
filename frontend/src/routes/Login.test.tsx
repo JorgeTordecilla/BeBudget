@@ -130,7 +130,7 @@ describe("Login route", () => {
     const login = vi.fn(async () => {
       throw new ApiProblemError(
         {
-          type: "https://api.budgetbuddy.dev/problems/unauthorized",
+          type: "https://api.bebudget.dev/problems/unauthorized",
           title: "Unauthorized",
           status: 401
         },
@@ -167,7 +167,7 @@ describe("Login route", () => {
     const login = vi.fn(async () => {
       throw new ApiProblemError(
         {
-          type: "https://api.budgetbuddy.dev/problems/rate-limited",
+          type: "https://api.bebudget.dev/problems/rate-limited",
           title: "Rate limited",
           status: 429
         },
@@ -248,7 +248,7 @@ describe("Login route", () => {
     const login = vi.fn(async () => {
       throw new ApiProblemError(
         {
-          type: "https://api.budgetbuddy.dev/problems/unauthorized",
+          type: "https://api.bebudget.dev/problems/unauthorized",
           title: "Unauthorized",
           status: 401
         },
@@ -268,3 +268,4 @@ describe("Login route", () => {
     });
   });
 });
+

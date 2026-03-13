@@ -6,8 +6,8 @@ import { publishProblemToast } from "@/components/errors/problemToastStore";
 import { setLastRequestId } from "@/state/diagnostics";
 import { captureApiFailure } from "@/observability/runtime";
 
-export const VENDOR_MEDIA_TYPE = "application/vnd.budgetbuddy.v1+json";
-const REFRESH_REUSE_DETECTED_TYPE = "https://api.budgetbuddy.dev/problems/refresh-reuse-detected";
+export const VENDOR_MEDIA_TYPE = "application/vnd.bebudget.v1+json";
+const REFRESH_REUSE_DETECTED_TYPE = "https://api.bebudget.dev/problems/refresh-reuse-detected";
 
 type PageLifecycleState = {
   bound: boolean;
@@ -316,3 +316,5 @@ export function createApiClient(bindings: AuthBindings, options: ClientOptions =
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+

@@ -261,7 +261,7 @@ describe("CategoriesPage", () => {
   it("shows forbidden banner when list fails with 403 problem", async () => {
     vi.mocked(listCategories).mockRejectedValueOnce(
       new ApiProblemError(403, {
-        type: "https://api.budgetbuddy.dev/problems/forbidden",
+        type: "https://api.bebudget.dev/problems/forbidden",
         title: "Forbidden",
         status: 403
       })
@@ -273,7 +273,7 @@ describe("CategoriesPage", () => {
   it("shows client contract error banner for 406 responses", async () => {
     vi.mocked(listCategories).mockRejectedValueOnce(
       new ApiProblemError(406, {
-        type: "https://api.budgetbuddy.dev/problems/not-acceptable",
+        type: "https://api.bebudget.dev/problems/not-acceptable",
         title: "",
         status: 406,
         detail: "Invalid Accept header"
@@ -322,7 +322,7 @@ describe("CategoriesPage", () => {
   it("dismisses page and form error banners", async () => {
     vi.mocked(listCategories).mockRejectedValueOnce(
       new ApiProblemError(403, {
-        type: "https://api.budgetbuddy.dev/problems/forbidden",
+        type: "https://api.bebudget.dev/problems/forbidden",
         title: "Forbidden",
         status: 403,
         detail: "Not allowed"
@@ -355,3 +355,4 @@ describe("CategoriesPage", () => {
     expect(archiveCategory).not.toHaveBeenCalled();
   });
 });
+

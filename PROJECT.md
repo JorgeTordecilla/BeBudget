@@ -1,7 +1,7 @@
 # Project
 
 ## Name
-BudgetBuddy
+BeBudget
 
 ## Goal
 Implement and maintain a contract-first personal finance platform where behavior is driven by OpenAPI and refined through OpenSpec changes.
@@ -11,7 +11,7 @@ Implement and maintain a contract-first personal finance platform where behavior
 - OpenSpec mirror contract: `openspec/specs/openapi.yaml`
 
 ## API Conventions
-- Success media type: `application/vnd.budgetbuddy.v1+json`
+- Success media type: `application/vnd.bebudget.v1+json`
 - Error media type: `application/problem+json`
 - Error model: ProblemDetails (`type`, `title`, `status`, optional `detail`/extensions)
 
@@ -68,7 +68,7 @@ backend\.venv\Scripts\python.exe tools\generate_sdks.py --check
 
 Generated SDK outputs:
 - `sdk/typescript/src/`
-- `sdk/python/budgetbuddy_sdk/`
+- `sdk/python/bebudget_sdk/`
 
 ## Frontend Verification Commands
 From `frontend/`:

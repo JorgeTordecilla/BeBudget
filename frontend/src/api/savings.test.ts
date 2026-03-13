@@ -40,7 +40,7 @@ describe("savings api wrappers", () => {
     const call = fetchMock.mock.calls[0];
     expect(String(call?.[0])).toContain("/savings-goals?status=completed");
     const headers = new Headers(call?.[1]?.headers);
-    expect(headers.get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(headers.get("Authorization")).toBe("Bearer access-123");
   });
 
@@ -207,3 +207,4 @@ describe("savings api wrappers", () => {
     expect(fetchMock.mock.calls[8]?.[1]?.method).toBe("DELETE");
   });
 });
+

@@ -183,7 +183,7 @@ describe("api client refresh behavior", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            type: "https://api.budgetbuddy.dev/problems/forbidden",
+            type: "https://api.bebudget.dev/problems/forbidden",
             title: "Forbidden",
             status: 403,
             detail: "Refresh revoked"
@@ -218,7 +218,7 @@ describe("api client refresh behavior", () => {
       expect.objectContaining({
         requestId: "req-refresh-403",
         status: 403,
-        type: "https://api.budgetbuddy.dev/problems/forbidden"
+        type: "https://api.bebudget.dev/problems/forbidden"
       })
     );
   });
@@ -235,7 +235,7 @@ describe("api client refresh behavior", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            type: "https://api.budgetbuddy.dev/problems/refresh-reuse-detected",
+            type: "https://api.bebudget.dev/problems/refresh-reuse-detected",
             title: "Refresh token reuse detected",
             status: 403,
             detail: "Refresh token was already used and rotated"
@@ -297,7 +297,7 @@ describe("api client refresh behavior", () => {
 
     const secondArg = fetchMock.mock.calls[0]?.[1];
     const headers = new Headers(secondArg?.headers);
-    expect(headers.get("Content-Type")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Content-Type")).toBe("application/vnd.bebudget.v1+json");
   });
 
   it("uses credentials include for login, refresh, and logout", async () => {
@@ -346,7 +346,7 @@ describe("api client refresh behavior", () => {
     expect(String(args?.[0])).toBe("http://test.local/api/me");
     const init = args?.[1];
     const headers = new Headers(init?.headers);
-    expect(headers.get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(headers.get("Authorization")).toBe("Bearer access-123");
     expect(headers.get("X-Request-Id")).toBeTruthy();
     expect(init?.credentials).toBe("include");
@@ -508,7 +508,7 @@ describe("api client refresh behavior", () => {
     const init = call?.[1];
     const headers = new Headers(init?.headers);
     expect(String(call?.[0])).toBe("http://test.local/api/auth/register");
-    expect(headers.get("Content-Type")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Content-Type")).toBe("application/vnd.bebudget.v1+json");
     expect(init?.credentials).toBe("include");
   });
 
@@ -516,7 +516,7 @@ describe("api client refresh behavior", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/budget-duplicate",
+          type: "https://api.bebudget.dev/problems/budget-duplicate",
           title: "Conflict",
           status: 409,
           detail: "duplicate"
@@ -713,7 +713,7 @@ describe("api client refresh behavior", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/forbidden",
+          type: "https://api.bebudget.dev/problems/forbidden",
           title: "Forbidden",
           status: 500
         }),
@@ -745,3 +745,5 @@ describe("api client refresh behavior", () => {
     );
   });
 });
+
+

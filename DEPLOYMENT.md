@@ -12,7 +12,7 @@ Verify critical configuration is present and safe:
 - `DATABASE_URL`
 - `JWT_SECRET`
 - `ENV` / `APP_ENV`
-- `BUDGETBUDDY_CORS_ORIGINS`
+- `BEBUDGET_CORS_ORIGINS`
 - `REFRESH_COOKIE_NAME`
 - `REFRESH_COOKIE_PATH`
 - `REFRESH_COOKIE_SAMESITE`
@@ -25,10 +25,17 @@ Verify critical configuration is present and safe:
 Fail-fast rules already enforced by startup:
 
 - `ENV=production` rejects `DEBUG=true`
-- `BUDGETBUDDY_CORS_ORIGINS` must not contain `*` in production
+- `BEBUDGET_CORS_ORIGINS` must not contain `*` in production
 - `REFRESH_COOKIE_SAMESITE=lax` is the recommended production baseline
 - `REFRESH_COOKIE_SAMESITE=none` still requires `REFRESH_COOKIE_SECURE=true`
 - CORS remains credentials-enabled with explicit allowlist; exposed headers are limited to `X-Request-Id` and `Retry-After`
+- Runtime requires canonical `BEBUDGET_CORS_ORIGINS` (legacy aliases are no longer supported).
+
+### 1.4 Rebrand migration notes (Phase 2)
+
+- Canonical success media type: `application/vnd.bebudget.v1+json`.
+- Canonical problem namespace: `https://api.bebudget.dev/problems/*`.
+- Legacy compatibility: removed. Only canonical BeBudget contract identifiers are supported.
 
 Push notes:
 
@@ -119,8 +126,8 @@ Use an existing test user and avoid printing secrets in shared logs.
 
 ```bash
 curl -s -X POST http://localhost:8000/api/auth/login ^
-  -H "accept: application/vnd.budgetbuddy.v1+json" ^
-  -H "content-type: application/vnd.budgetbuddy.v1+json" ^
+  -H "accept: application/vnd.bebudget.v1+json" ^
+  -H "content-type: application/vnd.bebudget.v1+json" ^
   -d "{\"username\":\"<USERNAME>\",\"password\":\"<PASSWORD>\"}" > login.json
 ```
 
@@ -128,7 +135,7 @@ Extract `access_token` from `login.json`, then:
 
 ```bash
 curl -i http://localhost:8000/api/me ^
-  -H "accept: application/vnd.budgetbuddy.v1+json" ^
+  -H "accept: application/vnd.bebudget.v1+json" ^
   -H "authorization: Bearer <ACCESS_TOKEN>"
 ```
 
@@ -237,3 +244,4 @@ When sharing command output, redact:
 - passwords
 - raw bearer/refresh tokens
 - full DB credentials in `DATABASE_URL`
+

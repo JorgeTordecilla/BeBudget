@@ -1,18 +1,18 @@
 from app.errors._helpers import make_api_error
 
-UNAUTHORIZED_TYPE = "https://api.budgetbuddy.dev/problems/unauthorized"
+UNAUTHORIZED_TYPE = "https://api.bebudget.dev/problems/unauthorized"
 UNAUTHORIZED_TITLE = "Unauthorized"
 UNAUTHORIZED_STATUS = 401
 
-FORBIDDEN_TYPE = "https://api.budgetbuddy.dev/problems/forbidden"
+FORBIDDEN_TYPE = "https://api.bebudget.dev/problems/forbidden"
 FORBIDDEN_TITLE = "Forbidden"
 FORBIDDEN_STATUS = 403
 
-NOT_ACCEPTABLE_TYPE = "https://api.budgetbuddy.dev/problems/not-acceptable"
+NOT_ACCEPTABLE_TYPE = "https://api.bebudget.dev/problems/not-acceptable"
 NOT_ACCEPTABLE_TITLE = "Not Acceptable"
 NOT_ACCEPTABLE_STATUS = 406
 
-ORIGIN_NOT_ALLOWED_TYPE = "https://api.budgetbuddy.dev/problems/origin-not-allowed"
+ORIGIN_NOT_ALLOWED_TYPE = "https://api.bebudget.dev/problems/origin-not-allowed"
 ORIGIN_NOT_ALLOWED_TITLE = "Forbidden"
 
 
@@ -49,3 +49,4 @@ def origin_not_allowed_error(detail: str | None = None) -> "APIError":
         detail=detail,
         type_=ORIGIN_NOT_ALLOWED_TYPE,
     )
+

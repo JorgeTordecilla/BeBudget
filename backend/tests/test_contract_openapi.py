@@ -10,38 +10,38 @@ from app.schemas import PASSWORD_POLICY_PATTERN
 
 SPEC = yaml.safe_load(Path("openapi.yaml").read_text(encoding="utf-8"))
 COMPONENTS = SPEC.get("components", {}).get("schemas", {})
-VENDOR = "application/vnd.budgetbuddy.v1+json"
+VENDOR = "application/vnd.bebudget.v1+json"
 PROBLEM = "application/problem+json"
 REFRESH_COOKIE_NAME = "bb_refresh"
-BUDGET_MONTH_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/budget-month-invalid"
+BUDGET_MONTH_INVALID_TYPE = "https://api.bebudget.dev/problems/budget-month-invalid"
 BUDGET_MONTH_INVALID_TITLE = "Budget month format is invalid"
-RATE_LIMITED_TYPE = "https://api.budgetbuddy.dev/problems/rate-limited"
+RATE_LIMITED_TYPE = "https://api.bebudget.dev/problems/rate-limited"
 RATE_LIMITED_TITLE = "Too Many Requests"
-SERVICE_UNAVAILABLE_TYPE = "https://api.budgetbuddy.dev/problems/service-unavailable"
+SERVICE_UNAVAILABLE_TYPE = "https://api.bebudget.dev/problems/service-unavailable"
 SERVICE_UNAVAILABLE_TITLE = "Service Unavailable"
-ORIGIN_NOT_ALLOWED_TYPE = "https://api.budgetbuddy.dev/problems/origin-not-allowed"
+ORIGIN_NOT_ALLOWED_TYPE = "https://api.bebudget.dev/problems/origin-not-allowed"
 ORIGIN_NOT_ALLOWED_TITLE = "Forbidden"
-TRANSACTION_MOOD_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/transaction-mood-invalid"
+TRANSACTION_MOOD_INVALID_TYPE = "https://api.bebudget.dev/problems/transaction-mood-invalid"
 TRANSACTION_MOOD_INVALID_TITLE = "Transaction mood value is invalid"
-BILL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.budgetbuddy.dev/problems/bill-category-type-mismatch"
+BILL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.bebudget.dev/problems/bill-category-type-mismatch"
 BILL_CATEGORY_TYPE_MISMATCH_TITLE = "Bill category must be of type expense"
-BILL_DUE_DAY_INVALID_TYPE = "https://api.budgetbuddy.dev/problems/bill-due-day-invalid"
+BILL_DUE_DAY_INVALID_TYPE = "https://api.bebudget.dev/problems/bill-due-day-invalid"
 BILL_DUE_DAY_INVALID_TITLE = "Bill due day must be between 1 and 31"
-BILL_ALREADY_PAID_TYPE = "https://api.budgetbuddy.dev/problems/bill-already-paid"
+BILL_ALREADY_PAID_TYPE = "https://api.bebudget.dev/problems/bill-already-paid"
 BILL_ALREADY_PAID_TITLE = "Bill already paid for this month"
-BILL_INACTIVE_FOR_MONTH_TYPE = "https://api.budgetbuddy.dev/problems/bill-inactive-for-month"
+BILL_INACTIVE_FOR_MONTH_TYPE = "https://api.bebudget.dev/problems/bill-inactive-for-month"
 BILL_INACTIVE_FOR_MONTH_TITLE = "Bill is inactive for this month"
-SAVINGS_GOAL_INVALID_TARGET_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-invalid-target"
+SAVINGS_GOAL_INVALID_TARGET_TYPE = "https://api.bebudget.dev/problems/savings-goal-invalid-target"
 SAVINGS_GOAL_INVALID_TARGET_TITLE = "Savings goal target must be greater than zero"
-SAVINGS_GOAL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-category-type-mismatch"
+SAVINGS_GOAL_CATEGORY_TYPE_MISMATCH_TYPE = "https://api.bebudget.dev/problems/savings-goal-category-type-mismatch"
 SAVINGS_GOAL_CATEGORY_TYPE_MISMATCH_TITLE = "Savings goal category must be of type expense"
-SAVINGS_GOAL_DEADLINE_PAST_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-deadline-past"
+SAVINGS_GOAL_DEADLINE_PAST_TYPE = "https://api.bebudget.dev/problems/savings-goal-deadline-past"
 SAVINGS_GOAL_DEADLINE_PAST_TITLE = "Savings goal deadline cannot be in the past"
-SAVINGS_GOAL_NOT_ACTIVE_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-not-active"
+SAVINGS_GOAL_NOT_ACTIVE_TYPE = "https://api.bebudget.dev/problems/savings-goal-not-active"
 SAVINGS_GOAL_NOT_ACTIVE_TITLE = "Savings goal is not active and cannot receive contributions"
-SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TYPE = "https://api.budgetbuddy.dev/problems/savings-contribution-invalid-amount"
+SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TYPE = "https://api.bebudget.dev/problems/savings-contribution-invalid-amount"
 SAVINGS_CONTRIBUTION_INVALID_AMOUNT_TITLE = "Contribution amount must be greater than zero"
-SAVINGS_GOAL_ALREADY_COMPLETED_TYPE = "https://api.budgetbuddy.dev/problems/savings-goal-already-completed"
+SAVINGS_GOAL_ALREADY_COMPLETED_TYPE = "https://api.bebudget.dev/problems/savings-goal-already-completed"
 SAVINGS_GOAL_ALREADY_COMPLETED_TITLE = "Savings goal is already completed"
 CANONICAL_EXAMPLE_STATUSES = {400, 401, 403, 406, 409, 429}
 
@@ -405,8 +405,8 @@ def test_auth_rate_limit_contract_mappings_exist():
         item["type"]
         for item in catalog
         if item["type"] in {
-            "https://api.budgetbuddy.dev/problems/refresh-revoked",
-            "https://api.budgetbuddy.dev/problems/refresh-reuse-detected",
+            "https://api.bebudget.dev/problems/refresh-revoked",
+            "https://api.bebudget.dev/problems/refresh-reuse-detected",
         }
     }
     assert refresh_problem_types == set()
@@ -524,7 +524,7 @@ def test_transaction_mood_invalid_problem_catalog_mapping_exists():
 
 def test_cors_cookie_cross_site_contract_notes_exist():
     description = SPEC["info"]["description"]
-    assert "BUDGETBUDDY_CORS_ORIGINS" in description
+    assert "BEBUDGET_CORS_ORIGINS" in description
     assert "Access-Control-Allow-Credentials" in description
     assert "GET,POST,PATCH,DELETE,OPTIONS" in description
     assert "X-Request-Id,Retry-After" in description
@@ -543,7 +543,7 @@ def test_audit_contract_mappings_exist():
     assert "401" in responses
     assert "403" in responses
     assert "406" in responses
-    assert "application/vnd.budgetbuddy.v1+json" in responses["200"]["content"]
+    assert "application/vnd.bebudget.v1+json" in responses["200"]["content"]
     assert "application/problem+json" in responses["400"]["content"]
     assert "application/problem+json" in responses["401"]["content"]
     assert "application/problem+json" in responses["403"]["content"]
@@ -652,7 +652,7 @@ def test_me_contract_mappings_exist():
     assert "200" in responses
     assert "401" in responses
     assert "406" in responses
-    assert "application/vnd.budgetbuddy.v1+json" in responses["200"]["content"]
+    assert "application/vnd.bebudget.v1+json" in responses["200"]["content"]
     assert "application/problem+json" in responses["401"]["content"]
     assert "application/problem+json" in responses["406"]["content"]
     assert "X-Request-Id" in responses["200"].get("headers", {})
@@ -767,3 +767,5 @@ def test_savings_error_responses_reference_problem_examples():
 
     contribution_post_422_examples = SPEC["paths"]["/savings-goals/{goal_id}/contributions"]["post"]["responses"]["422"]["content"][PROBLEM]["examples"]
     assert "savings-contribution-invalid-amount" in contribution_post_422_examples
+
+

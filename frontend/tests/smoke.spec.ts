@@ -5,7 +5,7 @@ const E2E_PASSWORD = process.env.E2E_PASSWORD;
 
 test("loads login page", async ({ page }) => {
   await page.goto("/login");
-  await expect(page.getByRole("heading", { name: "Welcome to BudgetBuddy" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome to BeBudget" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 

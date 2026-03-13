@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
-  title: BudgetBuddy API
+  title: BeBudget API
   version: '1'
   description: 'Operational header behavior: responses include `X-Request-Id`.
 
     If request provides `X-Request-Id`, the API echoes it; otherwise it generates one.
 
     Cross-site CORS policy for browser clients: API uses explicit origin allowlist from configuration
-    (`BUDGETBUDDY_CORS_ORIGINS`, default `http://localhost:5173`), `Access-Control-Allow-Credentials:
+    (`BEBUDGET_CORS_ORIGINS`, default `http://localhost:5173`), `Access-Control-Allow-Credentials:
     true`, allowed methods `GET,POST,PATCH,DELETE,OPTIONS`, allowed headers `Authorization,Content-Type,Accept,X-Request-Id`,
     and exposed headers `X-Request-Id,Retry-After`.
 
@@ -32,7 +32,7 @@ paths:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/ProbeHealthResponse'
               example:
@@ -52,7 +52,7 @@ paths:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/ProbeReadinessResponse'
               examples:
@@ -76,7 +76,7 @@ paths:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/ProbeReadinessResponse'
               examples:
@@ -101,7 +101,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/RegisterRequest'
       responses:
@@ -113,7 +113,7 @@ paths:
             Set-Cookie:
               $ref: '#/components/headers/Set-Cookie-Refresh'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/AuthSessionResponse'
               example:
@@ -174,7 +174,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
       responses:
@@ -186,7 +186,7 @@ paths:
             Set-Cookie:
               $ref: '#/components/headers/Set-Cookie-Refresh'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/AuthSessionResponse'
               example:
@@ -259,7 +259,7 @@ paths:
             Set-Cookie:
               $ref: '#/components/headers/Set-Cookie-Refresh'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/AuthSessionResponse'
               example:
@@ -413,7 +413,7 @@ paths:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/User'
               example:
@@ -488,7 +488,7 @@ paths:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 type: object
                 required:
@@ -548,14 +548,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/AccountCreate'
       responses:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Account'
               example:
@@ -615,7 +615,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Account'
               example:
@@ -679,14 +679,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/AccountUpdate'
       responses:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Account'
               example:
@@ -846,7 +846,7 @@ paths:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 type: object
                 required:
@@ -905,14 +905,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/CategoryCreate'
       responses:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Category'
               example:
@@ -971,7 +971,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Category'
               example:
@@ -1022,14 +1022,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/CategoryUpdate'
       responses:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Category'
               example:
@@ -1140,7 +1140,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/IncomeSourceListOut'
               example:
@@ -1186,14 +1186,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/IncomeSourceCreate'
       responses:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/IncomeSourceOut'
               example:
@@ -1256,7 +1256,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/IncomeSourceOut'
               example:
@@ -1311,14 +1311,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/IncomeSourceUpdate'
       responses:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/IncomeSourceOut'
               example:
@@ -1497,7 +1497,7 @@ paths:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 type: object
                 required:
@@ -1566,14 +1566,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/TransactionCreate'
       responses:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Transaction'
               example:
@@ -1650,14 +1650,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/TransactionImportRequest'
       responses:
         '200':
           description: Import result
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/TransactionImportResult'
               example:
@@ -1667,7 +1667,7 @@ paths:
                 - index: 1
                   message: category does not belong to authenticated user
                   problem:
-                    type: https://api.budgetbuddy.dev/problems/forbidden
+                    type: https://api.bebudget.dev/problems/forbidden
                     title: Forbidden
                     status: 403
         '400':
@@ -1822,7 +1822,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Transaction'
               example:
@@ -1881,14 +1881,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/TransactionUpdate'
       responses:
         '200':
           description: Updated (or restored when archived_at=null)
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Transaction'
               example:
@@ -2014,7 +2014,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/BillListOut'
         '401':
@@ -2040,14 +2040,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/BillCreate'
       responses:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/BillOut'
         '401':
@@ -2109,7 +2109,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/BillMonthlyStatusOut'
         '401':
@@ -2144,7 +2144,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/BillOut'
         '401':
@@ -2179,14 +2179,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/BillUpdate'
       responses:
         '200':
           description: Updated
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/BillOut'
         '401':
@@ -2279,14 +2279,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/BillPaymentCreate'
       responses:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/BillPaymentOut'
         '401':
@@ -2388,7 +2388,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsGoalListOut'
         '401':
@@ -2414,7 +2414,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/SavingsGoalCreate'
             example:
@@ -2428,7 +2428,7 @@ paths:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsGoalOut'
         '401':
@@ -2485,7 +2485,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsSummaryOut'
         '401':
@@ -2520,7 +2520,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsGoalDetailOut'
         '401':
@@ -2555,7 +2555,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/SavingsGoalUpdate'
             example:
@@ -2565,7 +2565,7 @@ paths:
         '200':
           description: Updated
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsGoalOut'
         '401':
@@ -2661,7 +2661,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsGoalOut'
         '401':
@@ -2714,7 +2714,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsGoalOut'
         '401':
@@ -2766,7 +2766,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/SavingsContributionCreate'
             example:
@@ -2776,7 +2776,7 @@ paths:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/SavingsContributionOut'
         '401':
@@ -2901,7 +2901,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/BudgetListResponse'
               example:
@@ -2957,14 +2957,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/BudgetCreate'
       responses:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Budget'
               example:
@@ -3034,7 +3034,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Budget'
               example:
@@ -3086,14 +3086,14 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/BudgetUpdate'
       responses:
         '200':
           description: Updated
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/Budget'
               example:
@@ -3229,7 +3229,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/AuditListResponse'
               example:
@@ -3300,7 +3300,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/AnalyticsByMonthResponse'
               example:
@@ -3361,7 +3361,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/IncomeAnalyticsOut'
               example:
@@ -3426,7 +3426,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/ImpulseSummaryOut'
               example:
@@ -3482,7 +3482,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/RolloverPreviewOut'
               example:
@@ -3524,7 +3524,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/vnd.budgetbuddy.v1+json:
+          application/vnd.bebudget.v1+json:
             schema:
               $ref: '#/components/schemas/RolloverApplyRequest'
             example:
@@ -3535,7 +3535,7 @@ paths:
         '201':
           description: Created
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/RolloverApplyOut'
               example:
@@ -3602,7 +3602,7 @@ paths:
         '200':
           description: OK
           content:
-            application/vnd.budgetbuddy.v1+json:
+            application/vnd.bebudget.v1+json:
               schema:
                 $ref: '#/components/schemas/AnalyticsByCategoryResponse'
               example:
@@ -3669,100 +3669,100 @@ components:
         type: integer
         minimum: 1
   x-problem-details-catalog:
-  - type: https://api.budgetbuddy.dev/problems/unauthorized
+  - type: https://api.bebudget.dev/problems/unauthorized
     title: Unauthorized
     status: 401
-  - type: https://api.budgetbuddy.dev/problems/forbidden
+  - type: https://api.bebudget.dev/problems/forbidden
     title: Forbidden
     status: 403
-  - type: https://api.budgetbuddy.dev/problems/not-acceptable
+  - type: https://api.bebudget.dev/problems/not-acceptable
     title: Not Acceptable
     status: 406
-  - type: https://api.budgetbuddy.dev/problems/invalid-cursor
+  - type: https://api.bebudget.dev/problems/invalid-cursor
     title: Invalid cursor
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/invalid-date-range
+  - type: https://api.bebudget.dev/problems/invalid-date-range
     title: Invalid date range
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/origin-not-allowed
+  - type: https://api.bebudget.dev/problems/origin-not-allowed
     title: Forbidden
     status: 403
-  - type: https://api.budgetbuddy.dev/problems/account-archived
+  - type: https://api.bebudget.dev/problems/account-archived
     title: Account is archived
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/category-archived
+  - type: https://api.bebudget.dev/problems/category-archived
     title: Category is archived
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/category-type-mismatch
+  - type: https://api.bebudget.dev/problems/category-type-mismatch
     title: Category type mismatch
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/budget-duplicate
+  - type: https://api.bebudget.dev/problems/budget-duplicate
     title: Budget already exists
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/category-not-owned
+  - type: https://api.bebudget.dev/problems/category-not-owned
     title: Category is not owned by authenticated user
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/budget-month-invalid
+  - type: https://api.bebudget.dev/problems/budget-month-invalid
     title: Budget month format is invalid
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/rollover-already-applied
+  - type: https://api.bebudget.dev/problems/rollover-already-applied
     title: Rollover already applied
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/rollover-no-surplus
+  - type: https://api.bebudget.dev/problems/rollover-no-surplus
     title: Rollover has no surplus
     status: 422
-  - type: https://api.budgetbuddy.dev/problems/transaction-mood-invalid
+  - type: https://api.bebudget.dev/problems/transaction-mood-invalid
     title: Transaction mood value is invalid
     status: 422
-  - type: https://api.budgetbuddy.dev/problems/bill-category-type-mismatch
+  - type: https://api.bebudget.dev/problems/bill-category-type-mismatch
     title: Bill category must be of type expense
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/bill-due-day-invalid
+  - type: https://api.bebudget.dev/problems/bill-due-day-invalid
     title: Bill due day must be between 1 and 31
     status: 422
-  - type: https://api.budgetbuddy.dev/problems/bill-already-paid
+  - type: https://api.bebudget.dev/problems/bill-already-paid
     title: Bill already paid for this month
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/bill-inactive-for-month
+  - type: https://api.bebudget.dev/problems/bill-inactive-for-month
     title: Bill is inactive for this month
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/savings-goal-invalid-target
+  - type: https://api.bebudget.dev/problems/savings-goal-invalid-target
     title: Savings goal target must be greater than zero
     status: 422
-  - type: https://api.budgetbuddy.dev/problems/savings-goal-category-type-mismatch
+  - type: https://api.bebudget.dev/problems/savings-goal-category-type-mismatch
     title: Savings goal category must be of type expense
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/savings-goal-deadline-past
+  - type: https://api.bebudget.dev/problems/savings-goal-deadline-past
     title: Savings goal deadline cannot be in the past
     status: 422
-  - type: https://api.budgetbuddy.dev/problems/savings-goal-not-active
+  - type: https://api.bebudget.dev/problems/savings-goal-not-active
     title: Savings goal is not active and cannot receive contributions
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/savings-contribution-invalid-amount
+  - type: https://api.bebudget.dev/problems/savings-contribution-invalid-amount
     title: Contribution amount must be greater than zero
     status: 422
-  - type: https://api.budgetbuddy.dev/problems/savings-goal-already-completed
+  - type: https://api.bebudget.dev/problems/savings-goal-already-completed
     title: Savings goal is already completed
     status: 409
-  - type: https://api.budgetbuddy.dev/problems/money-amount-not-integer
+  - type: https://api.bebudget.dev/problems/money-amount-not-integer
     title: Money amount must be an integer
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/money-amount-out-of-range
+  - type: https://api.bebudget.dev/problems/money-amount-out-of-range
     title: Money amount is out of safe range
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/money-amount-sign-invalid
+  - type: https://api.bebudget.dev/problems/money-amount-sign-invalid
     title: Money amount sign is invalid
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/money-currency-mismatch
+  - type: https://api.bebudget.dev/problems/money-currency-mismatch
     title: Money currency mismatch
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/import-batch-limit-exceeded
+  - type: https://api.bebudget.dev/problems/import-batch-limit-exceeded
     title: Import batch limit exceeded
     status: 400
-  - type: https://api.budgetbuddy.dev/problems/rate-limited
+  - type: https://api.bebudget.dev/problems/rate-limited
     title: Too Many Requests
     status: 429
-  - type: https://api.budgetbuddy.dev/problems/service-unavailable
+  - type: https://api.bebudget.dev/problems/service-unavailable
     title: Service Unavailable
     status: 503
   schemas:
@@ -3786,27 +3786,27 @@ components:
           type: string
           format: uri
       examples:
-      - type: https://api.budgetbuddy.dev/problems/invalid-date-range
+      - type: https://api.bebudget.dev/problems/invalid-date-range
         title: Invalid date range
         status: 400
         detail: '`from` must be less than or equal to `to`.'
-      - type: https://api.budgetbuddy.dev/problems/unauthorized
+      - type: https://api.bebudget.dev/problems/unauthorized
         title: Unauthorized
         status: 401
         detail: Missing or invalid bearer token.
-      - type: https://api.budgetbuddy.dev/problems/forbidden
+      - type: https://api.bebudget.dev/problems/forbidden
         title: Forbidden
         status: 403
         detail: Resource is not owned by authenticated user.
-      - type: https://api.budgetbuddy.dev/problems/not-acceptable
+      - type: https://api.bebudget.dev/problems/not-acceptable
         title: Not Acceptable
         status: 406
         detail: Accept header must allow a supported media type.
-      - type: https://api.budgetbuddy.dev/problems/account-archived
+      - type: https://api.bebudget.dev/problems/account-archived
         title: Account is archived
         status: 409
         detail: Transactions cannot be created on archived accounts.
-      - type: https://api.budgetbuddy.dev/problems/rate-limited
+      - type: https://api.bebudget.dev/problems/rate-limited
         title: Too Many Requests
         status: 429
         detail: Too many requests. Retry after the interval in Retry-After.
@@ -4289,7 +4289,7 @@ components:
         - index: 1
           message: category does not belong to authenticated user
           problem:
-            type: https://api.budgetbuddy.dev/problems/forbidden
+            type: https://api.bebudget.dev/problems/forbidden
             title: Forbidden
             status: 403
     TransactionImportRequest:
@@ -5446,56 +5446,56 @@ components:
     Problem400InvalidCursor:
       summary: Canonical 400 invalid cursor
       value:
-        type: https://api.budgetbuddy.dev/problems/invalid-cursor
+        type: https://api.bebudget.dev/problems/invalid-cursor
         title: Invalid cursor
         status: 400
         detail: Cursor token is malformed or unsupported.
     Problem400InvalidDateRange:
       summary: Canonical 400 invalid date range
       value:
-        type: https://api.budgetbuddy.dev/problems/invalid-date-range
+        type: https://api.bebudget.dev/problems/invalid-date-range
         title: Invalid date range
         status: 400
         detail: '`from` must be less than or equal to `to`.'
     Problem400BudgetMonthInvalid:
       summary: Canonical 400 invalid budget month
       value:
-        type: https://api.budgetbuddy.dev/problems/budget-month-invalid
+        type: https://api.bebudget.dev/problems/budget-month-invalid
         title: Budget month format is invalid
         status: 400
         detail: month must follow YYYY-MM format.
     Problem400ImportBatchLimitExceeded:
       summary: Canonical 400 import batch limit exceeded
       value:
-        type: https://api.budgetbuddy.dev/problems/import-batch-limit-exceeded
+        type: https://api.bebudget.dev/problems/import-batch-limit-exceeded
         title: Import batch limit exceeded
         status: 400
         detail: Number of items exceeds configured import batch limit.
     Problem401:
       summary: Canonical 401 error
       value:
-        type: https://api.budgetbuddy.dev/problems/unauthorized
+        type: https://api.bebudget.dev/problems/unauthorized
         title: Unauthorized
         status: 401
         detail: Missing or invalid bearer token.
     Problem403:
       summary: Canonical 403 error
       value:
-        type: https://api.budgetbuddy.dev/problems/forbidden
+        type: https://api.bebudget.dev/problems/forbidden
         title: Forbidden
         status: 403
         detail: Resource is not owned by authenticated user.
     Problem403OriginNotAllowed:
       summary: Canonical 403 origin not allowed
       value:
-        type: https://api.budgetbuddy.dev/problems/origin-not-allowed
+        type: https://api.bebudget.dev/problems/origin-not-allowed
         title: Forbidden
         status: 403
         detail: Origin is not allowed for refresh.
     Problem406:
       summary: Canonical 406 error
       value:
-        type: https://api.budgetbuddy.dev/problems/not-acceptable
+        type: https://api.bebudget.dev/problems/not-acceptable
         title: Not Acceptable
         status: 406
         detail: Accept header must allow a supported media type.
@@ -5509,126 +5509,129 @@ components:
     Problem409AccountArchived:
       summary: Canonical 409 account archived
       value:
-        type: https://api.budgetbuddy.dev/problems/account-archived
+        type: https://api.bebudget.dev/problems/account-archived
         title: Account is archived
         status: 409
         detail: Transactions cannot be created on archived accounts.
     Problem409CategoryTypeMismatch:
       summary: Canonical 409 category type mismatch
       value:
-        type: https://api.budgetbuddy.dev/problems/category-type-mismatch
+        type: https://api.bebudget.dev/problems/category-type-mismatch
         title: Category type mismatch
         status: 409
         detail: Transaction type must match category type.
     Problem409BudgetDuplicate:
       summary: Canonical 409 budget duplicate
       value:
-        type: https://api.budgetbuddy.dev/problems/budget-duplicate
+        type: https://api.bebudget.dev/problems/budget-duplicate
         title: Budget already exists
         status: 409
         detail: A budget for the same month and category already exists.
     Problem409RolloverAlreadyApplied:
       summary: Canonical 409 rollover already applied
       value:
-        type: https://api.budgetbuddy.dev/problems/rollover-already-applied
+        type: https://api.bebudget.dev/problems/rollover-already-applied
         title: Rollover already applied
         status: 409
         detail: Rollover for source month was already applied.
     Problem409BillCategoryTypeMismatch:
       summary: Canonical 409 bill category type mismatch
       value:
-        type: https://api.budgetbuddy.dev/problems/bill-category-type-mismatch
+        type: https://api.bebudget.dev/problems/bill-category-type-mismatch
         title: Bill category must be of type expense
         status: 409
         detail: Bill category must be expense.
     Problem409BillAlreadyPaid:
       summary: Canonical 409 bill already paid
       value:
-        type: https://api.budgetbuddy.dev/problems/bill-already-paid
+        type: https://api.bebudget.dev/problems/bill-already-paid
         title: Bill already paid for this month
         status: 409
         detail: A payment for this bill and month already exists.
     Problem409BillInactiveForMonth:
       summary: Canonical 409 bill inactive for month
       value:
-        type: https://api.budgetbuddy.dev/problems/bill-inactive-for-month
+        type: https://api.bebudget.dev/problems/bill-inactive-for-month
         title: Bill is inactive for this month
         status: 409
         detail: Activate the bill before creating a payment.
     Problem409SavingsGoalCategoryTypeMismatch:
       summary: Canonical 409 savings goal category type mismatch
       value:
-        type: https://api.budgetbuddy.dev/problems/savings-goal-category-type-mismatch
+        type: https://api.bebudget.dev/problems/savings-goal-category-type-mismatch
         title: Savings goal category must be of type expense
         status: 409
         detail: Savings goal category must be expense.
     Problem409SavingsGoalNotActive:
       summary: Canonical 409 savings goal not active
       value:
-        type: https://api.budgetbuddy.dev/problems/savings-goal-not-active
+        type: https://api.bebudget.dev/problems/savings-goal-not-active
         title: Savings goal is not active and cannot receive contributions
         status: 409
         detail: Goal status must be active to receive contributions.
     Problem409SavingsGoalAlreadyCompleted:
       summary: Canonical 409 savings goal already completed
       value:
-        type: https://api.budgetbuddy.dev/problems/savings-goal-already-completed
+        type: https://api.bebudget.dev/problems/savings-goal-already-completed
         title: Savings goal is already completed
         status: 409
         detail: Completed goals cannot be cancelled.
     Problem422RolloverNoSurplus:
       summary: Canonical 422 rollover has no surplus
       value:
-        type: https://api.budgetbuddy.dev/problems/rollover-no-surplus
+        type: https://api.bebudget.dev/problems/rollover-no-surplus
         title: Rollover has no surplus
         status: 422
         detail: No positive surplus is available for source month.
     Problem422SavingsGoalInvalidTarget:
       summary: Canonical 422 savings goal invalid target
       value:
-        type: https://api.budgetbuddy.dev/problems/savings-goal-invalid-target
+        type: https://api.bebudget.dev/problems/savings-goal-invalid-target
         title: Savings goal target must be greater than zero
         status: 422
         detail: target_cents must be greater than 0.
     Problem422SavingsGoalDeadlinePast:
       summary: Canonical 422 savings goal deadline in past
       value:
-        type: https://api.budgetbuddy.dev/problems/savings-goal-deadline-past
+        type: https://api.bebudget.dev/problems/savings-goal-deadline-past
         title: Savings goal deadline cannot be in the past
         status: 422
         detail: deadline cannot be earlier than today.
     Problem422SavingsContributionInvalidAmount:
       summary: Canonical 422 savings contribution invalid amount
       value:
-        type: https://api.budgetbuddy.dev/problems/savings-contribution-invalid-amount
+        type: https://api.bebudget.dev/problems/savings-contribution-invalid-amount
         title: Contribution amount must be greater than zero
         status: 422
         detail: amount_cents must be greater than 0.
     Problem422BillDueDayInvalid:
       summary: Canonical 422 bill due day invalid
       value:
-        type: https://api.budgetbuddy.dev/problems/bill-due-day-invalid
+        type: https://api.bebudget.dev/problems/bill-due-day-invalid
         title: Bill due day must be between 1 and 31
         status: 422
         detail: due_day must be between 1 and 31.
     Problem422TransactionMoodInvalid:
       summary: Canonical 422 transaction mood invalid
       value:
-        type: https://api.budgetbuddy.dev/problems/transaction-mood-invalid
+        type: https://api.bebudget.dev/problems/transaction-mood-invalid
         title: Transaction mood value is invalid
         status: 422
         detail: 'mood must be one of: happy, neutral, sad, anxious, bored'
     Problem429:
       summary: Canonical 429 error
       value:
-        type: https://api.budgetbuddy.dev/problems/rate-limited
+        type: https://api.bebudget.dev/problems/rate-limited
         title: Too Many Requests
         status: 429
         detail: Too many requests. Retry after the interval in Retry-After.
     Problem503ServiceUnavailable:
       summary: Canonical 503 service unavailable
       value:
-        type: https://api.budgetbuddy.dev/problems/service-unavailable
+        type: https://api.bebudget.dev/problems/service-unavailable
         title: Service Unavailable
         status: 503
         detail: Service temporarily unavailable, please retry.
+
+
+

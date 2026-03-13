@@ -35,7 +35,7 @@ describe("categories api wrappers", () => {
     const call = fetchMock.mock.calls[0];
     expect(String(call?.[0])).toContain("/categories?include_archived=false&type=income&limit=5");
     const headers = new Headers(call?.[1]?.headers);
-    expect(headers.get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(headers.get("Authorization")).toBe("Bearer access-123");
   });
 
@@ -82,7 +82,7 @@ describe("categories api wrappers", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/conflict",
+          type: "https://api.bebudget.dev/problems/conflict",
           title: "Conflict",
           status: 409,
           detail: "Category already exists"
@@ -154,3 +154,5 @@ describe("categories api wrappers", () => {
     });
   });
 });
+
+

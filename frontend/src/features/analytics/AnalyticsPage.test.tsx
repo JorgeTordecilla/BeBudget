@@ -136,7 +136,7 @@ describe("AnalyticsPage", () => {
   it("renders invalid-date-range feedback from backend problem details", async () => {
     vi.mocked(getAnalyticsByMonth).mockRejectedValueOnce(
       new ApiProblemError(400, {
-        type: "https://api.budgetbuddy.dev/problems/invalid-date-range",
+        type: "https://api.bebudget.dev/problems/invalid-date-range",
         title: "",
         status: 400
       })
@@ -462,3 +462,4 @@ describe("AnalyticsPage", () => {
     expect(screen.getByText("Monthly trend")).toBeInTheDocument();
   });
 });
+

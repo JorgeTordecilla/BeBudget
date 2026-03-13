@@ -31,7 +31,7 @@ describe("accounts api wrappers", () => {
     expect(String(call?.[0])).toContain("/accounts?include_archived=true&limit=10");
     const init = call?.[1];
     const headers = new Headers(init?.headers);
-    expect(headers.get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(headers.get("Authorization")).toBe("Bearer access-123");
     expect(init?.credentials).toBe("include");
   });
@@ -55,7 +55,7 @@ describe("accounts api wrappers", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/conflict",
+          type: "https://api.bebudget.dev/problems/conflict",
           title: "Conflict",
           status: 409,
           detail: "Account already exists"
@@ -144,3 +144,5 @@ describe("accounts api wrappers", () => {
     });
   });
 });
+
+

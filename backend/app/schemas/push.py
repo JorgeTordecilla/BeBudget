@@ -22,5 +22,5 @@ class VapidPublicKeyResponse(BaseModel):
 
 
 class PushTestRequest(BaseModel):
-    title: str = "Test - BudgetBuddy"
+    title: str = "Test - BeBudget"
     body: str = "Push notifications are working."

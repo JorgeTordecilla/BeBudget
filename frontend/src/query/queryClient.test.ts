@@ -22,7 +22,7 @@ describe("createAppQueryClient global error policy", () => {
       mutationFn: async () => {
         throw new ApiProblemError(
           {
-            type: "https://api.budgetbuddy.dev/problems/rate-limited",
+            type: "https://api.bebudget.dev/problems/rate-limited",
             title: "Too many requests",
             status: 429
           },
@@ -44,7 +44,7 @@ describe("createAppQueryClient global error policy", () => {
       queryFn: async () => {
         throw new ApiProblemError(
           {
-            type: "https://api.budgetbuddy.dev/problems/forbidden",
+            type: "https://api.bebudget.dev/problems/forbidden",
             title: "Forbidden",
             status: 403
           },
@@ -60,7 +60,7 @@ describe("createAppQueryClient global error policy", () => {
         queryFn: async () => {
           throw new ApiProblemError(
             {
-              type: "https://api.budgetbuddy.dev/problems/forbidden",
+              type: "https://api.bebudget.dev/problems/forbidden",
               title: "Forbidden",
               status: 403
             },
@@ -73,4 +73,98 @@ describe("createAppQueryClient global error policy", () => {
 
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("retries queries online but not offline", () => {
+    const queryClient = createAppQueryClient();
+    const retry = queryClient.getDefaultOptions().queries?.retry;
+    expect(typeof retry).toBe("function");
+    if (typeof retry !== "function") {
+      return;
+    }
+
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => true
+    });
+    expect(retry(0, new Error("fail"))).toBe(true);
+    expect(retry(2, new Error("fail"))).toBe(false);
+
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => false
+    });
+    expect(retry(0, new Error("fail"))).toBe(false);
+
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      get: () => true
+    });
+  });
+
+  it("emits toast for query errors when presentation is toast/both", async () => {
+    const spy = vi.spyOn(toastStore, "publishProblemToast").mockImplementation(() => undefined);
+    const queryClient = createAppQueryClient();
+
+    await expect(
+      queryClient.fetchQuery({
+        queryKey: ["query-toast"],
+        queryFn: async () => {
+          throw new ApiProblemError(
+            {
+              type: "https://api.bebudget.dev/problems/rate-limited",
+              title: "Too many requests",
+              status: 429
+            },
+            { httpStatus: 429, requestId: "req-query-toast", retryAfter: "30" }
+          );
+        }
+      })
+    ).rejects.toBeInstanceOf(ApiProblemError);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips toast for mutation errors mapped as inline-only", async () => {
+    const spy = vi.spyOn(toastStore, "publishProblemToast").mockImplementation(() => undefined);
+    const queryClient = createAppQueryClient();
+
+    const mutation = queryClient.getMutationCache().build(queryClient, {
+      mutationFn: async () => {
+        throw new ApiProblemError(
+          {
+            type: "https://api.bebudget.dev/problems/validation-error",
+            title: "Validation failed",
+            status: 422
+          },
+          { httpStatus: 422, requestId: "req-inline", retryAfter: null }
+        );
+      }
+    });
+
+    await expect(mutation.execute(undefined)).rejects.toBeInstanceOf(ApiProblemError);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("skips toast when mutation meta opts out", async () => {
+    const spy = vi.spyOn(toastStore, "publishProblemToast").mockImplementation(() => undefined);
+    const queryClient = createAppQueryClient();
+
+    const mutation = queryClient.getMutationCache().build(queryClient, {
+      mutationFn: async () => {
+        throw new ApiProblemError(
+          {
+            type: "https://api.bebudget.dev/problems/rate-limited",
+            title: "Too many requests",
+            status: 429
+          },
+          { httpStatus: 429, requestId: "req-mutation-skip", retryAfter: "5" }
+        );
+      },
+      meta: { skipGlobalErrorToast: true }
+    });
+
+    await expect(mutation.execute(undefined)).rejects.toBeInstanceOf(ApiProblemError);
+    expect(spy).not.toHaveBeenCalled();
+  });
 });
+

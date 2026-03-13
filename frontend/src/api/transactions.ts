@@ -185,7 +185,7 @@ export async function exportTransactionsCsv(
     setLastRequestId(requestId);
     const enhancedProblem = response.status === 429 && retryAfter
       ? {
-          type: problem?.type ?? "https://api.budgetbuddy.dev/problems/rate-limited",
+          type: problem?.type ?? "https://api.bebudget.dev/problems/rate-limited",
           title: problem?.title ?? "Too Many Requests",
           status: problem?.status ?? 429,
           detail: problem?.detail ?? `Too many requests. Try again in ${retryAfter} seconds.`
@@ -207,3 +207,4 @@ export async function exportTransactionsCsv(
     contentDisposition: response.headers.get("content-disposition")
   };
 }
+

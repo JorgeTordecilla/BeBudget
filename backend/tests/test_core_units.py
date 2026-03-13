@@ -139,7 +139,7 @@ def _set_minimum_config_env(monkeypatch):
     monkeypatch.setenv("JWT_SECRET", "unit-test-secret")
     monkeypatch.setenv("ENV", "development")
     monkeypatch.setenv("DEBUG", "false")
-    monkeypatch.setenv("BUDGETBUDDY_CORS_ORIGINS", "http://localhost:5173")
+    monkeypatch.setenv("BEBUDGET_CORS_ORIGINS", "http://localhost:5173")
     monkeypatch.setenv("REFRESH_COOKIE_NAME", "bb_refresh")
     monkeypatch.setenv("REFRESH_COOKIE_PATH", "/api/auth")
     monkeypatch.setenv("REFRESH_COOKIE_SAMESITE", "none")
@@ -260,8 +260,8 @@ def test_previous_month_yyyy_mm_rejects_invalid_input(month):
 
 def test_dependency_guards_and_current_user_paths(monkeypatch):
     assert _accepts_vendor_or_problem("*/*")
-    assert _accepts_vendor_or_problem("application/vnd.budgetbuddy.v1+json")
-    assert not _accepts_vendor_or_problem("application/vnd.budgetbuddy.v1+json;q=0")
+    assert _accepts_vendor_or_problem("application/vnd.bebudget.v1+json")
+    assert not _accepts_vendor_or_problem("application/vnd.bebudget.v1+json;q=0")
     assert not _accepts_vendor_or_problem("application/xml")
 
     # Path ignored (outside API).
@@ -319,7 +319,7 @@ def test_api_error_logging_includes_structured_operational_fields(caplog):
             status=401,
             title="Unauthorized",
             detail="Bearer abc.def.ghi",
-            type_="https://api.budgetbuddy.dev/problems/unauthorized",
+            type_="https://api.bebudget.dev/problems/unauthorized",
         )
 
     with TestClient(app) as client, caplog.at_level(logging.WARNING, logger="app.errors"):
@@ -332,7 +332,7 @@ def test_api_error_logging_includes_structured_operational_fields(caplog):
     assert any("request_id=req-unit-001" in message for message in messages)
     assert any("path=/boom" in message for message in messages)
     assert any("status=401" in message for message in messages)
-    assert any("problem_type=https://api.budgetbuddy.dev/problems/unauthorized" in message for message in messages)
+    assert any("problem_type=https://api.bebudget.dev/problems/unauthorized" in message for message in messages)
 
 
 def test_settings_fail_fast_for_missing_critical_database_url(monkeypatch):
@@ -358,7 +358,7 @@ def test_settings_fail_fast_for_production_insecure_configuration(monkeypatch):
         Settings()
 
     monkeypatch.setenv("DEBUG", "false")
-    monkeypatch.setenv("BUDGETBUDDY_CORS_ORIGINS", "*")
+    monkeypatch.setenv("BEBUDGET_CORS_ORIGINS", "*")
     with pytest.raises(ValueError, match="must not contain '\\*' in production"):
         Settings()
 
@@ -718,7 +718,7 @@ def test_settings_refresh_origin_missing_mode_validation(monkeypatch):
 
 def test_settings_refresh_origin_allowlist_defaults_to_cors(monkeypatch):
     _set_minimum_config_env(monkeypatch)
-    monkeypatch.setenv("BUDGETBUDDY_CORS_ORIGINS", "http://localhost:5173,https://app.example.com")
+    monkeypatch.setenv("BEBUDGET_CORS_ORIGINS", "http://localhost:5173,https://app.example.com")
     monkeypatch.delenv("AUTH_REFRESH_ALLOWED_ORIGINS", raising=False)
     settings = Settings()
     assert settings.auth_refresh_allowed_origins == ["http://localhost:5173", "https://app.example.com"]
@@ -1369,3 +1369,5 @@ def test_import_job_manager_idempotency_conflict_on_payload_mismatch():
     with pytest.raises(APIError) as exc:
         manager.submit(user_id="user-1", payload=second, idempotency_key="same")
     assert exc.value.status == 409
+
+

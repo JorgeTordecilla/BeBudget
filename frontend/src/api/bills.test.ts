@@ -39,7 +39,7 @@ describe("bills api wrappers", () => {
     const call = fetchMock.mock.calls[0];
     expect(String(call?.[0])).toContain("/bills?include_archived=true");
     const headers = new Headers(call?.[1]?.headers);
-    expect(headers.get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(headers.get("Authorization")).toBe("Bearer access-123");
   });
 
@@ -163,7 +163,7 @@ describe("bills api wrappers", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            type: "https://api.budgetbuddy.dev/problems/bill-category-type-mismatch",
+            type: "https://api.bebudget.dev/problems/bill-category-type-mismatch",
             title: "Bill category must be of type expense",
             status: 409
           }),
@@ -173,7 +173,7 @@ describe("bills api wrappers", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            type: "https://api.budgetbuddy.dev/problems/bill-due-day-invalid",
+            type: "https://api.bebudget.dev/problems/bill-due-day-invalid",
             title: "Bill due day must be between 1 and 31",
             status: 422
           }),
@@ -183,7 +183,7 @@ describe("bills api wrappers", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            type: "https://api.budgetbuddy.dev/problems/bill-already-paid",
+            type: "https://api.bebudget.dev/problems/bill-already-paid",
             title: "Bill already paid for this month",
             status: 409
           }),
@@ -193,7 +193,7 @@ describe("bills api wrappers", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            type: "https://api.budgetbuddy.dev/problems/bill-inactive-for-month",
+            type: "https://api.bebudget.dev/problems/bill-inactive-for-month",
             title: "Bill is inactive for this month",
             status: 409
           }),
@@ -212,7 +212,7 @@ describe("bills api wrappers", () => {
       name: "ApiProblemError",
       status: 409,
       problem: expect.objectContaining({
-        type: "https://api.budgetbuddy.dev/problems/bill-category-type-mismatch"
+        type: "https://api.bebudget.dev/problems/bill-category-type-mismatch"
       })
     } satisfies Partial<ApiProblemError>);
 
@@ -228,4 +228,6 @@ describe("bills api wrappers", () => {
     await expect(markBillPaid(client, "bill_1", { month: "2026-03" })).rejects.toMatchObject({ status: 409 });
   });
 });
+
+
 

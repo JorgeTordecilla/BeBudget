@@ -34,13 +34,13 @@ describe("InstallPrompt", () => {
 
   it("does not render when install prompt is unavailable", () => {
     render(<InstallPrompt />);
-    expect(screen.queryByRole("banner", { name: "Install BudgetBuddy" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner", { name: "Install BeBudget" })).not.toBeInTheDocument();
   });
 
   it("renders when install prompt is available", () => {
     hookState.canInstall = true;
     render(<InstallPrompt />);
-    expect(screen.getByRole("banner", { name: "Install BudgetBuddy" })).toBeInTheDocument();
+    expect(screen.getByRole("banner", { name: "Install BeBudget" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Install" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Not now" })).toBeInTheDocument();
   });
@@ -49,14 +49,14 @@ describe("InstallPrompt", () => {
     hookState.canInstall = true;
     localStorage.setItem(DEFER_KEY, String(Date.now() + 60_000));
     render(<InstallPrompt />);
-    expect(screen.queryByRole("banner", { name: "Install BudgetBuddy" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner", { name: "Install BeBudget" })).not.toBeInTheDocument();
   });
 
   it("dismisses and stores a deferred timestamp when user clicks Not now", () => {
     hookState.canInstall = true;
     render(<InstallPrompt />);
     fireEvent.click(screen.getByRole("button", { name: "Not now" }));
-    expect(screen.queryByRole("banner", { name: "Install BudgetBuddy" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner", { name: "Install BeBudget" })).not.toBeInTheDocument();
     const stored = Number.parseInt(localStorage.getItem(DEFER_KEY) ?? "0", 10);
     expect(stored).toBeGreaterThan(Date.now());
   });
@@ -70,7 +70,7 @@ describe("InstallPrompt", () => {
     await waitFor(() => {
       expect(hookState.promptInstall).toHaveBeenCalledTimes(1);
     });
-    expect(screen.queryByRole("banner", { name: "Install BudgetBuddy" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner", { name: "Install BeBudget" })).not.toBeInTheDocument();
   });
 
   it("renders iOS fallback instructions when browser install prompt is unavailable", () => {
@@ -78,7 +78,7 @@ describe("InstallPrompt", () => {
 
     render(<InstallPrompt />);
 
-    expect(screen.getByRole("banner", { name: "Install BudgetBuddy" })).toBeInTheDocument();
+    expect(screen.getByRole("banner", { name: "Install BeBudget" })).toBeInTheDocument();
     expect(screen.getByText("On iPhone: tap Share, then Add to Home Screen.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Install" })).not.toBeInTheDocument();
   });
@@ -89,6 +89,6 @@ describe("InstallPrompt", () => {
 
     render(<InstallPrompt />);
 
-    expect(screen.queryByRole("banner", { name: "Install BudgetBuddy" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("banner", { name: "Install BeBudget" })).not.toBeInTheDocument();
   });
 });

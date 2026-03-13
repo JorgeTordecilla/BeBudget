@@ -59,7 +59,7 @@ describe("resolveProblemUi", () => {
   it("uses safe fallback without raw detail for non-validation unknown problem types", () => {
     const error = new ApiProblemError(
       {
-        type: "https://api.budgetbuddy.dev/problems/unknown",
+        type: "https://api.bebudget.dev/problems/unknown",
         title: "Some unknown problem",
         status: 500,
         detail: "Traceback: ValueError..."
@@ -115,3 +115,4 @@ describe("resolveProblemUi", () => {
     expect(ui.requestId).toBe("req-11");
   });
 });
+

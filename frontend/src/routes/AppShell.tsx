@@ -314,7 +314,7 @@ export default function AppShell() {
             <div className="flex min-h-10 items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-4">
                 <div className="shrink-0">
-                  <p className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">BudgetBuddy</p>
+                  <p className="text-[0.62rem] uppercase tracking-[0.22em] text-muted-foreground">BeBudget</p>
                 </div>
                 <nav
                   className="flex min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
@@ -347,7 +347,7 @@ export default function AppShell() {
                   <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10">
                     <img
                       src="/apple-touch-icon.png"
-                      alt="BudgetBuddy logo"
+                      alt="BeBudget logo"
                       className="h-5 w-5 rounded-md object-cover"
                     />
                   </span>

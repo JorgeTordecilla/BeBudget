@@ -5,7 +5,7 @@ import sys
 import yaml
 
 SPEC_PATH = Path("backend/openapi.yaml")
-SUCCESS_MEDIA = "application/vnd.budgetbuddy.v1+json"
+SUCCESS_MEDIA = "application/vnd.bebudget.v1+json"
 PROBLEM_MEDIA = "application/problem+json"
 CANONICAL_ERROR_STATUSES = {"400", "401", "403", "406", "409", "429"}
 
@@ -102,4 +102,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
 

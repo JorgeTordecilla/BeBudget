@@ -1,6 +1,6 @@
-# BudgetBuddy
+# BeBudget
 
-Monorepo de BudgetBuddy con backend API contract-first, frontend web y generación de SDKs.
+Monorepo de BeBudget con backend API contract-first, frontend web y generación de SDKs.
 
 ## Stack
 - Backend: FastAPI, SQLAlchemy, Pytest
@@ -65,7 +65,7 @@ backend\.venv\Scripts\python.exe tools\generate_sdks.py --check
 
 Salidas:
 - `sdk/typescript/src/`
-- `sdk/python/budgetbuddy_sdk/`
+- `sdk/python/bebudget_sdk/`
 
 ## Flujo OpenSpec
 - Cambios activos: `openspec/changes/<change-name>/`

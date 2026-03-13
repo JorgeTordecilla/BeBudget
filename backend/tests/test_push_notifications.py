@@ -14,7 +14,7 @@ from app.db import SessionLocal
 from app.models import Account, Bill, Category, PushSubscription, User
 from app.cli import send_bill_reminders as reminders_cli
 
-VENDOR = "application/vnd.budgetbuddy.v1+json"
+VENDOR = "application/vnd.bebudget.v1+json"
 
 
 def _register_user(client: TestClient) -> dict[str, str]:
@@ -134,7 +134,7 @@ def test_send_push_returns_false_on_410(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "pywebpush", types.SimpleNamespace(WebPushException=_WebPushException, webpush=_webpush))
     monkeypatch.setattr(settings, "vapid_private_key", "private")
-    monkeypatch.setattr(settings, "vapid_contact", "mailto:dev@budgetbuddy.app")
+    monkeypatch.setattr(settings, "vapid_contact", "mailto:dev@bebudget.app")
 
     subscription = types.SimpleNamespace(endpoint="https://push.example/subscriptions/device-003", p256dh="k1", auth="k2")
     assert send_push(subscription, {"title": "hello"}) is False
@@ -289,3 +289,4 @@ def test_upsert_subscription_uses_sqlite_fallback_branch(monkeypatch):
     assert updated.user_id == "user-3"
     assert updated.p256dh == "p-key-updated"
     assert updated.auth == "a-key-updated"
+

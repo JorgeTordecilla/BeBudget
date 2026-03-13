@@ -8,8 +8,10 @@ import {
   exportTransactionsCsv,
   buildTransactionsExportQuery,
   importTransactions,
+  getTransactionsImportJob,
   listTransactions,
   restoreTransaction,
+  submitTransactionsImportJob,
   updateTransaction
 } from "@/api/transactions";
 
@@ -77,7 +79,7 @@ describe("transactions api wrappers", () => {
     );
     const init = call?.[1];
     const headers = new Headers(init?.headers);
-    expect(headers.get("Accept")).toBe("application/vnd.budgetbuddy.v1+json");
+    expect(headers.get("Accept")).toBe("application/vnd.bebudget.v1+json");
     expect(headers.get("Authorization")).toBe("Bearer access-123");
     expect(init?.credentials).toBe("include");
   });
@@ -174,7 +176,7 @@ describe("transactions api wrappers", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/category-type-mismatch",
+          type: "https://api.bebudget.dev/problems/category-type-mismatch",
           title: "Category type mismatch",
           status: 409,
           detail: "Transaction type must match category type."
@@ -222,6 +224,66 @@ describe("transactions api wrappers", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/transactions/import");
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("POST");
     expect(result.created_count).toBe(1);
+  });
+
+  it("submits import job with optional idempotency key", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          job_id: "job-1",
+          state: "queued",
+          accepted_at: "2026-03-13T00:00:00Z"
+        }),
+        { status: 202, headers: { "content-type": "application/json" } }
+      )
+    );
+    const client = makeClient(fetchMock);
+
+    const response = await submitTransactionsImportJob(
+      client,
+      {
+        mode: "partial",
+        items: [
+          {
+            type: "expense",
+            account_id: "a1",
+            category_id: "c1",
+            amount_cents: 1200,
+            date: "2026-02-01"
+          }
+        ]
+      },
+      "idem-123"
+    );
+
+    expect(response.job_id).toBe("job-1");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/transactions/import/jobs");
+    const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("Idempotency-Key")).toBe("idem-123");
+  });
+
+  it("reads import job status by id", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          job_id: "job-1",
+          state: "succeeded",
+          summary: {
+            created_count: 2,
+            failed_count: 0
+          },
+          updated_at: "2026-03-13T00:00:10Z"
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    const client = makeClient(fetchMock);
+
+    const response = await getTransactionsImportJob(client, "job-1");
+
+    expect(response.job_id).toBe("job-1");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/transactions/import/jobs/job-1");
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("GET");
   });
 
   it("builds export query with active filters only", () => {
@@ -286,7 +348,7 @@ describe("transactions api wrappers", () => {
     const listFetch = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/invalid-cursor",
+          type: "https://api.bebudget.dev/problems/invalid-cursor",
           title: "Invalid cursor",
           status: 400
         }),
@@ -298,7 +360,7 @@ describe("transactions api wrappers", () => {
     const createFetch = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/invalid-request",
+          type: "https://api.bebudget.dev/problems/invalid-request",
           title: "Invalid request",
           status: 400
         }),
@@ -318,7 +380,7 @@ describe("transactions api wrappers", () => {
     const archiveFetch = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/forbidden",
+          type: "https://api.bebudget.dev/problems/forbidden",
           title: "Forbidden",
           status: 403
         }),
@@ -332,7 +394,7 @@ describe("transactions api wrappers", () => {
     const importFetch = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/import-batch-limit-exceeded",
+          type: "https://api.bebudget.dev/problems/import-batch-limit-exceeded",
           title: "Import limit exceeded",
           status: 400
         }),
@@ -438,7 +500,7 @@ describe("transactions api wrappers", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          type: "https://api.budgetbuddy.dev/problems/rate-limited",
+          type: "https://api.bebudget.dev/problems/rate-limited",
           title: "Too Many Requests",
           status: 429
         }),
@@ -460,3 +522,5 @@ describe("transactions api wrappers", () => {
     } satisfies Partial<ApiProblemError>);
   });
 });
+
+

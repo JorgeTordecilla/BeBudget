@@ -18,7 +18,7 @@ describe("observability runtime", () => {
         method: "GET",
         path: "/accounts",
         requestId: "req-1",
-        problemType: "https://api.budgetbuddy.dev/problems/forbidden",
+        problemType: "https://api.bebudget.dev/problems/forbidden",
         problemTitle: "Forbidden"
       })
     ).not.toThrow();
@@ -62,7 +62,7 @@ describe("observability runtime with sentry bridge enabled", () => {
       method: "GET",
       path: "/accounts",
       requestId: "req-10",
-      problemType: "https://api.budgetbuddy.dev/problems/forbidden",
+      problemType: "https://api.bebudget.dev/problems/forbidden",
       problemTitle: "Forbidden"
     });
     runtime.captureRuntimeFailure({
@@ -80,3 +80,4 @@ describe("observability runtime with sentry bridge enabled", () => {
     });
   });
 });
+

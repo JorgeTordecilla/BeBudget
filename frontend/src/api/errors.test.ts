@@ -6,7 +6,7 @@ describe("toApiError", () => {
   it("normalizes problem+json responses", async () => {
     const response = new Response(
       JSON.stringify({
-        type: "https://api.budgetbuddy.dev/problems/forbidden",
+        type: "https://api.bebudget.dev/problems/forbidden",
         title: "Forbidden",
         status: 403,
         detail: "No access"
@@ -49,4 +49,5 @@ describe("toApiError", () => {
     }
   });
 });
+
 

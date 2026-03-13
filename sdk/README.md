@@ -2,8 +2,8 @@
 
 Generated clients are deterministic and derived from `backend/openapi.yaml`.
 
-- TypeScript generator: `budgetbuddy-ts-sdkgen@1.0.0`
-- Python generator: `budgetbuddy-py-sdkgen@1.0.0`
+- TypeScript generator: `bebudget-ts-sdkgen@1.0.0`
+- Python generator: `bebudget-py-sdkgen@1.0.0`
 
 Regenerate locally:
 

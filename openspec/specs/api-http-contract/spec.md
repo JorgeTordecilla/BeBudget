@@ -1,28 +1,28 @@
 ## Purpose
-Define the canonical HTTP/API contract for BudgetBuddy, including media types, error semantics, and endpoint behavior guarantees.
+Define the canonical HTTP/API contract for BeBudget, including media types, error semantics, and endpoint behavior guarantees.
 ## Requirements
 ### Requirement: Vendor media type for successful payloads
-The backend MUST return response bodies for successful non-204 operations using `application/vnd.budgetbuddy.v1+json`, including endpoints whose request and response models are reorganized into backend domain schema modules.
+The backend MUST return response bodies for successful non-204 operations using `application/vnd.bebudget.v1+json`, including endpoints whose request and response models are reorganized into backend domain schema modules.
 
 #### Scenario: Successful endpoint response uses vendor media type
 - **WHEN** a client calls a successful endpoint that returns a JSON body
-- **THEN** the response status SHALL match the OpenAPI status code and the `Content-Type` header SHALL be `application/vnd.budgetbuddy.v1+json`
+- **THEN** the response status SHALL match the OpenAPI status code and the `Content-Type` header SHALL be `application/vnd.bebudget.v1+json`
 
 #### Scenario: Category restore success uses vendor media type
 - **WHEN** `PATCH /categories/{category_id}` sets `archived_at` to `null` for a category owned by the authenticated user
-- **THEN** the API SHALL return `200` with `Content-Type: application/vnd.budgetbuddy.v1+json` and a `Category` payload with `archived_at=null`
+- **THEN** the API SHALL return `200` with `Content-Type: application/vnd.bebudget.v1+json` and a `Category` payload with `archived_at=null`
 
 #### Scenario: Transaction restore success uses vendor media type
 - **WHEN** `PATCH /transactions/{transaction_id}` sets `archived_at` to `null` for an owned transaction
-- **THEN** the API SHALL return `200` with `Content-Type: application/vnd.budgetbuddy.v1+json` and `Transaction` payload
+- **THEN** the API SHALL return `200` with `Content-Type: application/vnd.bebudget.v1+json` and `Transaction` payload
 
 #### Scenario: Income-source success payloads use vendor media type
 - **WHEN** `GET /income-sources`, `POST /income-sources`, `GET /income-sources/{income_source_id}`, or `PATCH /income-sources/{income_source_id}` succeeds
-- **THEN** the response SHALL use `Content-Type: application/vnd.budgetbuddy.v1+json`
+- **THEN** the response SHALL use `Content-Type: application/vnd.bebudget.v1+json`
 
 #### Scenario: Income analytics success payload uses vendor media type
 - **WHEN** `GET /analytics/income` succeeds
-- **THEN** the response SHALL use `Content-Type: application/vnd.budgetbuddy.v1+json`
+- **THEN** the response SHALL use `Content-Type: application/vnd.bebudget.v1+json`
 
 #### Scenario: Schema module reorganization preserves success payload behavior
 - **WHEN** backend Pydantic schemas are reorganized into `app/schemas/*` modules
@@ -38,31 +38,31 @@ The backend MUST return all error payloads as `application/problem+json` for inc
 
 #### Scenario: Invalid cursor is canonical
 - **WHEN** `cursor` query parameter is malformed (invalid base64, invalid JSON, or missing required cursor keys)
-- **THEN** the API SHALL return `400` with `application/problem+json` and canonical `type=https://api.budgetbuddy.dev/problems/invalid-cursor`, `title=Invalid cursor`, `status=400`
+- **THEN** the API SHALL return `400` with `application/problem+json` and canonical `type=https://api.bebudget.dev/problems/invalid-cursor`, `title=Invalid cursor`, `status=400`
 
 #### Scenario: Unauthorized responses are canonical
 - **WHEN** authentication fails for protected endpoints (including missing/invalid bearer token)
-- **THEN** the API SHALL return `401` with `application/problem+json` and canonical `type=https://api.budgetbuddy.dev/problems/unauthorized`, `title=Unauthorized`, `status=401`
+- **THEN** the API SHALL return `401` with `application/problem+json` and canonical `type=https://api.bebudget.dev/problems/unauthorized`, `title=Unauthorized`, `status=401`
 
 #### Scenario: Forbidden responses are canonical
 - **WHEN** an authenticated user is not allowed to access a protected owned resource
-- **THEN** the API SHALL return `403` with `application/problem+json` and canonical `type=https://api.budgetbuddy.dev/problems/forbidden`, `title=Forbidden`, `status=403`
+- **THEN** the API SHALL return `403` with `application/problem+json` and canonical `type=https://api.bebudget.dev/problems/forbidden`, `title=Forbidden`, `status=403`
 
 #### Scenario: Not acceptable responses are canonical
 - **WHEN** request `Accept` does not include supported media types for contract endpoints
-- **THEN** the API SHALL return `406` with `application/problem+json` and canonical `type=https://api.budgetbuddy.dev/problems/not-acceptable`, `title=Not Acceptable`, `status=406`
+- **THEN** the API SHALL return `406` with `application/problem+json` and canonical `type=https://api.bebudget.dev/problems/not-acceptable`, `title=Not Acceptable`, `status=406`
 
 #### Scenario: Archived account conflict has canonical ProblemDetails
 - **WHEN** `POST /transactions` references an account whose `archived_at` is not null
-- **THEN** the API SHALL return `409` with `application/problem+json` and `type=https://api.budgetbuddy.dev/problems/account-archived`, `title=Account is archived`, and `status=409`
+- **THEN** the API SHALL return `409` with `application/problem+json` and `type=https://api.bebudget.dev/problems/account-archived`, `title=Account is archived`, and `status=409`
 
 #### Scenario: Category archived conflict has canonical ProblemDetails
 - **WHEN** `POST /transactions` or `PATCH /transactions/{transaction_id}` resolves to a category whose `archived_at` is not null
-- **THEN** the API SHALL return `409` with `application/problem+json` and `type=https://api.budgetbuddy.dev/problems/category-archived`, `title=Category is archived`, and `status=409`
+- **THEN** the API SHALL return `409` with `application/problem+json` and `type=https://api.bebudget.dev/problems/category-archived`, `title=Category is archived`, and `status=409`
 
 #### Scenario: Category type mismatch conflict has canonical ProblemDetails
 - **WHEN** `POST /transactions` or `PATCH /transactions/{transaction_id}` has `type` different from the selected category `type`
-- **THEN** the API SHALL return `409` with `application/problem+json` and `type=https://api.budgetbuddy.dev/problems/category-type-mismatch`, `title=Category type mismatch`, and `status=409`
+- **THEN** the API SHALL return `409` with `application/problem+json` and `type=https://api.bebudget.dev/problems/category-type-mismatch`, `title=Category type mismatch`, and `status=409`
 
 #### Scenario: Category mismatch canonical problem is consistent for both mismatch directions
 - **WHEN** mismatch occurs for `income->expense` or `expense->income`
@@ -129,7 +129,7 @@ Rollover apply MUST distinguish authorization failures from business-rule confli
 
 #### Scenario: Foreign rollover account or category is forbidden
 - **WHEN** an authenticated user supplies rollover account/category resources not owned by them
-- **THEN** the API SHALL return `403` with `application/problem+json` and canonical `type=https://api.budgetbuddy.dev/problems/forbidden`, `title=Forbidden`, `status=403`.
+- **THEN** the API SHALL return `403` with `application/problem+json` and canonical `type=https://api.bebudget.dev/problems/forbidden`, `title=Forbidden`, `status=403`.
 
 #### Scenario: Archived owned rollover resource remains conflict
 - **WHEN** rollover apply is attempted with an owned but archived account or owned but archived income category
@@ -140,7 +140,7 @@ Rollover apply MUST distinguish authorization failures from business-rule confli
 The backend MUST validate `Accept` headers for endpoints in the contract and return `406` with `ProblemDetails` when the expected media type is not acceptable.
 
 #### Scenario: Unsupported Accept header
-- **WHEN** a client sends `Accept` that does not allow `application/vnd.budgetbuddy.v1+json` or `application/problem+json` as required
+- **WHEN** a client sends `Accept` that does not allow `application/vnd.bebudget.v1+json` or `application/problem+json` as required
 - **THEN** the API SHALL return `406` with canonical Not Acceptable ProblemDetails
 
 #### Scenario: Category restore with unsupported Accept header
@@ -278,7 +278,7 @@ The API SHALL reject invalid date range queries on `GET /transactions` with cano
 
 #### Scenario: From date greater than to date
 - **WHEN** `GET /transactions` is called with `from > to`
-- **THEN** the API SHALL return `400` with `Content-Type: application/problem+json` and exact `type=https://api.budgetbuddy.dev/problems/invalid-date-range`, `title=Invalid date range`, `status=400`
+- **THEN** the API SHALL return `400` with `Content-Type: application/problem+json` and exact `type=https://api.bebudget.dev/problems/invalid-date-range`, `title=Invalid date range`, `status=400`
 
 ### Requirement: Cursor format and paging behavior are explicit for list endpoints
 The API SHALL document cursor pagination for `GET /accounts`, `GET /categories`, and `GET /transactions` with deterministic behavior.
@@ -311,7 +311,7 @@ Malformed cursors MUST continue to return canonical invalid-cursor ProblemDetail
 
 #### Scenario: Invalid cursor returns canonical 400
 - **WHEN** a list endpoint receives an invalid cursor token
-- **THEN** the API SHALL return `400` with `Content-Type: application/problem+json` and canonical `type=https://api.budgetbuddy.dev/problems/invalid-cursor`, `title=Invalid cursor`, `status=400`
+- **THEN** the API SHALL return `400` with `Content-Type: application/problem+json` and canonical `type=https://api.bebudget.dev/problems/invalid-cursor`, `title=Invalid cursor`, `status=400`
 
 ### Requirement: Paging stability expectation under concurrency is documented
 The contract SHALL clarify cursor paging stability expectations when data changes concurrently.
@@ -325,7 +325,7 @@ Switching to DB-backed persistence MUST NOT change the public API contract.
 
 #### Scenario: Success media type remains vendor-specific
 - **WHEN** successful endpoints return JSON payloads
-- **THEN** responses SHALL continue using `application/vnd.budgetbuddy.v1+json`
+- **THEN** responses SHALL continue using `application/vnd.bebudget.v1+json`
 
 #### Scenario: Error payload contract remains ProblemDetails
 - **WHEN** API errors are returned
@@ -347,7 +347,7 @@ Budget endpoints MUST follow the established HTTP media-type policy for success 
 
 #### Scenario: Budget success payloads use vendor media type
 - **WHEN** `GET /budgets`, `POST /budgets`, `GET /budgets/{budget_id}`, or `PATCH /budgets/{budget_id}` succeeds with a response body
-- **THEN** the API SHALL return `Content-Type: application/vnd.budgetbuddy.v1+json`
+- **THEN** the API SHALL return `Content-Type: application/vnd.bebudget.v1+json`
 
 #### Scenario: Budget archive returns empty 204 response
 - **WHEN** `DELETE /budgets/{budget_id}` succeeds
@@ -410,7 +410,7 @@ The OpenAPI contract MUST document `GET /audit` with owner-scoped query paramete
 
 #### Scenario: Audit success media type is vendor-specific
 - **WHEN** `GET /audit` succeeds
-- **THEN** the response SHALL use `application/vnd.budgetbuddy.v1+json`
+- **THEN** the response SHALL use `application/vnd.bebudget.v1+json`
 
 ### Requirement: Audit error mappings are canonical
 Audit endpoint errors MUST be mapped to `application/problem+json` with canonical statuses.
@@ -472,7 +472,7 @@ Examples MUST remain consistent with schema constraints and media-type rules.
 
 #### Scenario: Success examples use vendor media type
 - **WHEN** a success example is defined
-- **THEN** it SHALL be under `application/vnd.budgetbuddy.v1+json` and validate against the referenced response schema
+- **THEN** it SHALL be under `application/vnd.bebudget.v1+json` and validate against the referenced response schema
 
 #### Scenario: Error examples use ProblemDetails media type
 - **WHEN** an error example is defined
@@ -526,7 +526,7 @@ The HTTP contract MUST expose `GET /me` as an authenticated endpoint that return
 
 #### Scenario: Authenticated request returns current user
 - **WHEN** `GET /me` is called with a valid bearer access token
-- **THEN** the API SHALL return `200` with `Content-Type: application/vnd.budgetbuddy.v1+json` and a `User` payload
+- **THEN** the API SHALL return `200` with `Content-Type: application/vnd.bebudget.v1+json` and a `User` payload
 
 ### Requirement: Session bootstrap endpoint error mappings are canonical
 The `GET /me` contract MUST define canonical error mappings using `application/problem+json`.
@@ -551,7 +551,7 @@ The HTTP contract MUST define `POST /auth/register` success body using `AuthSess
 
 #### Scenario: Register success excludes refresh token from body
 - **WHEN** `POST /auth/register` succeeds
-- **THEN** the API SHALL return `201` with `Content-Type: application/vnd.budgetbuddy.v1+json` and payload fields `user`, `access_token`, `access_token_expires_in` only
+- **THEN** the API SHALL return `201` with `Content-Type: application/vnd.bebudget.v1+json` and payload fields `user`, `access_token`, `access_token_expires_in` only
 
 ### Requirement: Register contract documents refresh cookie transport
 The OpenAPI contract MUST explicitly document `Set-Cookie` refresh transport for register success.
@@ -756,7 +756,7 @@ OpenAPI contract MUST define all savings-goal and contribution lifecycle endpoin
 
 #### Scenario: Success and error media types are canonical
 - **WHEN** savings endpoints return success or failure
-- **THEN** success responses use `application/vnd.budgetbuddy.v1+json` (except `204`) and failures use `application/problem+json`.
+- **THEN** success responses use `application/vnd.bebudget.v1+json` (except `204`) and failures use `application/problem+json`.
 
 ### Requirement: OpenAPI schemas define savings-goal computed payloads
 OpenAPI components MUST include schemas for savings goals, contributions, detail, and summary payloads.
@@ -781,3 +781,5 @@ Savings responses MUST reference canonical savings error identities.
   - `savings-goal-not-active`
   - `savings-contribution-invalid-amount`
   - `savings-goal-already-completed`.
+
+

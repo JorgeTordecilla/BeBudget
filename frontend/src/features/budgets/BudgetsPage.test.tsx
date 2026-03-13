@@ -227,7 +227,7 @@ describe("BudgetsPage", () => {
   it("renders mapped 409 budget-duplicate feedback", async () => {
     vi.mocked(createBudget).mockRejectedValueOnce(
       new ApiProblemError(409, {
-        type: "https://api.budgetbuddy.dev/problems/budget-duplicate",
+        type: "https://api.bebudget.dev/problems/budget-duplicate",
         title: "Budget already exists",
         status: 409
       })
@@ -248,7 +248,7 @@ describe("BudgetsPage", () => {
   it("renders inline feedback for backend budget-month-invalid", async () => {
     vi.mocked(createBudget).mockRejectedValueOnce(
       new ApiProblemError(400, {
-        type: "https://api.budgetbuddy.dev/problems/budget-month-invalid",
+        type: "https://api.bebudget.dev/problems/budget-month-invalid",
         title: "",
         status: 400
       })
@@ -271,7 +271,7 @@ describe("BudgetsPage", () => {
   it("renders inline feedback for backend money-amount-* errors", async () => {
     vi.mocked(createBudget).mockRejectedValueOnce(
       new ApiProblemError(400, {
-        type: "https://api.budgetbuddy.dev/problems/money-amount-out-of-range",
+        type: "https://api.bebudget.dev/problems/money-amount-out-of-range",
         title: "",
         status: 400
       })
@@ -376,7 +376,7 @@ describe("BudgetsPage", () => {
   it("shows archive error banner when delete fails", async () => {
     vi.mocked(archiveBudget).mockRejectedValueOnce(
       new ApiProblemError(403, {
-        type: "https://api.budgetbuddy.dev/problems/forbidden",
+        type: "https://api.bebudget.dev/problems/forbidden",
         title: "Forbidden",
         status: 403
       })
@@ -446,3 +446,4 @@ describe("BudgetsPage", () => {
     ).toBeTruthy();
   });
 });
+

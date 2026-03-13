@@ -265,7 +265,7 @@ describe("shared components", () => {
   it("renders equivalent semantics across inline, banner, and toast surfaces for the same problem", async () => {
     const problem = new ApiProblemError(
       {
-        type: "https://api.budgetbuddy.dev/problems/forbidden",
+        type: "https://api.bebudget.dev/problems/forbidden",
         title: "Forbidden",
         status: 403
       },
@@ -290,7 +290,7 @@ describe("shared components", () => {
       presentation: "inline",
       requestId: "req-equivalent",
       status: 403,
-      type: "https://api.budgetbuddy.dev/problems/forbidden",
+      type: "https://api.bebudget.dev/problems/forbidden",
       retryAfter: null
     });
 
@@ -447,3 +447,4 @@ describe("shared components", () => {
     expect(onFieldChange).toHaveBeenCalledWith("note", "Monthly salary");
   });
 });
+

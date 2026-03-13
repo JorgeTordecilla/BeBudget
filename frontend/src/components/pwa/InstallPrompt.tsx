@@ -66,10 +66,10 @@ export default function InstallPrompt() {
   return (
     <div
       role="banner"
-      aria-label="Install BudgetBuddy"
+      aria-label="Install BeBudget"
       className="mb-4 rounded-2xl border border-primary/40 bg-primary/10 px-4 py-4 shadow-sm"
     >
-      <p className="text-base font-semibold text-foreground">Install BudgetBuddy for quick access</p>
+      <p className="text-base font-semibold text-foreground">Install BeBudget for quick access</p>
       {showIosFallback ? (
         <p className="mt-1 text-sm text-foreground/80">On iPhone: tap Share, then Add to Home Screen.</p>
       ) : (
