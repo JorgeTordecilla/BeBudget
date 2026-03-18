@@ -207,6 +207,21 @@ describe("Register route", () => {
     expect(await screen.findByText("Username already exists. Try another one.")).toBeInTheDocument();
   });
 
+  it("submits register payload with default currency and keeps select mounted", async () => {
+    const register = vi.fn(async () => undefined);
+    renderRegister({ register });
+
+    fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    await waitFor(() => expect(register).toHaveBeenCalledTimes(1));
+    expect(register).toHaveBeenCalledWith("demo", "Secret1!", "USD");
+  });
+
   it("handles 429 countdown and re-enables submit", async () => {
     const register = vi.fn(async () => {
       throw new ApiProblemError(
