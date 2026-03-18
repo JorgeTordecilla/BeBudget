@@ -2119,6 +2119,93 @@ def test_account_creation_materializes_opening_transaction_from_initial_balance(
         assert zero_rows == []
 
 
+def test_account_create_on_conflict_modes_cover_error_reuse_and_restore():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+
+        created = client.post(
+            "/api/accounts",
+            json={"name": "shared-account", "type": "cash", "initial_balance_cents": 0, "note": "acct"},
+            headers=headers,
+        )
+        assert created.status_code == 201
+        account_id = created.json()["id"]
+
+        duplicate_default = client.post(
+            "/api/accounts",
+            json={"name": "shared-account", "type": "cash", "initial_balance_cents": 0, "note": "acct"},
+            headers=headers,
+        )
+        assert duplicate_default.status_code == 409
+
+        duplicate_reuse = client.post(
+            "/api/accounts?on_conflict=use_existing",
+            json={"name": "shared-account", "type": "cash", "initial_balance_cents": 0, "note": "acct"},
+            headers=headers,
+        )
+        assert duplicate_reuse.status_code == 200
+        assert duplicate_reuse.json()["id"] == account_id
+
+        archived = client.delete(f"/api/accounts/{account_id}", headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"})
+        assert archived.status_code == 204
+
+        restored = client.post(
+            "/api/accounts?on_conflict=use_existing",
+            json={"name": "shared-account", "type": "cash", "initial_balance_cents": 0, "note": "acct"},
+            headers=headers,
+        )
+        assert restored.status_code == 200
+        restored_body = restored.json()
+        assert restored_body["id"] == account_id
+        assert restored_body["archived_at"] is None
+
+
+def test_category_create_on_conflict_modes_cover_error_reuse_and_restore():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+
+        created = client.post(
+            "/api/categories",
+            json={"name": "shared-category", "type": "expense", "note": "cat"},
+            headers=headers,
+        )
+        assert created.status_code == 201
+        category_id = created.json()["id"]
+
+        duplicate_default = client.post(
+            "/api/categories",
+            json={"name": "shared-category", "type": "expense", "note": "cat"},
+            headers=headers,
+        )
+        assert duplicate_default.status_code == 409
+
+        duplicate_reuse = client.post(
+            "/api/categories?on_conflict=use_existing",
+            json={"name": "shared-category", "type": "expense", "note": "cat"},
+            headers=headers,
+        )
+        assert duplicate_reuse.status_code == 200
+        assert duplicate_reuse.json()["id"] == category_id
+
+        archived = client.delete(
+            f"/api/categories/{category_id}",
+            headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"},
+        )
+        assert archived.status_code == 204
+
+        restored = client.post(
+            "/api/categories?on_conflict=use_existing",
+            json={"name": "shared-category", "type": "expense", "note": "cat"},
+            headers=headers,
+        )
+        assert restored.status_code == 200
+        restored_body = restored.json()
+        assert restored_body["id"] == category_id
+        assert restored_body["archived_at"] is None
+
+
 def test_account_creation_rolls_back_when_opening_transaction_side_effect_fails(monkeypatch):
     with TestClient(app, raise_server_exceptions=False) as client:
         user = _register_user(client)
@@ -2740,6 +2827,75 @@ def test_patch_transaction_invalid_amount_values_return_canonical_money_problems
         for patch_body, expected_type, expected_title in invalid_patches:
             response = client.patch(f"/api/transactions/{tx_id}", json=patch_body, headers=auth_headers)
             _assert_money_problem(response, expected_type, expected_title)
+
+
+def test_transactions_import_accepts_large_amounts_within_bound_without_overflow():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "import-large-bound-account")
+        category_id = _create_category(client, headers, "import-large-bound-income", "income")
+
+        payload = {
+            "mode": "all_or_nothing",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 3_000_000_000,
+                    "date": "2026-03-31",
+                    "merchant": "Tutoring",
+                    "note": "large import row",
+                    "mood": None,
+                    "is_impulse": False,
+                }
+            ],
+        }
+
+        imported = client.post("/api/transactions/import", json=payload, headers=headers)
+        assert imported.status_code == 200
+        assert imported.headers["content-type"].startswith(VENDOR)
+        body = imported.json()
+        assert body["created_count"] == 1
+        assert body["failed_count"] == 0
+
+
+def test_transactions_import_reports_out_of_range_amount_as_canonical_failure():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "import-out-of-range-account")
+        category_id = _create_category(client, headers, "import-out-of-range-income", "income")
+
+        payload = {
+            "mode": "all_or_nothing",
+            "items": [
+                {
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": category_id,
+                    "amount_cents": 100_000_000_000_000,
+                    "date": "2026-03-31",
+                    "merchant": "Too Large",
+                    "note": "out-of-range import row",
+                    "mood": None,
+                    "is_impulse": False,
+                }
+            ],
+        }
+
+        imported = client.post("/api/transactions/import", json=payload, headers=headers)
+        assert imported.status_code == 200
+        assert imported.headers["content-type"].startswith(VENDOR)
+        body = imported.json()
+        assert body["created_count"] == 0
+        assert body["failed_count"] == 1
+        assert body["failures"][0]["index"] == 0
+        assert body["failures"][0]["problem"]["type"] == MONEY_AMOUNT_OUT_OF_RANGE_TYPE
+        assert body["failures"][0]["problem"]["title"] == MONEY_AMOUNT_OUT_OF_RANGE_TITLE
+        assert "integer out of range" not in body["failures"][0]["message"].lower()
+        assert "sqlalchemy" not in body["failures"][0]["message"].lower()
 
 
 def test_transaction_money_currency_mismatch_returns_canonical_problem():

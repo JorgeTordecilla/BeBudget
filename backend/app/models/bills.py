@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -18,7 +18,7 @@ class Bill(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     due_day: Mapped[int] = mapped_column(Integer, nullable=False)
-    budget_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    budget_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)
     account_id: Mapped[str] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -48,7 +48,7 @@ class BillPayment(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     month: Mapped[str] = mapped_column(String(7), nullable=False)
     transaction_id: Mapped[str] = mapped_column(String(36), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False)
-    actual_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    actual_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz=UTC), nullable=False)
 
     bill: Mapped[Bill] = relationship("Bill", back_populates="payments")

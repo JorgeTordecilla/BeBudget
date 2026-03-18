@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
@@ -14,10 +16,12 @@ from app.core.errors import APIError
 from app.errors import forbidden_error
 from app.models import Account, Category, Transaction, User
 from app.repositories import SQLAlchemyAccountRepository
+from app.routers._conflict_reuse import reuse_or_restore_response
 from app.routers._crud_common import apply_created_cursor, build_created_cursor_page, commit_or_conflict
 from app.schemas import AccountCreate, AccountOut, AccountUpdate
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
+CreateConflictMode = Literal["error", "use_existing"]
 
 _OPENING_CATEGORY_NAME_BY_TYPE = {
     "income": "Opening Balance Income",
@@ -113,10 +117,28 @@ def list_accounts(
 def create_account(
     payload: AccountCreate,
     request: Request,
+    on_conflict: CreateConflictMode = Query(default="error"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     repo = SQLAlchemyAccountRepository(db)
+    if on_conflict == "use_existing":
+        existing = db.scalar(
+            select(Account)
+            .where(Account.user_id == current_user.id)
+            .where(Account.name == payload.name)
+        )
+        reused = reuse_or_restore_response(
+            db=db,
+            request=request,
+            user_id=current_user.id,
+            row=existing,
+            resource_type="account",
+            schema=AccountOut,
+        )
+        if reused is not None:
+            return reused
+
     row = Account(user_id=current_user.id, **payload.model_dump())
     repo.add(row)
     try:
@@ -128,6 +150,22 @@ def create_account(
         )
     except IntegrityError as exc:
         db.rollback()
+        if on_conflict == "use_existing":
+            existing = db.scalar(
+                select(Account)
+                .where(Account.user_id == current_user.id)
+                .where(Account.name == payload.name)
+            )
+            reused = reuse_or_restore_response(
+                db=db,
+                request=request,
+                user_id=current_user.id,
+                row=existing,
+                resource_type="account",
+                schema=AccountOut,
+            )
+            if reused is not None:
+                return reused
         raise APIError(status=409, title="Conflict", detail="Account name already exists") from exc
     except Exception:
         db.rollback()

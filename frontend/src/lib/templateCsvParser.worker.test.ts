@@ -32,13 +32,19 @@ describe("templateCsvParser.worker", () => {
       data: {
         csvText: "date,type,account,category,amount\\n2026-01-01,expense,Cash,Food,1000",
         accounts: [] as Account[],
-        categories: [] as Category[]
+        categories: [] as Category[],
+        currencyCode: "COP"
       }
     } as MessageEvent;
 
     self.onmessage?.(event as MessageEvent<unknown>);
 
-    expect(parseTemplateCsv).toHaveBeenCalled();
+    expect(parseTemplateCsv).toHaveBeenCalledWith(
+      event.data.csvText,
+      event.data.accounts,
+      event.data.categories,
+      "COP"
+    );
     expect(postMessageSpy).toHaveBeenCalledWith(
       expect.objectContaining({ ok: true })
     );
@@ -61,7 +67,8 @@ describe("templateCsvParser.worker", () => {
       data: {
         csvText: "bad",
         accounts: [] as Account[],
-        categories: [] as Category[]
+        categories: [] as Category[],
+        currencyCode: "USD"
       }
     } as MessageEvent<unknown>);
 
@@ -85,7 +92,8 @@ describe("templateCsvParser.worker", () => {
       data: {
         csvText: "bad",
         accounts: [] as Account[],
-        categories: [] as Category[]
+        categories: [] as Category[],
+        currencyCode: "USD"
       }
     } as MessageEvent<unknown>);
 

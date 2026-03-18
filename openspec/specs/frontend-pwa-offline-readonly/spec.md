@@ -4,7 +4,7 @@
 TBD - created by syncing change frontend-pwa-installable-offline-readonly. Update Purpose after archive.
 ## Requirements
 ### Requirement: Frontend MUST be installable as a standards-compliant PWA
-The frontend SHALL provide manifest metadata, icon assets, and service-worker registration needed for installability on supported Android and iOS browsers.
+The frontend SHALL keep installability requirements while exposing `BeBudget` as the canonical app identity in metadata and install prompts.
 
 #### Scenario: Manifest is generated at default plugin path
 - **WHEN** production build artifacts are inspected
@@ -21,9 +21,18 @@ The frontend SHALL provide manifest metadata, icon assets, and service-worker re
 - **WHEN** manifest content is validated
 - **THEN** it SHALL include `name`, `short_name`, `display: standalone`, `start_url`, icons (192 + 512 any + 512 maskable), and shortcuts.
 
+#### Scenario: Manifest metadata uses BeBudget identity
+- **WHEN** manifest content is validated
+- **THEN** `name` and `short_name` SHALL use `BeBudget` branding
+- **AND** installability metadata requirements SHALL remain satisfied.
+
 #### Scenario: iOS metadata is present
 - **WHEN** `index.html` is inspected
 - **THEN** Apple standalone meta tags and `apple-touch-icon` link SHALL be present.
+
+#### Scenario: Install prompt copy uses BeBudget
+- **WHEN** install prompt UI is shown to users
+- **THEN** visible install copy and accessibility label naming SHALL use `BeBudget`.
 
 ### Requirement: Service worker runtime caching MUST protect auth/session correctness
 Runtime caching SHALL use ordered route rules that exclude auth/session-sensitive endpoints from cache and provide offline fallback only for non-sensitive GET APIs.

@@ -10,10 +10,17 @@ Backend runtime configuration MUST be loaded through a typed declarative setting
 - **THEN** coercion and validation SHALL be enforced through typed settings fields and model validators
 - **AND** invalid values SHALL fail startup with explicit configuration errors.
 
-#### Scenario: Existing env-variable contract remains stable
-- **WHEN** operators provide existing environment variable names used by the service
-- **THEN** runtime settings resolution SHALL preserve current variable names and equivalent defaults
-- **AND** startup behavior SHALL remain contract-compatible for valid and invalid configuration inputs.
+### Requirement: Existing env-variable contract remains stable
+Runtime settings SHALL use `BEBUDGET_*` as the only supported environment namespace; legacy `BUDGETBUDDY_*` keys are removed.
+
+#### Scenario: Canonical namespace is BEBUDGET
+- **WHEN** operators configure runtime settings for new deployments
+- **THEN** documentation and runtime validation SHALL treat `BEBUDGET_*` keys as canonical.
+
+#### Scenario: Legacy namespace is rejected
+- **WHEN** operators provide only legacy `BUDGETBUDDY_*` keys
+- **THEN** runtime SHALL fail validation for required canonical keys
+- **AND** operators SHALL be required to configure `BEBUDGET_*` keys.
 
 ### Requirement: Critical runtime configuration is fail-fast
 The service MUST validate critical configuration at startup and refuse to start when required values are missing or invalid.
