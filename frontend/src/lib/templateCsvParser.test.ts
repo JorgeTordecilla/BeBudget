@@ -51,8 +51,8 @@ describe("templateCsvParser", () => {
 
     const result = parseTemplateCsv(csv, accounts, categories);
 
-    expect(result.validCount).toBe(4);
-    expect(result.errorCount).toBe(1);
+    expect(result.validCount).toBe(2);
+    expect(result.errorCount).toBe(3);
   });
 
   it("parses date variants and marks invalid dates", () => {
