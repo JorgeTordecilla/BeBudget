@@ -6,8 +6,11 @@ from app.errors import (
 )
 from app.models.enums import TransactionType
 
-# Conservative product-level bound to avoid absurd values while staying far from DB limits.
+# Conservative product-level bound to avoid absurd values while staying below BIGINT limits.
+BIGINT_MAX = 9_223_372_036_854_775_807
 MAX_ABSOLUTE_AMOUNT_CENTS = 9_999_999_999_99
+if MAX_ABSOLUTE_AMOUNT_CENTS > BIGINT_MAX:  # pragma: no cover - static guardrail
+    raise RuntimeError("MAX_ABSOLUTE_AMOUNT_CENTS must be <= BIGINT_MAX")
 SUPPORTED_CURRENCIES = {"USD", "COP", "EUR", "MXN"}
 CURRENCY_MINOR_UNITS = {
     "USD": 2,

@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { resolveMinorUnits } from "@/utils/money";
 import type {
   Account,
   AccountType,
@@ -157,7 +158,7 @@ function parseDateToIso(raw: string): string | null {
   return toIsoDate(parsed.getUTCFullYear(), parsed.getUTCMonth() + 1, parsed.getUTCDate());
 }
 
-function parseAmountToCents(raw: string): number | null {
+function parseAmountToCents(raw: string, fractionDigits: number): number | null {
   const value = raw.trim();
   if (!value) {
     return null;
@@ -176,8 +177,15 @@ function parseAmountToCents(raw: string): number | null {
     const sep = lastDot >= 0 ? "." : ",";
     const sepIndex = sep === "." ? lastDot : lastComma;
     const decimals = sanitized.length - sepIndex - 1;
-    if (decimals === 2) {
-      decimalSeparator = sep;
+    if (decimals > 0) {
+      if (fractionDigits === 0) {
+        return null;
+      }
+      if (decimals <= fractionDigits) {
+        decimalSeparator = sep;
+      } else {
+        return null;
+      }
     }
   }
 
@@ -195,7 +203,7 @@ function parseAmountToCents(raw: string): number | null {
   if (!Number.isFinite(amount) || amount <= 0) {
     return null;
   }
-  return Math.round(amount * 100);
+  return Math.round(amount * 10 ** fractionDigits);
 }
 
 function normalizeType(raw: string): TransactionType | null {
@@ -304,10 +312,12 @@ export function buildTransactionImportItems(
 export function parseTemplateCsv(
   rawCsvText: string,
   accounts: Account[],
-  categories: Category[]
+  categories: Category[],
+  currencyCode = "USD"
 ): ParsedImportResult {
   const { rows, headers } = parseCsvText(rawCsvText);
   const availableHeaders = new Set(headers);
+  const minorUnits = resolveMinorUnits(currencyCode);
 
   const missingRequiredHeaders = REQUIRED_HEADERS.filter((header) => !availableHeaders.has(header));
   if (missingRequiredHeaders.length > 0) {
@@ -380,7 +390,7 @@ export function parseTemplateCsv(
       parsed.normalized.date = parsedDate;
     }
 
-    const amountCents = parseAmountToCents(rawAmount);
+    const amountCents = parseAmountToCents(rawAmount, minorUnits);
     if (!amountCents) {
       parsed.errors.push({ field: "amount", message: `Invalid amount: '${rawAmount}'` });
     } else {

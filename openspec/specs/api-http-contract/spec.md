@@ -2,11 +2,15 @@
 Define the canonical HTTP/API contract for BeBudget, including media types, error semantics, and endpoint behavior guarantees.
 ## Requirements
 ### Requirement: Vendor media type for successful payloads
-The backend MUST return response bodies for successful non-204 operations using `application/vnd.bebudget.v1+json`, including endpoints whose request and response models are reorganized into backend domain schema modules.
+The API SHALL use `application/vnd.bebudget.v1+json` as the only supported vendor media type for successful payloads.
 
 #### Scenario: Successful endpoint response uses vendor media type
 - **WHEN** a client calls a successful endpoint that returns a JSON body
 - **THEN** the response status SHALL match the OpenAPI status code and the `Content-Type` header SHALL be `application/vnd.bebudget.v1+json`
+
+#### Scenario: Legacy media type is unsupported
+- **WHEN** clients send or negotiate `application/vnd.budgetbuddy.v1+json`
+- **THEN** the API SHALL reject the request according to content negotiation/error policy.
 
 #### Scenario: Category restore success uses vendor media type
 - **WHEN** `PATCH /categories/{category_id}` sets `archived_at` to `null` for a category owned by the authenticated user
@@ -24,17 +28,29 @@ The backend MUST return response bodies for successful non-204 operations using 
 - **WHEN** `GET /analytics/income` succeeds
 - **THEN** the response SHALL use `Content-Type: application/vnd.bebudget.v1+json`
 
+#### Scenario: Account create reuses existing on explicit conflict mode
+- **WHEN** `POST /accounts?on_conflict=use_existing` matches an existing owned account under uniqueness constraints
+- **THEN** the API SHALL return `200` with `application/vnd.bebudget.v1+json` and the existing account payload.
+
+#### Scenario: Category create reuses existing on explicit conflict mode
+- **WHEN** `POST /categories?on_conflict=use_existing` matches an existing owned category under uniqueness constraints
+- **THEN** the API SHALL return `200` with `application/vnd.bebudget.v1+json` and the existing category payload.
+
 #### Scenario: Schema module reorganization preserves success payload behavior
 - **WHEN** backend Pydantic schemas are reorganized into `app/schemas/*` modules
 - **THEN** existing endpoints SHALL preserve their success payload shapes
 - **AND** vendor media type behavior SHALL remain unchanged
 
 ### Requirement: ProblemDetails for error payloads
-The backend MUST return all error payloads as `application/problem+json` for income-source and income-analytics endpoints, aligned with canonical API behavior, even when backend schema modules are reorganized.
+Canonical ProblemDetails type URIs SHALL use the BeBudget namespace only; legacy identifiers are unsupported.
 
 #### Scenario: Validation error is returned as ProblemDetails
 - **WHEN** request data violates schema constraints
 - **THEN** the API SHALL return status `400` with `Content-Type: application/problem+json` and a body containing `type`, `title`, and `status`
+
+#### Scenario: Legacy problem namespaces are unsupported
+- **WHEN** clients rely on legacy `budgetbuddy` problem identifiers
+- **THEN** integrations SHALL treat them as deprecated/unsupported and migrate to canonical BeBudget problem URIs.
 
 #### Scenario: Invalid cursor is canonical
 - **WHEN** `cursor` query parameter is malformed (invalid base64, invalid JSON, or missing required cursor keys)
@@ -95,6 +111,12 @@ The backend MUST return all error payloads as `application/problem+json` for inc
 #### Scenario: Money validation failures are canonical 400 responses
 - **WHEN** `POST /transactions` or `PATCH /transactions/{transaction_id}` fails money invariants (`amount_cents` non-integer, zero/sign-invalid, out-of-range, currency mismatch)
 - **THEN** the API SHALL return `400` with `Content-Type: application/problem+json` and canonical `ProblemDetails` fields
+
+#### Scenario: Oversized money amount is rejected before insert
+- **WHEN** a transaction/import payload provides `amount_cents` above the configured domain maximum
+- **THEN** the API SHALL return `400` with `application/problem+json`
+- **AND** the response SHALL use canonical money out-of-range ProblemDetails
+- **AND** runtime SHALL NOT surface database `integer out of range` failures to clients.
 
 #### Scenario: Money validation failures do not leak internals
 - **WHEN** money-validation errors are returned to clients

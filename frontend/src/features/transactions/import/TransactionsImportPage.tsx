@@ -57,9 +57,14 @@ async function fetchAllCategories(client: ReturnType<typeof useAuth>["apiClient"
   return items;
 }
 
-async function parseCsvOffMainThread(csvText: string, accounts: Account[], categories: Category[]): Promise<ParsedImportResult> {
+async function parseCsvOffMainThread(
+  csvText: string,
+  accounts: Account[],
+  categories: Category[],
+  currencyCode: string
+): Promise<ParsedImportResult> {
   if (typeof Worker === "undefined") {
-    return parseTemplateCsv(csvText, accounts, categories);
+    return parseTemplateCsv(csvText, accounts, categories, currencyCode);
   }
 
   return new Promise((resolve, reject) => {
@@ -79,7 +84,7 @@ async function parseCsvOffMainThread(csvText: string, accounts: Account[], categ
       reject(new Error("Failed to parse CSV"));
     };
 
-    worker.postMessage({ csvText, accounts, categories });
+    worker.postMessage({ csvText, accounts, categories, currencyCode });
   });
 }
 
@@ -104,7 +109,7 @@ function idempotencyKey(): string {
 }
 
 export default function TransactionsImportPage() {
-  const { apiClient } = useAuth();
+  const { apiClient, user } = useAuth();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<WizardStep>("upload");
@@ -266,7 +271,13 @@ export default function TransactionsImportPage() {
 
     const text = await readFileText(file);
     try {
-      const parsed = await parseCsvOffMainThread(text, existingAccounts, existingCategories);
+      const currencyCode = user?.currency_code ?? "USD";
+      const parsed = await parseCsvOffMainThread(
+        text,
+        existingAccounts,
+        existingCategories,
+        currencyCode
+      );
       if (parsed.missingRequiredHeaders.length > 0) {
         setFormatError(`Missing required columns: ${parsed.missingRequiredHeaders.join(", ")}`);
         return;

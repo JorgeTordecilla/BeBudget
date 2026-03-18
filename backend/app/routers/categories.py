@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
@@ -15,10 +17,12 @@ from app.errors import forbidden_error
 from app.models import Category, User
 from app.models.enums import CategoryType
 from app.repositories import SQLAlchemyCategoryRepository
+from app.routers._conflict_reuse import reuse_or_restore_response
 from app.routers._crud_common import apply_created_cursor, build_created_cursor_page, commit_or_conflict
 from app.schemas import CategoryCreate, CategoryOut, CategoryUpdate
 
 router = APIRouter(prefix="/categories", tags=["categories"])
+CreateConflictMode = Literal["error", "use_existing"]
 
 
 def _owned_category_or_403(db: Session, user_id: str, category_id: str) -> Category:
@@ -60,16 +64,52 @@ def list_categories(
 def create_category(
     payload: CategoryCreate,
     request: Request,
+    on_conflict: CreateConflictMode = Query(default="error"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     repo = SQLAlchemyCategoryRepository(db)
+    if on_conflict == "use_existing":
+        existing = db.scalar(
+            select(Category)
+            .where(Category.user_id == current_user.id)
+            .where(Category.name == payload.name)
+            .where(Category.type == payload.type)
+        )
+        reused = reuse_or_restore_response(
+            db=db,
+            request=request,
+            user_id=current_user.id,
+            row=existing,
+            resource_type="category",
+            schema=CategoryOut,
+        )
+        if reused is not None:
+            return reused
+
     row = Category(user_id=current_user.id, **payload.model_dump())
     repo.add(row)
     try:
         db.flush()
     except IntegrityError as exc:
         db.rollback()
+        if on_conflict == "use_existing":
+            existing = db.scalar(
+                select(Category)
+                .where(Category.user_id == current_user.id)
+                .where(Category.name == payload.name)
+                .where(Category.type == payload.type)
+            )
+            reused = reuse_or_restore_response(
+                db=db,
+                request=request,
+                user_id=current_user.id,
+                row=existing,
+                resource_type="category",
+                schema=CategoryOut,
+            )
+            if reused is not None:
+                return reused
         raise APIError(status=409, title="Conflict", detail="Category name already exists for this type") from exc
     emit_audit_event(
         db,

@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Date, DateTime, Enum as SAEnum, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import BigInteger, Date, DateTime, Enum as SAEnum, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -30,7 +30,7 @@ class Account(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     type: Mapped[AccountType] = mapped_column(_value_enum(AccountType, name="ck_accounts_type_enum"), nullable=False)
-    initial_balance_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    initial_balance_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz=UTC), nullable=False)
@@ -79,7 +79,7 @@ class Transaction(Base):
     income_source_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("income_sources.id", ondelete="SET NULL"), nullable=True
     )
-    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     merchant: Mapped[str | None] = mapped_column(String(160), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -115,7 +115,7 @@ class IncomeSource(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    expected_amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    expected_amount_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     frequency: Mapped[IncomeFrequency] = mapped_column(
         _value_enum(IncomeFrequency, name="ck_income_sources_frequency_enum"),
         nullable=False,
@@ -144,5 +144,5 @@ class MonthlyRollover(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     source_month: Mapped[str] = mapped_column(String(7), nullable=False)
     transaction_id: Mapped[str] = mapped_column(String(36), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False)
-    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(tz=UTC), nullable=False)

@@ -16,6 +16,14 @@ The backend MUST implement `/accounts` and `/accounts/{account_id}` with create,
 - **WHEN** a user creates an account name that already exists under the uniqueness rule
 - **THEN** the API SHALL return `409` as `ProblemDetails`
 
+#### Scenario: Create account reuses existing in explicit mode
+- **WHEN** `POST /accounts?on_conflict=use_existing` matches an existing owned active account
+- **THEN** the API SHALL return `200` with the existing account resource.
+
+#### Scenario: Create account restores archived in explicit mode
+- **WHEN** `POST /accounts?on_conflict=use_existing` matches an existing owned archived account
+- **THEN** the API SHALL restore the account (`archived_at=null`) and return `200` with the restored resource.
+
 #### Scenario: Access forbidden account
 - **WHEN** a user requests an account not owned by that user
 - **THEN** the API SHALL return `403` as `ProblemDetails`
@@ -47,6 +55,14 @@ The backend MUST implement `/categories` and `/categories/{category_id}` with li
 #### Scenario: Category uniqueness by type
 - **WHEN** a user creates or renames a category to an existing name of the same type
 - **THEN** the API SHALL return `409` as `ProblemDetails`
+
+#### Scenario: Create category reuses existing in explicit mode
+- **WHEN** `POST /categories?on_conflict=use_existing` matches an existing owned active category with same name/type
+- **THEN** the API SHALL return `200` with the existing category resource.
+
+#### Scenario: Create category restores archived in explicit mode
+- **WHEN** `POST /categories?on_conflict=use_existing` matches an existing owned archived category with same name/type
+- **THEN** the API SHALL restore the category (`archived_at=null`) and return `200` with the restored resource.
 
 #### Scenario: Archived category is restored via patch
 - **WHEN** a client archives a category and then calls `PATCH /categories/{category_id}` with `archived_at=null` using a valid owner token
@@ -132,9 +148,23 @@ The backend MUST implement `/transactions` and `/transactions/{transaction_id}` 
 - **WHEN** a transaction write provides `amount_cents` beyond configured safe limits
 - **THEN** the API SHALL reject with canonical validation `400` ProblemDetails
 
+#### Scenario: Large money values within configured bound persist successfully
+- **WHEN** transaction/import payloads include large `amount_cents` values within configured domain limits
+- **THEN** persistence SHALL succeed without database numeric overflow.
+
+#### Scenario: Out-of-bound money values fail with canonical validation
+- **WHEN** transaction/import payloads include `amount_cents` above configured domain limits
+- **THEN** requests SHALL fail with canonical `400` money out-of-range ProblemDetails before DB write.
+
 #### Scenario: transaction currency must match user currency
 - **WHEN** a transaction write resolves to a money operation with a currency different from the authenticated user's `currency_code`
 - **THEN** the API SHALL reject with canonical validation `400` ProblemDetails
+
+#### Scenario: User currency invariants remain unchanged under BIGINT migration
+- **WHEN** transaction/import payloads are validated after money-column widening
+- **THEN** `amount_cents` SHALL continue representing minor units of the authenticated user's currency
+- **AND** no FX conversion SHALL be introduced by this change
+- **AND** currency mismatch rules SHALL remain enforced with canonical validation errors.
 
 ### Requirement: Transactions import/export rate limiting is deterministic and policy-scoped
 Transaction import/export endpoints SHALL enforce deterministic rate limits using transaction-scoped policy settings independent from auth endpoint throttling controls.

@@ -5,7 +5,7 @@ Define deterministic and reproducible SDK generation from the OpenAPI contract.
 ## ADDED Requirements
 
 ### Requirement: SDK generation is deterministic and reproducible
-The project MUST generate TypeScript and Python SDKs from `backend/openapi.yaml` using pinned generator versions and checked-in configuration.
+Generated SDK public identity SHALL align with `BeBudget` naming while keeping deterministic generation behavior unchanged; legacy aliases are removed.
 
 #### Scenario: Pinned generator inputs are versioned
 - **WHEN** SDK generation tooling is reviewed
@@ -14,6 +14,11 @@ The project MUST generate TypeScript and Python SDKs from `backend/openapi.yaml`
 #### Scenario: TypeScript and Python SDK outputs are generated from the same spec
 - **WHEN** SDK generation command runs
 - **THEN** `sdk/typescript` and `sdk/python` SHALL be regenerated from the same OpenAPI source without manual edits
+
+#### Scenario: Legacy SDK naming is removed
+- **WHEN** existing integrations import legacy BudgetBuddy-named client surfaces
+- **THEN** those imports SHALL be treated as unsupported
+- **AND** integrations SHALL migrate to canonical `BeBudget` exports.
 
 ### Requirement: SDK generation commands are documented for contributors
 The project MUST document local commands and prerequisites for SDK regeneration.
