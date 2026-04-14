@@ -6,6 +6,7 @@ import type { ApiClient } from "@/api/client";
 import { archiveAccount, createAccount, listAccounts, updateAccount } from "@/api/accounts";
 import { ApiProblemError } from "@/api/problem";
 import { AuthContext } from "@/auth/AuthContext";
+import { invalidateAccountMutationDependencies } from "@/features/transactions/transactionCache";
 import AccountsPage from "@/pages/AccountsPage";
 
 vi.mock("@/api/accounts", () => ({
@@ -13,6 +14,10 @@ vi.mock("@/api/accounts", () => ({
   createAccount: vi.fn(),
   updateAccount: vi.fn(),
   archiveAccount: vi.fn()
+}));
+
+vi.mock("@/features/transactions/transactionCache", () => ({
+  invalidateAccountMutationDependencies: vi.fn().mockResolvedValue(undefined)
 }));
 
 const apiClientStub = {} as ApiClient;
@@ -45,6 +50,7 @@ function renderPage() {
 describe("AccountsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(invalidateAccountMutationDependencies).mockResolvedValue(undefined);
     vi.mocked(listAccounts).mockResolvedValue({
       items: [
         {
@@ -99,6 +105,7 @@ describe("AccountsPage", () => {
         expect.objectContaining({ name: "Savings", initial_balance_cents: 5000 })
       )
     );
+    expect(invalidateAccountMutationDependencies).toHaveBeenCalled();
   });
 
   it("parses locale decimal input without inflating cents", async () => {

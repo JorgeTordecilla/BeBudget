@@ -5,6 +5,7 @@ import { listAccounts } from "@/api/accounts";
 import { listCategories } from "@/api/categories";
 import type { ApiClient } from "@/api/client";
 import type { RolloverPreview } from "@/api/types";
+import { optionQueryKeys } from "@/query/queryKeys";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { formatCents } from "@/utils/money";
@@ -31,14 +32,14 @@ export default function RolloverApplyModal({
   onSubmit,
 }: Props) {
   const accountsQuery = useQuery({
-    queryKey: ["rollover", "accounts", "apply"] as const,
+    queryKey: optionQueryKeys.accounts({ includeArchived: false, limit: 100 }),
     enabled: open,
     meta: { skipGlobalErrorToast: true },
     queryFn: () => listAccounts(apiClient, { includeArchived: false, limit: 100 }),
   });
 
   const categoriesQuery = useQuery({
-    queryKey: ["rollover", "categories", "apply"] as const,
+    queryKey: optionQueryKeys.categories({ includeArchived: false, type: "income", limit: 100 }),
     enabled: open,
     meta: { skipGlobalErrorToast: true },
     queryFn: () => listCategories(apiClient, { includeArchived: false, type: "income", limit: 100 }),

@@ -11,6 +11,7 @@ import SelectField from "@/components/SelectField";
 import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
 import ProblemBanner from "@/components/ProblemBanner";
 import { publishSuccessToast } from "@/components/feedback/successToastStore";
+import { invalidateAccountMutationDependencies } from "@/features/transactions/transactionCache";
 import { appendCursorPage } from "@/lib/pagination";
 import { toLocalProblem } from "@/lib/problemDetails";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
@@ -101,7 +102,7 @@ export default function AccountsPage() {
     onSuccess: async () => {
       publishSuccessToast(editing ? "Account updated successfully." : "Account created successfully.");
       setFormOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      await invalidateAccountMutationDependencies(queryClient);
     },
     onError: (error) => {
       setFormProblem(error);
@@ -114,7 +115,7 @@ export default function AccountsPage() {
     onSuccess: async () => {
       publishSuccessToast("Account archived successfully.");
       setArchiveTarget(null);
-      await queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      await invalidateAccountMutationDependencies(queryClient);
     },
     onError: (error) => {
       setPageProblem(error);

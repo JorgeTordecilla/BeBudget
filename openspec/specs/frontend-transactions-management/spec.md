@@ -196,7 +196,7 @@ The frontend SHALL validate and normalize textarea input before submitting impor
 - **THEN** frontend SHALL show a non-blocking warning before submit.
 
 ### Requirement: Bulk import result visualization must expose row-level failures
-The frontend SHALL render `TransactionImportResult` with summary counters and per-row failure details.
+The frontend SHALL render `TransactionImportResult` with summary counters and per-row failure details, and SHALL keep cross-page option caches coherent after import side effects.
 
 #### Scenario: Successful partial import displays summary and failures
 - **WHEN** API responds `200` with `created_count`, `failed_count`, and `failures[]`
@@ -207,6 +207,29 @@ The frontend SHALL render `TransactionImportResult` with summary counters and pe
 - **WHEN** import request returns `200`
 - **THEN** frontend SHALL invalidate transaction and analytics query families
 - **AND** budgets-related overlays MAY be invalidated where coupled to analytics display.
+
+#### Scenario: Post-import option freshness is deterministic
+- **WHEN** import request returns `200` and import flow created or reused accounts/categories
+- **THEN** frontend SHALL invalidate option query families for `accounts` and `categories`
+- **AND** transactions selectors SHALL reflect created/reused options without manual reload.
+
+### Requirement: Option-list queries follow resource-oriented cache keys
+Option-list queries MUST remain coherent across transactions surfaces and dependent routes after domain mutations.
+
+#### Scenario: Account mutation invalidates option-list consumers
+- **WHEN** account create/update/archive succeeds from any route
+- **THEN** frontend SHALL invalidate the `accounts` option query family
+- **AND** transactions-related selectors SHALL refresh deterministically.
+
+#### Scenario: Category mutation invalidates option-list consumers
+- **WHEN** category create/update/archive/restore succeeds from any route
+- **THEN** frontend SHALL invalidate the `categories` option query family
+- **AND** transactions-related selectors SHALL refresh deterministically.
+
+#### Scenario: Rollover option keys are covered by shared invalidation policy
+- **WHEN** rollover apply modal requests account/category options
+- **THEN** those queries SHALL use shared resource-oriented key families or equivalent invalidation coverage
+- **AND** SHALL NOT remain stale after account/category mutations.
 
 ### Requirement: Transactions CSV export request must be contract-safe
 The frontend SHALL request `GET /transactions/export` with filter-aware query composition, CSV content negotiation, and existing auth/session behavior.
