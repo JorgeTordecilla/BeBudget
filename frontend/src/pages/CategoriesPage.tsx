@@ -17,6 +17,7 @@ import SelectField from "@/components/SelectField";
 import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
 import ProblemBanner from "@/components/ProblemBanner";
 import { publishSuccessToast } from "@/components/feedback/successToastStore";
+import { invalidateCategoryMutationDependencies } from "@/features/transactions/transactionCache";
 import { appendCursorPage } from "@/lib/pagination";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { Button } from "@/ui/button";
@@ -65,8 +66,7 @@ export default function CategoriesPage() {
   const baseQueryKey = ["categories", includeArchived, typeFilter] as const;
 
   async function invalidateCategoryCaches(): Promise<void> {
-    await queryClient.invalidateQueries({ queryKey: ["categories"] });
-    await queryClient.invalidateQueries({ queryKey: ["categories-options"] });
+    await invalidateCategoryMutationDependencies(queryClient);
   }
 
   const categoriesQuery = useQuery({

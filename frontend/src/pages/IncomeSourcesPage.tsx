@@ -16,6 +16,7 @@ import PageHeader from "@/components/PageHeader";
 import ProblemBanner from "@/components/ProblemBanner";
 import ProblemDetailsInline from "@/components/errors/ProblemDetailsInline";
 import { publishSuccessToast } from "@/components/feedback/successToastStore";
+import { invalidateIncomeSourceMutationDependencies } from "@/features/transactions/transactionCache";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { Button } from "@/ui/button";
 import { Card, CardContent } from "@/ui/card";
@@ -78,8 +79,7 @@ export default function IncomeSourcesPage() {
     onSuccess: async () => {
       publishSuccessToast(editing ? "Income source updated successfully." : "Income source created successfully.");
       setFormOpen(false);
-      await queryClient.invalidateQueries({ queryKey: ["income-sources"] });
-      await queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      await invalidateIncomeSourceMutationDependencies(queryClient);
     },
     onError: (error) => {
       setFormProblem(error);
@@ -92,8 +92,7 @@ export default function IncomeSourcesPage() {
     onSuccess: async () => {
       publishSuccessToast("Income source archived successfully.");
       setArchiveTarget(null);
-      await queryClient.invalidateQueries({ queryKey: ["income-sources"] });
-      await queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      await invalidateIncomeSourceMutationDependencies(queryClient);
     },
     onError: (error) => {
       setPageProblem(error);
@@ -105,8 +104,7 @@ export default function IncomeSourcesPage() {
     mutationFn: (incomeSourceId: string) => restoreIncomeSource(apiClient, incomeSourceId),
     onSuccess: async () => {
       publishSuccessToast("Income source restored successfully.");
-      await queryClient.invalidateQueries({ queryKey: ["income-sources"] });
-      await queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      await invalidateIncomeSourceMutationDependencies(queryClient);
     },
     onError: (error) => {
       setPageProblem(error);

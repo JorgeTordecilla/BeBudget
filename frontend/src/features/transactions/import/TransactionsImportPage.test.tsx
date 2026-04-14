@@ -14,6 +14,7 @@ import {
   submitTransactionsImportJob
 } from "@/api/transactions";
 import { AuthContext } from "@/auth/AuthContext";
+import { invalidateImportExecutionDependencies } from "@/features/transactions/transactionCache";
 import TransactionsImportPage from "@/features/transactions/import/TransactionsImportPage";
 
 vi.mock("@/api/accounts", () => ({
@@ -30,6 +31,10 @@ vi.mock("@/api/transactions", () => ({
   importTransactions: vi.fn(),
   submitTransactionsImportJob: vi.fn(),
   getTransactionsImportJob: vi.fn()
+}));
+
+vi.mock("@/features/transactions/transactionCache", () => ({
+  invalidateImportExecutionDependencies: vi.fn().mockResolvedValue(undefined)
 }));
 
 const apiClientStub = {} as ApiClient;
@@ -119,6 +124,7 @@ function mockCompletedJob(overrides?: Partial<TransactionImportJob>) {
 describe("TransactionsImportPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(invalidateImportExecutionDependencies).mockResolvedValue(undefined);
     vi.mocked(listAccounts).mockResolvedValue({ items: existingAccounts, next_cursor: null });
     vi.mocked(listCategories).mockResolvedValue({ items: existingCategories, next_cursor: null });
     vi.mocked(createAccount).mockResolvedValue({
@@ -226,6 +232,7 @@ describe("TransactionsImportPage", () => {
     expect(payload.items).toHaveLength(1);
     expect(payload.items[0]?.account_id).toBe("acc-existing");
     expect(payload.items[0]?.category_id).toBe("cat-groceries");
+    expect(invalidateImportExecutionDependencies).toHaveBeenCalled();
   });
 
   it("supports entity edits before execution", async () => {

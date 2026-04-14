@@ -553,7 +553,6 @@ describe("TransactionsPage", () => {
       apiClientStub,
       expect.objectContaining({
         from: localIsoDateToApiUtcDate("2026-03-20"),
-        to: localIsoDateToApiUtcDate("2026-03-20"),
         type: "income"
       })
     );

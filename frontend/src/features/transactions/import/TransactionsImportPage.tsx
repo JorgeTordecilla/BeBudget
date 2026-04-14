@@ -17,7 +17,7 @@ import {
   type EntityToCreate,
   type ParsedImportResult
 } from "@/lib/templateCsvParser";
-import { invalidateTransactionsAnalyticsAndBudgets } from "@/features/transactions/transactionCache";
+import { invalidateImportExecutionDependencies } from "@/features/transactions/transactionCache";
 import { Button } from "@/ui/button";
 
 const LARGE_FILE_BYTES = 2 * 1024 * 1024;
@@ -229,7 +229,7 @@ export default function TransactionsImportPage() {
     onSuccess: async (importResult) => {
       setRequestError(null);
       setResult(importResult);
-      await invalidateTransactionsAnalyticsAndBudgets(queryClient);
+      await invalidateImportExecutionDependencies(queryClient);
     },
     onError: (error) => {
       setRequestError(error);
