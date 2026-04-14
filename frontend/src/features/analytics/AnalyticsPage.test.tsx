@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 
 import { getAnalyticsByCategory, getAnalyticsByMonth, getAnalyticsIncome, getImpulseSummary } from "@/api/analytics";
@@ -11,7 +11,7 @@ import { applyRollover, getRolloverPreview } from "@/api/rollover";
 import type { ApiClient } from "@/api/client";
 import { AuthContext } from "@/auth/AuthContext";
 import AnalyticsPage from "@/features/analytics/AnalyticsPage";
-import { localIsoDateToApiUtcDate } from "@/utils/dates";
+import { defaultAnalyticsRange, localIsoDateToApiUtcDate } from "@/utils/dates";
 
 vi.mock("@/api/analytics", () => ({
   getAnalyticsByMonth: vi.fn(),
@@ -56,6 +56,10 @@ function renderPage(initialEntries = ["/app/analytics"], currencyCode = "USD") {
 }
 
 describe("AnalyticsPage", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getAnalyticsByMonth).mockResolvedValue({
@@ -144,6 +148,18 @@ describe("AnalyticsPage", () => {
 
     renderPage();
     expect(await screen.findByText(/Invalid date range/)).toBeInTheDocument();
+  });
+
+  it("uses current month month-to-date range when opened without query params", async () => {
+    const expected = defaultAnalyticsRange();
+    renderPage(["/app/analytics"]);
+
+    await waitFor(() =>
+      expect(getAnalyticsByMonth).toHaveBeenCalledWith(apiClientStub, {
+        from: localIsoDateToApiUtcDate(expected.from),
+        to: localIsoDateToApiUtcDate(expected.to)
+      })
+    );
   });
 
   it("switches category metric between expense and income views", async () => {

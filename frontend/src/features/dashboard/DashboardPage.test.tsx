@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
 import type { ApiClient } from "@/api/client";
@@ -124,6 +124,10 @@ function mockDashboardQueries() {
 }
 
 describe("DashboardPage", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(listAccounts).mockResolvedValue({ items: [], next_cursor: null });
@@ -164,6 +168,30 @@ describe("DashboardPage", () => {
     expect(screen.getAllByRole("link", { name: "Open transactions" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Review budgets" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Open analytics" }).length).toBeGreaterThan(0);
+  });
+
+  it("builds analytics deep-link as month-to-date for current month", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-13T10:00:00.000Z"));
+
+    renderPage(1280);
+
+    const analyticsLinks = screen.getAllByRole("link", { name: "Open analytics" });
+    expect(analyticsLinks.length).toBeGreaterThan(0);
+    expect(analyticsLinks[0]).toHaveAttribute("href", expect.stringContaining("from=2026-03-01"));
+    expect(analyticsLinks[0]).toHaveAttribute("href", expect.stringContaining("to=2026-03-13"));
+  });
+
+  it("keeps analytics deep-link full-month for non-current selected month", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-13T10:00:00.000Z"));
+
+    renderPage(1280);
+    fireEvent.change(screen.getByLabelText("Dashboard month"), { target: { value: "2026-02" } });
+
+    const analyticsLinks = screen.getAllByRole("link", { name: "Open analytics" });
+    expect(analyticsLinks[0]).toHaveAttribute("href", expect.stringContaining("from=2026-02-01"));
+    expect(analyticsLinks[0]).toHaveAttribute("href", expect.stringContaining("to=2026-02-28"));
   });
 
   it("renders pace monitor details with projected vs actual usage", () => {
