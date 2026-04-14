@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getAnalyticsByCategory, getAnalyticsByMonth } from "@/api/analytics";
 import { listTransactions } from "@/api/transactions";
@@ -35,7 +35,14 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe("dashboard query helpers", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("builds deterministic month ranges and recent months", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-13T10:00:00.000Z"));
+
     const current = currentLocalMonth();
     expect(current).toMatch(/^\d{4}-\d{2}$/);
     expect(recentMonths(6)).toHaveLength(6);
@@ -45,6 +52,20 @@ describe("dashboard query helpers", () => {
       month: "2026-02",
       from: "2026-02-01",
       to: "2026-02-28"
+    });
+
+    const currentMonthRange = monthToDateRange("2026-03");
+    expect(currentMonthRange).toEqual({
+      month: "2026-03",
+      from: "2026-03-01",
+      to: "2026-03-13"
+    });
+
+    const fallbackRange = monthToDateRange("bad-month");
+    expect(fallbackRange).toEqual({
+      month: "2026-03",
+      from: "2026-03-01",
+      to: "2026-03-13"
     });
   });
 });

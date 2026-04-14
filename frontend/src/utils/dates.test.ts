@@ -6,7 +6,9 @@ import {
   defaultAnalyticsRange,
   isValidDateRange,
   isValidIsoDate,
+  isValidIsoMonth,
   localIsoDateToApiUtcDate,
+  monthEndIsoDate,
   monthStartIsoDate,
   todayIsoDate
 } from "@/utils/dates";
@@ -15,6 +17,13 @@ describe("date helpers", () => {
   it("returns month-start in ISO format", () => {
     const date = new Date(Date.UTC(2026, 1, 14));
     expect(monthStartIsoDate(date)).toBe("2026-02-01");
+  });
+
+  it("validates and resolves ISO month helpers", () => {
+    expect(isValidIsoMonth("2026-03")).toBe(true);
+    expect(isValidIsoMonth("2026-13")).toBe(false);
+    expect(monthEndIsoDate("2026-02")).toBe("2026-02-28");
+    expect(monthEndIsoDate("bad")).toBe("bad");
   });
 
   it("validates ISO date and date ranges", () => {

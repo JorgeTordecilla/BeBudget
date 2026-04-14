@@ -4,7 +4,7 @@ import { getAnalyticsByCategory, getAnalyticsByMonth } from "@/api/analytics";
 import { listTransactions } from "@/api/transactions";
 import type { ApiClient } from "@/api/client";
 import type { AnalyticsByCategoryItem, AnalyticsByMonthItem, Transaction } from "@/api/types";
-import { currentIsoMonth } from "@/utils/dates";
+import { currentIsoMonth, isValidIsoMonth, monthEndIsoDate, todayIsoDate } from "@/utils/dates";
 
 export type DashboardMonthRange = {
   month: string;
@@ -16,20 +16,26 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-function daysInMonth(year: number, monthIndex: number): number {
-  return new Date(year, monthIndex + 1, 0).getDate();
-}
-
-export function monthToDateRange(month: string): DashboardMonthRange {
+export function monthToDateRange(month: string, now = new Date()): DashboardMonthRange {
+  if (!isValidIsoMonth(month)) {
+    const fallbackMonth = currentIsoMonth(now);
+    return {
+      month: fallbackMonth,
+      from: `${fallbackMonth}-01`,
+      to: todayIsoDate(now)
+    };
+  }
   const [yearText, monthText] = month.split("-");
   const year = Number(yearText);
   const monthIndex = Number(monthText) - 1;
   const monthPart = pad2(monthIndex + 1);
-  const endDay = daysInMonth(year, monthIndex);
+  const currentMonth = currentIsoMonth(now);
+  const isCurrentMonth = month === currentMonth;
+  const to = isCurrentMonth ? todayIsoDate(now) : monthEndIsoDate(month);
   return {
     month,
     from: `${year}-${monthPart}-01`,
-    to: `${year}-${monthPart}-${pad2(endDay)}`
+    to
   };
 }
 
@@ -38,10 +44,7 @@ function monthStartFromMonth(month: string): string {
 }
 
 function monthEndFromMonth(month: string): string {
-  const [yearText, monthText] = month.split("-");
-  const year = Number(yearText);
-  const monthIndex = Number(monthText) - 1;
-  return `${year}-${pad2(monthIndex + 1)}-${pad2(daysInMonth(year, monthIndex))}`;
+  return monthEndIsoDate(month);
 }
 
 export function currentLocalMonth(): string {

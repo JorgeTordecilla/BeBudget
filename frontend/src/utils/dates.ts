@@ -6,6 +6,10 @@ function toLocalIsoDate(date: Date): string {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
+function daysInMonth(year: number, monthIndex: number): number {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
 function fromIsoDateParts(value: string): { year: number; month: number; day: number } | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return null;
@@ -28,8 +32,28 @@ export function todayIsoDate(date = new Date()): string {
   return toLocalIsoDate(date);
 }
 
+export function isValidIsoMonth(value: string): boolean {
+  if (!/^\d{4}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const [yearPart, monthPart] = value.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  return Number.isInteger(year) && Number.isInteger(month) && month >= 1 && month <= 12;
+}
+
 export function monthStartIsoDate(date = new Date()): string {
   return `${currentIsoMonth(date)}-01`;
+}
+
+export function monthEndIsoDate(value: string): string {
+  if (!isValidIsoMonth(value)) {
+    return value;
+  }
+  const [yearPart, monthPart] = value.split("-");
+  const year = Number(yearPart);
+  const monthIndex = Number(monthPart) - 1;
+  return `${year}-${pad2(monthIndex + 1)}-${pad2(daysInMonth(year, monthIndex))}`;
 }
 
 export function defaultAnalyticsRange(now = new Date()): { from: string; to: string } {

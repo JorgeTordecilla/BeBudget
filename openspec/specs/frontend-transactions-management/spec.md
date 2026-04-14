@@ -131,7 +131,7 @@ The frontend SHALL parse `application/problem+json` and provide canonical status
 - **AND** SHALL not auto-retry the export request.
 
 ### Requirement: Transactions page must reuse global frontend quality standards
-The transactions experience SHALL follow the established frontend policy for state handling, accessibility, responsiveness, and verification.
+The transactions and analytics experience SHALL follow established frontend policy for state handling, URL-driven filters, accessibility, responsiveness, and verification.
 
 #### Scenario: Page states and accessibility are explicit
 - **WHEN** the page is rendered or mutated
@@ -159,6 +159,21 @@ The transactions experience SHALL follow the established frontend policy for sta
 - **THEN** `npm run test` SHALL pass
 - **AND** `npm run test:coverage` SHALL remain at or above project thresholds
 - **AND** `npm run build` SHALL pass.
+
+#### Scenario: Analytics entry points resolve deterministic and consistent date ranges
+- **WHEN** a user opens Analytics from navbar without explicit `from/to`
+- **THEN** frontend SHALL initialize Analytics to current month month-to-date (`from=month start`, `to=today`)
+- **AND** this initialized range SHALL be equivalent to Dashboard drill-down behavior for current month.
+
+#### Scenario: Dashboard analytics deep-link preserves selected-month intent
+- **WHEN** user opens Analytics from Dashboard for a non-current selected month
+- **THEN** frontend SHALL deep-link using full selected-month range (`from=month start`, `to=month end`)
+- **AND** Analytics SHALL render the same aggregate totals expected for that month context.
+
+#### Scenario: URL range remains source of truth after apply
+- **WHEN** Analytics receives valid `from/to` query params
+- **THEN** frontend SHALL use those params as applied range
+- **AND** subsequent apply actions SHALL update URL deterministically with normalized ISO values.
 
 ### Requirement: Bulk import request composition must be contract-safe
 The frontend SHALL compose import payloads that match `TransactionImportRequest` and use existing API client transport/auth behavior.
