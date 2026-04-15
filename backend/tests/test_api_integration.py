@@ -110,6 +110,7 @@ def _register_user(client: TestClient):
     payload = {
         "username": username,
         "password": "StrongPwd123!",
+        "email": f"{username}@example.com",
         "currency_code": "USD",
     }
     r = client.post("/api/auth/register", json=payload, headers={"accept": VENDOR, "content-type": VENDOR})
@@ -124,8 +125,10 @@ def _register_user(client: TestClient):
     assert "Max-Age=" in register_cookie_header
     body = r.json()
     assert "refresh_token" not in body
+    assert body["user"]["email"] == f"{username}@example.com"
     return {
         "username": username,
+        "email": f"{username}@example.com",
         "password": payload["password"],
         "access": body["access_token"],
         "refresh": _refresh_cookie_from_response(r),
@@ -515,7 +518,7 @@ def test_problem_details_on_invalid_accept():
     with TestClient(app) as client:
         r = client.post(
             "/api/auth/register",
-            json={"username": "abc_123", "password": "StrongPwd123!", "currency_code": "USD"},
+            json={"username": "abc_123", "password": "StrongPwd123!", "email": "abc_123@example.com", "currency_code": "USD"},
             headers={"accept": "application/xml", "content-type": VENDOR},
         )
         assert r.status_code == 406
@@ -531,7 +534,7 @@ def test_accept_header_rejects_partial_media_type_match():
     with TestClient(app) as client:
         response = client.post(
             "/api/auth/register",
-            json={"username": "abc_124", "password": "StrongPwd123!", "currency_code": "USD"},
+            json={"username": "abc_124", "password": "StrongPwd123!", "email": "abc_124@example.com", "currency_code": "USD"},
             headers={"accept": "application/vnd.bebudget.v1+json-foo", "content-type": VENDOR},
         )
         assert response.status_code == 406
@@ -546,7 +549,7 @@ def test_accept_header_with_q_zero_is_rejected():
     with TestClient(app) as client:
         response = client.post(
             "/api/auth/register",
-            json={"username": "abc_1245", "password": "StrongPwd123!", "currency_code": "USD"},
+            json={"username": "abc_1245", "password": "StrongPwd123!", "email": "abc_1245@example.com", "currency_code": "USD"},
             headers={"accept": f"{VENDOR};q=0", "content-type": VENDOR},
         )
         assert response.status_code == 406
@@ -561,7 +564,7 @@ def test_content_type_rejects_partial_media_type_match():
     with TestClient(app) as client:
         response = client.post(
             "/api/auth/register",
-            json={"username": "abc_125", "password": "StrongPwd123!", "currency_code": "USD"},
+            json={"username": "abc_125", "password": "StrongPwd123!", "email": "abc_125@example.com", "currency_code": "USD"},
             headers={"accept": VENDOR, "content-type": "application/vnd.bebudget.v1+json-foo"},
         )
         assert response.status_code == 400
@@ -740,6 +743,7 @@ def test_problem_detail_sanitizes_token_like_content():
             json={
                 "username": "abc_123",
                 "password": {"token": "Bearer abc.def.ghi"},
+                "email": "abc_123@example.com",
                 "currency_code": "USD",
             },
             headers={"accept": VENDOR, "content-type": VENDOR},
@@ -823,7 +827,7 @@ def test_register_rejects_password_that_violates_policy():
     with TestClient(app) as client:
         response = client.post(
             "/api/auth/register",
-            json={"username": "pw_policy_u1", "password": "alllowercase1!", "currency_code": "USD"},
+            json={"username": "pw_policy_u1", "password": "alllowercase1!", "email": "pw_policy_u1@example.com", "currency_code": "USD"},
             headers={"accept": VENDOR, "content-type": VENDOR},
         )
         assert response.status_code == 400
@@ -831,6 +835,213 @@ def test_register_rejects_password_that_violates_policy():
         body = response.json()
         assert body["title"] == "Invalid request"
         assert body["status"] == 400
+
+
+def test_register_requires_email_field():
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/register",
+            json={"username": "email_required_u1", "password": "StrongPwd123!", "currency_code": "USD"},
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert response.status_code == 422
+        assert response.headers["content-type"].startswith(PROBLEM)
+        body = response.json()
+        assert body["title"] == "Unprocessable Entity"
+        assert "email" in body.get("detail", "").lower()
+
+
+@pytest.mark.parametrize(
+    "bad_email",
+    [
+        "usuario@",
+        "usuariocorreo.com",
+        "us uario@correo.com",
+        "",
+    ],
+)
+def test_register_rejects_invalid_email_format(bad_email: str):
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/register",
+            json={
+                "username": f"invalid_email_{uuid.uuid4().hex[:6]}",
+                "password": "StrongPwd123!",
+                "email": bad_email,
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert response.status_code == 422
+        assert response.headers["content-type"].startswith(PROBLEM)
+        body = response.json()
+        assert body["title"] == "Unprocessable Entity"
+        assert "email" in body.get("detail", "").lower()
+
+
+def test_register_rejects_email_longer_than_254():
+    local_part = "a" * 245
+    bad_email = f"{local_part}@example.com"
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/register",
+            json={
+                "username": f"long_email_{uuid.uuid4().hex[:6]}",
+                "password": "StrongPwd123!",
+                "email": bad_email,
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert response.status_code == 422
+        assert response.headers["content-type"].startswith(PROBLEM)
+
+
+def test_register_rejects_null_email():
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/register",
+            json={
+                "username": f"null_email_{uuid.uuid4().hex[:6]}",
+                "password": "StrongPwd123!",
+                "email": None,
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert response.status_code == 422
+        assert response.headers["content-type"].startswith(PROBLEM)
+
+
+def test_register_accepts_valid_subdomain_email():
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/register",
+            json={
+                "username": f"subdomain_{uuid.uuid4().hex[:6]}",
+                "password": "StrongPwd123!",
+                "email": "user@mail.empresa.co",
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert response.status_code == 201
+        assert response.json()["user"]["email"] == "user@mail.empresa.co"
+
+
+def test_register_normalizes_email_to_lowercase_and_returns_it():
+    username = f"email_norm_{uuid.uuid4().hex[:6]}"
+    raw_email = f"{username}@Example.COM"
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/auth/register",
+            json={
+                "username": username,
+                "password": "StrongPwd123!",
+                "email": raw_email,
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert response.status_code == 201
+        assert response.json()["user"]["email"] == raw_email.lower()
+
+
+def test_register_returns_409_when_email_already_exists():
+    shared_email = f"dup_email_{uuid.uuid4().hex[:8]}@example.com"
+    with TestClient(app) as client:
+        first = client.post(
+            "/api/auth/register",
+            json={
+                "username": f"user_a_{uuid.uuid4().hex[:6]}",
+                "password": "StrongPwd123!",
+                "email": shared_email,
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert first.status_code == 201
+
+        second = client.post(
+            "/api/auth/register",
+            json={
+                "username": f"user_b_{uuid.uuid4().hex[:6]}",
+                "password": "StrongPwd123!",
+                "email": shared_email,
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert second.status_code == 409
+        assert second.headers["content-type"].startswith(PROBLEM)
+        body = second.json()
+        assert body["title"] == "Conflict"
+        assert body["detail"] == "Email already registered"
+
+
+def test_register_keeps_username_conflict_behavior_when_email_is_new():
+    username = f"dup_user_{uuid.uuid4().hex[:8]}"
+    with TestClient(app) as client:
+        first = client.post(
+            "/api/auth/register",
+            json={
+                "username": username,
+                "password": "StrongPwd123!",
+                "email": f"{username}@example.com",
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert first.status_code == 201
+
+        second = client.post(
+            "/api/auth/register",
+            json={
+                "username": username,
+                "password": "StrongPwd123!",
+                "email": f"new_{username}@example.com",
+                "currency_code": "USD",
+            },
+            headers={"accept": VENDOR, "content-type": VENDOR},
+        )
+        assert second.status_code == 409
+        assert second.headers["content-type"].startswith(PROBLEM)
+        assert second.json().get("detail") == "Username already exists"
+
+
+def test_register_same_email_concurrent_requests_only_one_succeeds():
+    shared_email = f"race_{uuid.uuid4().hex[:8]}@example.com"
+    barrier = Barrier(2)
+    statuses: list[int] = []
+    lock = Lock()
+
+    def _run(username_suffix: str) -> None:
+        with TestClient(app) as thread_client:
+            try:
+                barrier.wait(timeout=2)
+            except BrokenBarrierError:
+                return
+            response = thread_client.post(
+                "/api/auth/register",
+                json={
+                    "username": f"race_user_{username_suffix}_{uuid.uuid4().hex[:6]}",
+                    "password": "StrongPwd123!",
+                    "email": shared_email,
+                    "currency_code": "USD",
+                },
+                headers={"accept": VENDOR, "content-type": VENDOR},
+            )
+            with lock:
+                statuses.append(response.status_code)
+
+    t1 = Thread(target=_run, args=("a",))
+    t2 = Thread(target=_run, args=("b",))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    assert sorted(statuses) == [201, 409]
 
 
 def test_login_rejects_password_that_violates_policy_before_credential_check():
@@ -861,6 +1072,7 @@ def test_me_returns_authenticated_user():
         _assert_request_id_header_present(response)
         body = response.json()
         assert body["username"] == user["username"]
+        assert body["email"] == user["email"]
         assert body["currency_code"] == "USD"
         assert isinstance(body["id"], str)
         assert body["id"].strip() != ""
@@ -1687,6 +1899,7 @@ def test_auth_register_rate_limit_exceeded_returns_canonical_429(monkeypatch):
             json={
                 "username": f"u_{uuid.uuid4().hex[:8]}",
                 "password": "StrongPwd123!",
+                "email": f"u_{uuid.uuid4().hex[:8]}@example.com",
                 "currency_code": "USD",
             },
             headers={"accept": VENDOR, "content-type": VENDOR},
@@ -1698,6 +1911,7 @@ def test_auth_register_rate_limit_exceeded_returns_canonical_429(monkeypatch):
             json={
                 "username": f"u_{uuid.uuid4().hex[:8]}",
                 "password": "StrongPwd123!",
+                "email": f"u_{uuid.uuid4().hex[:8]}@example.com",
                 "currency_code": "USD",
             },
             headers={"accept": VENDOR, "content-type": VENDOR},

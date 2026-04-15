@@ -120,6 +120,7 @@ paths:
                 user:
                   id: 2a4b0e6d-924d-4df0-bc22-9e639da60bcb
                   username: demo_user
+                  email: demo_user@example.com
                   currency_code: USD
                 access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYTRiMGU2ZC05MjRkLTRkZjAtYmMyMi05ZTYzOWRhNjBiY2IiLCJleHAiOjE5MDAwMDAwMDAsImlhdCI6MTg5OTk5OTAwMH0.dummysignature
                 access_token_expires_in: 900
@@ -133,7 +134,7 @@ paths:
                 canonical:
                   $ref: '#/components/examples/Problem400InvalidRequest'
         '409':
-          description: Username already exists
+          description: Username or email already exists
           content:
             application/problem+json:
               schema:
@@ -141,6 +142,22 @@ paths:
               examples:
                 canonical:
                   $ref: '#/components/examples/Problem409Conflict'
+        '422':
+          description: Unprocessable Entity
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalid-email:
+                  value:
+                    type: about:blank
+                    title: Unprocessable Entity
+                    status: 422
+                    detail: email must be a valid email address
         '429':
           description: Too Many Requests
           headers:
@@ -193,6 +210,7 @@ paths:
                 user:
                   id: 2a4b0e6d-924d-4df0-bc22-9e639da60bcb
                   username: demo_user
+                  email: demo_user@example.com
                   currency_code: USD
                 access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYTRiMGU2ZC05MjRkLTRkZjAtYmMyMi05ZTYzOWRhNjBiY2IiLCJleHAiOjE5MDAwMDAwMDAsImlhdCI6MTg5OTk5OTAwMH0.dummysignature
                 access_token_expires_in: 900
@@ -266,6 +284,7 @@ paths:
                 user:
                   id: 2a4b0e6d-924d-4df0-bc22-9e639da60bcb
                   username: demo_user
+                  email: demo_user@example.com
                   currency_code: USD
                 access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYTRiMGU2ZC05MjRkLTRkZjAtYmMyMi05ZTYzOWRhNjBiY2IiLCJleHAiOjE5MDAwMDAwMDAsImlhdCI6MTg5OTk5OTAwMH0.dummysignature
                 access_token_expires_in: 900
@@ -419,6 +438,7 @@ paths:
               example:
                 id: 2a4b0e6d-924d-4df0-bc22-9e639da60bcb
                 username: demo_user
+                email: demo_user@example.com
                 currency_code: USD
         '401':
           description: Unauthorized
@@ -3908,6 +3928,7 @@ components:
       required:
       - id
       - username
+      - email
       - currency_code
       properties:
         id:
@@ -3916,6 +3937,10 @@ components:
         username:
           type: string
           pattern: ^[a-zA-Z0-9_]{3,20}$
+        email:
+          type: string
+          format: email
+          maxLength: 254
         currency_code:
           type: string
           enum:
@@ -3928,6 +3953,7 @@ components:
       required:
       - username
       - password
+      - email
       - currency_code
       properties:
         username:
@@ -3937,6 +3963,10 @@ components:
           type: string
           minLength: 8
           pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$
+        email:
+          type: string
+          format: email
+          maxLength: 254
         currency_code:
           type: string
           enum:
@@ -3963,6 +3993,7 @@ components:
         user:
           id: 2a4b0e6d-924d-4df0-bc22-9e639da60bcb
           username: demo_user
+          email: demo_user@example.com
           currency_code: USD
         access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyYTRiMGU2ZC05MjRkLTRkZjAtYmMyMi05ZTYzOWRhNjBiY2IiLCJleHAiOjE5MDAwMDAwMDAsImlhdCI6MTg5OTk5OTAwMH0.dummysignature
         access_token_expires_in: 900

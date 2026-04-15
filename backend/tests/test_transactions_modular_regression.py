@@ -10,6 +10,7 @@ def _register_user(client: TestClient):
     payload = {
         "username": f"mr_{uuid.uuid4().hex[:8]}",
         "password": "StrongPwd123!",
+        "email": f"mr_{uuid.uuid4().hex[:8]}@example.com",
         "currency_code": "USD",
     }
     r = client.post("/api/auth/register", json=payload, headers={"accept": VENDOR, "content-type": VENDOR})

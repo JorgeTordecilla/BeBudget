@@ -11,6 +11,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from starlette.requests import Request
 
 import app.core.audit as audit_core
@@ -928,7 +929,7 @@ def test_active_refresh_token_or_401_rejects_missing_or_expired_rows():
         assert exc_info.value.status == 401
         assert exc_info.value.detail == "Refresh token is invalid or expired"
 
-        user = User(username="expired_refresh_user", password_hash="hash", currency_code="USD")
+        user = User(username="expired_refresh_user", email="expired_refresh_user@example.com", password_hash="hash", currency_code="USD")
         db.add(user)
         db.flush()
         db.add(
@@ -953,12 +954,17 @@ def test_register_returns_conflict_when_username_exists(monkeypatch):
     monkeypatch.setattr(auth_router, "_auth_rate_limit_or_429", lambda *args, **kwargs: None)
     db = SessionLocal()
     try:
-        existing = User(username="duplicate_user", password_hash="hash", currency_code="USD")
+        existing = User(username="duplicate_user", email="duplicate_user@example.com", password_hash="hash", currency_code="USD")
         db.add(existing)
         db.commit()
 
         request = _request("/api/auth/register", method="POST")
-        payload = auth_router.RegisterRequest(username="duplicate_user", password="StrongPwd123!", currency_code="USD")
+        payload = auth_router.RegisterRequest(
+            username="duplicate_user",
+            password="StrongPwd123!",
+            email="duplicate_user@example.com",
+            currency_code="USD",
+        )
         with pytest.raises(APIError) as exc_info:
             auth_router.register(payload, request, db)
         assert exc_info.value.status == 409
@@ -967,10 +973,102 @@ def test_register_returns_conflict_when_username_exists(monkeypatch):
         db.close()
 
 
+def test_register_returns_conflict_when_email_exists(monkeypatch):
+    monkeypatch.setattr(auth_router, "_auth_rate_limit_or_429", lambda *args, **kwargs: None)
+    db = SessionLocal()
+    try:
+        existing = User(
+            username="existing_user",
+            email="duplicate_email@example.com",
+            password_hash="hash",
+            currency_code="USD",
+        )
+        db.add(existing)
+        db.commit()
+
+        request = _request("/api/auth/register", method="POST")
+        payload = auth_router.RegisterRequest(
+            username="new_user",
+            password="StrongPwd123!",
+            email="duplicate_email@example.com",
+            currency_code="USD",
+        )
+        with pytest.raises(APIError) as exc_info:
+            auth_router.register(payload, request, db)
+        assert exc_info.value.status == 409
+        assert exc_info.value.title == "Conflict"
+        assert exc_info.value.detail == "Email already registered"
+    finally:
+        db.close()
+
+
+def test_user_repository_get_by_email_returns_user():
+    db = SessionLocal()
+    try:
+        user = User(
+            username="repo_email_user",
+            email="repo_email_user@example.com",
+            password_hash="hash",
+            currency_code="USD",
+        )
+        db.add(user)
+        db.commit()
+        repo = SQLAlchemyUserRepository(db)
+        found = repo.get_by_email("repo_email_user@example.com")
+        assert found is not None
+        assert found.id == user.id
+    finally:
+        db.close()
+
+
+def test_register_does_not_remap_unknown_integrity_errors(monkeypatch):
+    monkeypatch.setattr(auth_router, "_auth_rate_limit_or_429", lambda *args, **kwargs: None)
+
+    class _FakeUserRepo:
+        def __init__(self, _db):
+            pass
+
+        def get_by_username(self, _username):
+            return None
+
+        def get_by_email(self, _email):
+            return None
+
+        def add(self, _user):
+            return None
+
+    class _FakeRefreshRepo:
+        def __init__(self, _db):
+            pass
+
+        def add(self, _token):
+            return None
+
+    class _FakeDb:
+        def flush(self):
+            raise IntegrityError("INSERT INTO users ...", {}, Exception("other constraint failed"))
+
+        def rollback(self):
+            return None
+
+    monkeypatch.setattr(auth_router, "SQLAlchemyUserRepository", _FakeUserRepo)
+    monkeypatch.setattr(auth_router, "SQLAlchemyRefreshTokenRepository", _FakeRefreshRepo)
+
+    request = _request("/api/auth/register", method="POST")
+    payload = auth_router.RegisterRequest(
+        username="unknown_integrity",
+        password="StrongPwd123!",
+        email="unknown_integrity@example.com",
+        currency_code="USD",
+    )
+    with pytest.raises(IntegrityError):
+        auth_router.register(payload, request, _FakeDb())
+
+
 def test_repository_protocol_shapes_are_implemented():
     # Ensure protocol contracts are imported/exercised and concrete repos expose required methods.
     protocol_to_impl = [
-        (UserRepository, SQLAlchemyUserRepository, ["get_by_id", "get_by_username", "add"]),
+        (UserRepository, SQLAlchemyUserRepository, ["get_by_id", "get_by_username", "get_by_email", "add"]),
         (
             RefreshTokenRepository,
             SQLAlchemyRefreshTokenRepository,
@@ -990,8 +1088,8 @@ def test_repository_protocol_shapes_are_implemented():
 
 
 def _seed_repo_users(db):
-    user = User(username="repo_user_a", password_hash="hash", currency_code="USD")
-    other_user = User(username="repo_user_b", password_hash="hash", currency_code="USD")
+    user = User(username="repo_user_a", email="repo_user_a@example.com", password_hash="hash", currency_code="USD")
+    other_user = User(username="repo_user_b", email="repo_user_b@example.com", password_hash="hash", currency_code="USD")
     db.add_all([user, other_user])
     db.flush()
     return user, other_user
@@ -1146,7 +1244,7 @@ def test_refresh_repository_rotate_atomically_is_idempotent_under_concurrency():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        user = User(username="refresh_repo_user", password_hash="hash", currency_code="USD")
+        user = User(username="refresh_repo_user", email="refresh_repo_user@example.com", password_hash="hash", currency_code="USD")
         db.add(user)
         db.flush()
         refresh = RefreshToken(
@@ -1213,7 +1311,12 @@ def test_refresh_repository_rotate_atomically_uses_shared_utc_clock(monkeypatch)
 
     db = SessionLocal()
     try:
-        user = User(username="refresh_repo_clock_user", password_hash="hash", currency_code="USD")
+        user = User(
+            username="refresh_repo_clock_user",
+            email="refresh_repo_clock_user@example.com",
+            password_hash="hash",
+            currency_code="USD",
+        )
         db.add(user)
         db.flush()
         refresh = RefreshToken(

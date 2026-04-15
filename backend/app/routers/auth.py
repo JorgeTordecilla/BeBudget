@@ -161,19 +161,54 @@ def _active_refresh_token_or_401(db: Session, refresh_token: str) -> RefreshToke
     return refresh_row
 
 
+def _integrity_conflict_field(exc: IntegrityError) -> str | None:
+    message = str(getattr(exc, "orig", exc)).lower()
+    if (
+        "users.username" in message
+        or "(username)" in message
+        or "users_username_key" in message
+        or "uq_users_username" in message
+    ):
+        return "username"
+    if (
+        "users.email" in message
+        or "(email)" in message
+        or "users_email_key" in message
+        or "uq_users_email" in message
+    ):
+        return "email"
+    return None
+
+
 @router.post("/register")
 def register(payload: RegisterRequest, request: Request, db: Session = Depends(get_db)):
     _auth_rate_limit_or_429(request, endpoint="register", identity=resolve_rate_limit_client_ip(request))
 
     user_repo = SQLAlchemyUserRepository(db)
     refresh_repo = SQLAlchemyRefreshTokenRepository(db)
-    user = User(username=payload.username, password_hash=hash_password(payload.password), currency_code=payload.currency_code)
+    normalized_email = payload.email.strip().lower()
+    if user_repo.get_by_username(payload.username):
+        raise APIError(status=409, title="Conflict", detail="Username already exists")
+    if user_repo.get_by_email(normalized_email):
+        raise APIError(status=409, title="Conflict", detail="Email already registered")
+
+    user = User(
+        username=payload.username,
+        email=normalized_email,
+        password_hash=hash_password(payload.password),
+        currency_code=payload.currency_code,
+    )
     user_repo.add(user)
     try:
         db.flush()
     except IntegrityError as exc:
         db.rollback()
-        raise APIError(status=409, title="Conflict", detail="Username already exists") from exc
+        conflict_field = _integrity_conflict_field(exc)
+        if conflict_field == "username":
+            raise APIError(status=409, title="Conflict", detail="Username already exists") from exc
+        if conflict_field == "email":
+            raise APIError(status=409, title="Conflict", detail="Email already registered") from exc
+        raise
 
     refresh_token = generate_refresh_token()
     refresh_repo.add(_create_root_refresh(user.id, refresh_token))

@@ -18,6 +18,9 @@ class SQLAlchemyUserRepository:
     def get_by_username(self, username: str) -> User | None:
         return self.db.scalar(select(User).where(User.username == username))
 
+    def get_by_email(self, email: str) -> User | None:
+        return self.db.scalar(select(User).where(User.email == email))
+
     def add(self, user: User) -> None:
         self.db.add(user)
 

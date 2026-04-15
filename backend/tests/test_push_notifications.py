@@ -21,7 +21,7 @@ def _register_user(client: TestClient) -> dict[str, str]:
     username = f"push_{uuid.uuid4().hex[:8]}"
     response = client.post(
         "/api/auth/register",
-        json={"username": username, "password": "StrongPwd123!", "currency_code": "USD"},
+        json={"username": username, "password": "StrongPwd123!", "email": f"{username}@example.com", "currency_code": "USD"},
         headers={"accept": VENDOR, "content-type": VENDOR},
     )
     assert response.status_code == 201
@@ -142,7 +142,8 @@ def test_send_push_returns_false_on_410(monkeypatch):
 
 def test_send_bill_reminders_removes_expired_subscriptions(monkeypatch):
     with SessionLocal() as db:
-        user = User(username=f"push_cli_{uuid.uuid4().hex[:6]}", password_hash="hash", currency_code="USD")
+        username = f"push_cli_{uuid.uuid4().hex[:6]}"
+        user = User(username=username, email=f"{username}@example.com", password_hash="hash", currency_code="USD")
         db.add(user)
         db.flush()
 

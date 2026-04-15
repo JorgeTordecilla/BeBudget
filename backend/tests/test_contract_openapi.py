@@ -123,7 +123,7 @@ def _refresh_cookie_from_response(response) -> str:
 def _auth_flow(client: TestClient, username: str) -> tuple[str, str]:
     register = client.post(
         "/api/auth/register",
-        json={"username": username, "password": "StrongPwd123!", "currency_code": "USD"},
+        json={"username": username, "password": "StrongPwd123!", "email": f"{username}@example.com", "currency_code": "USD"},
         headers={"accept": VENDOR, "content-type": VENDOR},
     )
     _assert_contract(register, "/auth/register", "post")
@@ -414,12 +414,17 @@ def test_auth_rate_limit_contract_mappings_exist():
 
 def test_auth_password_policy_contract_matches_runtime_schema():
     register_password_schema = COMPONENTS["RegisterRequest"]["properties"]["password"]
+    register_email_schema = COMPONENTS["RegisterRequest"]["properties"]["email"]
     login_password_schema = COMPONENTS["LoginRequest"]["properties"]["password"]
 
     for schema in (register_password_schema, login_password_schema):
         assert schema["type"] == "string"
         assert schema["minLength"] == 8
         assert schema["pattern"] == PASSWORD_POLICY_PATTERN
+    assert register_email_schema["type"] == "string"
+    assert register_email_schema["format"] == "email"
+    assert register_email_schema["maxLength"] == 254
+    assert "email" in COMPONENTS["RegisterRequest"]["required"]
 
 
 def test_transactions_rate_limit_contract_mappings_exist():
@@ -479,6 +484,8 @@ def test_auth_cookie_transport_contract_mappings_exist():
     assert "refresh_token" not in auth_session_schema.get("properties", {})
     access_token_schema = auth_session_schema["properties"]["access_token"]
     assert "JWT" in access_token_schema.get("description", "")
+    assert "email" in SPEC["components"]["schemas"]["User"]["properties"]
+    assert "email" in SPEC["components"]["schemas"]["User"]["required"]
 
     refresh_cookie_header_desc = SPEC["components"]["headers"]["Set-Cookie-Refresh"]["description"]
     cleared_cookie_header_desc = SPEC["components"]["headers"]["Set-Cookie-Refresh-Cleared"]["description"]
@@ -491,6 +498,7 @@ def test_auth_cookie_transport_contract_mappings_exist():
 
     register_access_token = register_post["responses"]["201"]["content"][VENDOR]["example"]["access_token"]
     assert register_access_token.count(".") == 2
+    assert "email" in register_post["responses"]["201"]["content"][VENDOR]["example"]["user"]
     refresh_forbidden_examples = refresh_post["responses"]["403"]["content"][PROBLEM]["examples"]
     assert "origin-not-allowed" in refresh_forbidden_examples
     assert refresh_forbidden_examples["origin-not-allowed"]["$ref"].endswith("/Problem403OriginNotAllowed")
@@ -658,6 +666,9 @@ def test_me_contract_mappings_exist():
     assert "X-Request-Id" in responses["200"].get("headers", {})
     assert "X-Request-Id" in responses["401"].get("headers", {})
     assert "X-Request-Id" in responses["406"].get("headers", {})
+    user_schema = SPEC["components"]["schemas"]["User"]
+    assert "email" in user_schema["properties"]
+    assert "email" in user_schema["required"]
 
 
 def test_bills_openapi_paths_and_schemas_exist():

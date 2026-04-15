@@ -30,6 +30,7 @@ def _ensure_demo_user(log_fn) -> User:
             raise RuntimeError("Demo user not found and BOOTSTRAP_CREATE_DEMO_USER is false")
         user = User(
             username=settings.bootstrap_demo_username,
+            email=f"{settings.bootstrap_demo_username.lower()}@bebudget.local",
             password_hash=hash_password(settings.bootstrap_demo_password),
             currency_code=settings.bootstrap_demo_currency_code,
         )
