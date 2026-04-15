@@ -12,7 +12,7 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isBootstrapping: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string, currencyCode: string) => Promise<void>;
+  register: (username: string, email: string, password: string, currencyCode: string) => Promise<void>;
   logout: () => Promise<void>;
   bootstrapSession: () => Promise<boolean>;
 };
@@ -175,9 +175,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastBootstrapFailureAtRef.current = null;
   }, [client]);
 
-  const register = useCallback(async (username: string, password: string, currencyCode: string): Promise<void> => {
+  const register = useCallback(async (username: string, email: string, password: string, currencyCode: string): Promise<void> => {
     const authSession = await client.register({
       username,
+      email,
       password,
       currency_code: currencyCode
     });

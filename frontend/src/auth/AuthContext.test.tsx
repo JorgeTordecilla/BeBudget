@@ -7,28 +7,28 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { useAuth } from "@/auth/useAuth";
 
 const mockLogin = vi.fn(async (_username: string, _password: string) => {
-  const user = { id: "u1", username: "demo", currency_code: "USD" };
+  const user = { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" };
   return { user, access_token: "token-1", access_token_expires_in: 900 };
 });
-const mockRegister = vi.fn(async (_username: string, _password: string, _currencyCode: string) => {
-  const user = { id: "u1", username: "demo", currency_code: "COP" };
+const mockRegister = vi.fn(async (_username: string, _email: string, _password: string, _currencyCode: string) => {
+  const user = { id: "u1", username: "demo", email: "demo@example.com", currency_code: "COP" };
   return { user, access_token: "token-register", access_token_expires_in: 900 };
 });
 type RefreshSession = {
-  user: { id: string; username: string; currency_code: string };
+  user: { id: string; username: string; email: string; currency_code: string };
   access_token: string;
   access_token_expires_in: number;
 };
 const mockRefresh = vi.fn(async (): Promise<RefreshSession | null> => {
-  const user = { id: "u1", username: "demo", currency_code: "USD" };
+  const user = { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" };
   return { user, access_token: "token-2", access_token_expires_in: 900 };
 });
-const mockMe = vi.fn(async () => ({ id: "u1", username: "demo", currency_code: "USD" }));
+const mockMe = vi.fn(async () => ({ id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" }));
 const mockLogout = vi.fn(async () => undefined);
 
 vi.mock("@/api/client", () => ({
   createApiClient: vi.fn((bindings: {
-    setSession: (next: { accessToken: string; user: { id: string; username: string; currency_code: string } }) => void;
+    setSession: (next: { accessToken: string; user: { id: string; username: string; email: string; currency_code: string } }) => void;
     clearSession: () => void;
   }) => ({
     login: vi.fn(async (...args: [string, string]) => {
@@ -36,8 +36,8 @@ vi.mock("@/api/client", () => ({
       bindings.setSession({ accessToken: response.access_token, user: response.user });
       return response;
     }),
-    register: vi.fn(async (payload: { username: string; password: string; currency_code: string }) => {
-      const response = await mockRegister(payload.username, payload.password, payload.currency_code);
+    register: vi.fn(async (payload: { username: string; email: string; password: string; currency_code: string }) => {
+      const response = await mockRegister(payload.username, payload.email, payload.password, payload.currency_code);
       bindings.setSession({ accessToken: response.access_token, user: response.user });
       return response;
     }),
@@ -139,7 +139,7 @@ describe("AuthProvider", () => {
   it("uses cached user during bootstrap before refresh resolves", async () => {
     window.localStorage.setItem(
       "bb_session_user",
-      JSON.stringify({ id: "cached-user", username: "cached", currency_code: "USD" })
+      JSON.stringify({ id: "cached-user", username: "cached", email: "cached@example.com", currency_code: "USD" })
     );
     let resolveRefresh: ((value: RefreshSession | null) => void) | null = null;
     mockRefresh.mockImplementationOnce(
@@ -158,7 +158,7 @@ describe("AuthProvider", () => {
 
     await act(async () => {
       resolveRefresh?.({
-        user: { id: "u1", username: "demo", currency_code: "USD" },
+        user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
         access_token: "token-2",
         access_token_expires_in: 900
       });
@@ -168,7 +168,7 @@ describe("AuthProvider", () => {
   it("hydrates cached user on initial render before async bootstrap resolves", () => {
     window.localStorage.setItem(
       "bb_session_user",
-      JSON.stringify({ id: "cached-user", username: "cached", currency_code: "USD" })
+      JSON.stringify({ id: "cached-user", username: "cached", email: "cached@example.com", currency_code: "USD" })
     );
     mockRefresh.mockImplementationOnce(() => new Promise<RefreshSession | null>(() => undefined));
 
@@ -182,7 +182,7 @@ describe("AuthProvider", () => {
     const removeItemSpy = vi.spyOn(Storage.prototype, "removeItem");
     window.localStorage.setItem(
       "bb_session_user",
-      JSON.stringify({ id: "cached-user", username: "cached", currency_code: "USD" })
+      JSON.stringify({ id: "cached-user", username: "cached", email: "cached@example.com", currency_code: "USD" })
     );
     mockRefresh.mockResolvedValueOnce(null);
 
@@ -262,7 +262,7 @@ describe("AuthProvider", () => {
       second = result.current.bootstrapSession();
       expect(mockRefresh).toHaveBeenCalledTimes(1);
       resolveRefresh?.({
-        user: { id: "u1", username: "demo", currency_code: "USD" },
+        user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
         access_token: "token-2",
         access_token_expires_in: 900
       });
@@ -289,7 +289,7 @@ describe("AuthProvider", () => {
     const setTimeoutSpy = vi.spyOn(window, "setTimeout");
     const token = createJwt(Math.floor(nowMs / 1000) + 300);
     mockLogin.mockResolvedValueOnce({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       access_token: token,
       access_token_expires_in: 900
     });
@@ -310,7 +310,7 @@ describe("AuthProvider", () => {
     const setTimeoutSpy = vi.spyOn(window, "setTimeout");
     const token = createJwt(Math.floor(nowMs / 1000) + 86_400);
     mockLogin.mockResolvedValueOnce({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       access_token: token,
       access_token_expires_in: 900
     });
@@ -327,7 +327,7 @@ describe("AuthProvider", () => {
   it("does not schedule silent refresh when jwt payload is malformed", async () => {
     vi.useFakeTimers();
     mockLogin.mockResolvedValueOnce({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       access_token: "not-a-jwt",
       access_token_expires_in: 900
     });
@@ -353,7 +353,7 @@ describe("AuthProvider", () => {
     const setTimeoutSpy = vi.spyOn(window, "setTimeout");
     const token = createJwt(Math.floor(nowMs / 1000) + 30);
     mockLogin.mockResolvedValueOnce({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       access_token: token,
       access_token_expires_in: 900
     });
@@ -374,7 +374,7 @@ describe("AuthProvider", () => {
     const clearTimeoutSpy = vi.spyOn(window, "clearTimeout");
     const token = createJwt(Math.floor(nowMs / 1000) + 300);
     mockLogin.mockResolvedValueOnce({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       access_token: token,
       access_token_expires_in: 900
     });
@@ -396,7 +396,7 @@ describe("AuthProvider", () => {
     vi.setSystemTime(nowMs);
     const token = createJwt(Math.floor(nowMs / 1000) + 61, { foo: "bar-baz_qux" });
     mockLogin.mockResolvedValueOnce({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       access_token: token,
       access_token_expires_in: 900
     });

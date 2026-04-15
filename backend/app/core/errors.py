@@ -78,6 +78,30 @@ def _is_transaction_mood_validation_error(exc: RequestValidationError) -> bool:
     return False
 
 
+def _is_email_validation_error(exc: RequestValidationError) -> bool:
+    for item in exc.errors():
+        loc = item.get("loc")
+        if isinstance(loc, (list, tuple)) and "email" in loc:
+            return True
+    return False
+
+
+def _email_validation_detail(exc: RequestValidationError) -> str:
+    for item in exc.errors():
+        loc = item.get("loc")
+        if not (isinstance(loc, (list, tuple)) and "email" in loc):
+            continue
+        error_type = str(item.get("type", ""))
+        if "missing" in error_type:
+            return "email field is required"
+        if "string_too_long" in error_type:
+            return "email must be 254 characters or fewer"
+        if "string_type" in error_type:
+            return "email field is required"
+        return item.get("msg", "email must be a valid email address")
+    return "email must be a valid email address"
+
+
 def _problem_response(
     status: int,
     title: str,
@@ -117,6 +141,8 @@ def register_exception_handlers(app) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(request: Request, exc: RequestValidationError):
+        if _is_email_validation_error(exc):
+            return _problem_response(422, "Unprocessable Entity", _email_validation_detail(exc), request)
         if _is_amount_cents_validation_error(exc):
             from app.errors import (
                 MONEY_AMOUNT_NOT_INTEGER_TITLE,

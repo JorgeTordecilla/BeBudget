@@ -19,12 +19,12 @@ const apiClientStub = {} as ApiClient;
 function renderRegister({
   register = async () => undefined,
   isAuthenticated = false,
-  user = null as { id: string; username: string; currency_code: string } | null,
+  user = null as { id: string; username: string; email: string; currency_code: string } | null,
   accessToken = null as string | null
 }: {
-  register?: (username: string, password: string, currencyCode: string) => Promise<void>;
+  register?: (username: string, email: string, password: string, currencyCode: string) => Promise<void>;
   isAuthenticated?: boolean;
-  user?: { id: string; username: string; currency_code: string } | null;
+  user?: { id: string; username: string; email: string; currency_code: string } | null;
   accessToken?: string | null;
 } = {}) {
   return render(
@@ -74,7 +74,7 @@ describe("Register route", () => {
 
   it("redirects immediately when user is present", async () => {
     renderRegister({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       isAuthenticated: true
     });
 
@@ -84,7 +84,7 @@ describe("Register route", () => {
 
   it("redirects with cached user even when access token is null", async () => {
     renderRegister({
-      user: { id: "u-cache", username: "cached", currency_code: "USD" },
+      user: { id: "u-cache", username: "cached", email: "cached@example.com", currency_code: "USD" },
       accessToken: null,
       isAuthenticated: false
     });
@@ -120,6 +120,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "ab" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -133,6 +134,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "1234567" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "1234567" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -146,6 +148,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "weak" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "other-weak" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -173,6 +176,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret12!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret12!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -200,6 +204,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -207,11 +212,81 @@ describe("Register route", () => {
     expect(await screen.findByText("Username already exists. Try another one.")).toBeInTheDocument();
   });
 
+  it("shows conflict message for existing email", async () => {
+    const register = vi.fn(async () => {
+      throw new ApiProblemError(
+        {
+          type: "about:blank",
+          title: "Conflict",
+          status: 409,
+          detail: "Email already registered"
+        },
+        {
+          httpStatus: 409,
+          requestId: "req-409-email",
+          retryAfter: null
+        }
+      );
+    });
+    renderRegister({ register });
+
+    fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("Email already registered. Try another one.")).toBeInTheDocument();
+  });
+
+  it("validates missing email before submit", async () => {
+    const register = vi.fn(async () => undefined);
+    renderRegister({ register });
+
+    fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("Email is required.")).toBeInTheDocument();
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it("validates invalid email format before submit", async () => {
+    const register = vi.fn(async () => undefined);
+    renderRegister({ register });
+
+    fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "bad-email" } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("Enter a valid email address.")).toBeInTheDocument();
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it("validates max email length before submit", async () => {
+    const register = vi.fn(async () => undefined);
+    renderRegister({ register });
+    const longEmail = `${"a".repeat(245)}@example.com`;
+
+    fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: longEmail } });
+    fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("Email must be 254 characters or fewer.")).toBeInTheDocument();
+    expect(register).not.toHaveBeenCalled();
+  });
+
   it("submits register payload with default currency and keeps select mounted", async () => {
     const register = vi.fn(async () => undefined);
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     expect(screen.getByRole("combobox")).toBeInTheDocument();
@@ -219,7 +294,7 @@ describe("Register route", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
     await waitFor(() => expect(register).toHaveBeenCalledTimes(1));
-    expect(register).toHaveBeenCalledWith("demo", "Secret1!", "USD");
+    expect(register).toHaveBeenCalledWith("demo", "demo@example.com", "Secret1!", "USD");
   });
 
   it("handles 429 countdown and re-enables submit", async () => {
@@ -240,6 +315,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -259,6 +335,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -286,6 +363,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -322,6 +400,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -353,6 +432,7 @@ describe("Register route", () => {
     renderRegister({ register });
 
     fireEvent.change(await screen.findByPlaceholderText("Username"), { target: { value: "demo" } });
+    fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "demo@example.com" } });
     fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "Secret1!" } });
     fireEvent.change(screen.getByPlaceholderText("Confirm password"), { target: { value: "Secret1!" } });
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));

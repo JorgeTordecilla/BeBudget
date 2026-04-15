@@ -12,7 +12,7 @@ import { ApiProblemError, OfflineMutationError } from "@/api/errors";
 import type { User } from "@/api/types";
 
 function makeUser(): User {
-  return { id: "u1", username: "demo", currency_code: "USD" };
+  return { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" };
 }
 
 describe("api client refresh behavior", () => {
@@ -499,6 +499,7 @@ describe("api client refresh behavior", () => {
 
     const response = await client.register({
       username: "demo",
+      email: "demo@example.com",
       password: "secret",
       currency_code: "USD"
     });
@@ -536,6 +537,7 @@ describe("api client refresh behavior", () => {
     await expect(
       client.register({
         username: "demo",
+        email: "demo@example.com",
         password: "secret",
         currency_code: "USD"
       })

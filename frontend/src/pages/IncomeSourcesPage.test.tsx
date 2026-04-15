@@ -35,7 +35,7 @@ function renderPage() {
         <AuthContext.Provider
           value={{
             apiClient: apiClientStub,
-            user: { id: "u1", username: "demo", currency_code: "COP" },
+            user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "COP" },
             accessToken: "token",
             isAuthenticated: true,
             isBootstrapping: false,

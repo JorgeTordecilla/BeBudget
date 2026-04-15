@@ -45,7 +45,7 @@ describe("RequireAuth", () => {
     const bootstrapSession = vi.fn(async () => true);
     renderWithAuth({
       apiClient: apiClientStub,
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       accessToken: null,
       isAuthenticated: false,
       isBootstrapping: false,
@@ -62,7 +62,7 @@ describe("RequireAuth", () => {
   it("keeps content visible when user exists and bootstrap is in progress", () => {
     renderWithAuth({
       apiClient: apiClientStub,
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       accessToken: null,
       isAuthenticated: false,
       isBootstrapping: true,
@@ -107,7 +107,7 @@ describe("RequireAuth", () => {
           bootstrap.promise.then(() => {
             setValue((current) => ({
               ...current,
-              user: { id: "u1", username: "demo", currency_code: "USD" },
+              user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
               accessToken: "token",
               isAuthenticated: true
             }));
@@ -144,7 +144,7 @@ describe("RequireAuth", () => {
   it("renders protected content when authenticated", () => {
     renderWithAuth({
       apiClient: apiClientStub,
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       accessToken: "token",
       isAuthenticated: true,
       isBootstrapping: false,

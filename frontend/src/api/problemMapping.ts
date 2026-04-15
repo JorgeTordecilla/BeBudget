@@ -216,6 +216,13 @@ function resolveAuthUnknownProblemFallback(error: ApiProblemError, authFlow: "lo
         showDetail: false
       };
     }
+    if (/email already registered/i.test(detail)) {
+      return {
+        message: "Email already registered. Try another one.",
+        presentation: "inline",
+        showDetail: false
+      };
+    }
     return AUTH_CONFLICT_FALLBACK;
   }
 

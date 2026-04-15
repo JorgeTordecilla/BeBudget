@@ -88,6 +88,22 @@ describe("resolveProblemUi", () => {
     expect(ui.detail).toBeNull();
   });
 
+  it("maps register email conflict to friendly deterministic message", () => {
+    const error = new ApiProblemError(
+      {
+        type: "about:blank",
+        title: "Conflict",
+        status: 409,
+        detail: "Email already registered"
+      },
+      { httpStatus: 409, requestId: "req-conflict-email", retryAfter: null }
+    );
+    const ui = resolveProblemUi(error, "Unexpected error.", { authFlow: "register" });
+    expect(ui.message).toBe("Email already registered. Try another one.");
+    expect(ui.presentation).toBe("inline");
+    expect(ui.detail).toBeNull();
+  });
+
   it("maps unknown conflict problems to inline detail-first message", () => {
     const error = new ApiProblemError(
       {
