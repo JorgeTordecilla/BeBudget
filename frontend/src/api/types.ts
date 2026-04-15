@@ -1,6 +1,7 @@
 export type User = {
   id: string;
   username: string;
+  email: string;
   currency_code: string;
 };
 
@@ -12,6 +13,7 @@ export type AuthSessionResponse = {
 
 export type RegisterRequest = {
   username: string;
+  email: string;
   password: string;
   currency_code: string;
 };

@@ -7,28 +7,28 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { useAuth } from "@/auth/useAuth";
 
 const mockLogin = vi.fn(async (_username: string, _password: string) => {
-  const user = { id: "u1", username: "demo", currency_code: "USD" };
+  const user = { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" };
   return { user, access_token: "token-1", access_token_expires_in: 900 };
 });
-const mockRegister = vi.fn(async (_username: string, _password: string, _currencyCode: string) => {
-  const user = { id: "u1", username: "demo", currency_code: "COP" };
+const mockRegister = vi.fn(async (_username: string, _email: string, _password: string, _currencyCode: string) => {
+  const user = { id: "u1", username: "demo", email: "demo@example.com", currency_code: "COP" };
   return { user, access_token: "token-register", access_token_expires_in: 900 };
 });
 type RefreshSession = {
-  user: { id: string; username: string; currency_code: string };
+  user: { id: string; username: string; email: string; currency_code: string };
   access_token: string;
   access_token_expires_in: number;
 };
 const mockRefresh = vi.fn(async (): Promise<RefreshSession | null> => {
-  const user = { id: "u1", username: "demo", currency_code: "USD" };
+  const user = { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" };
   return { user, access_token: "token-2", access_token_expires_in: 900 };
 });
-const mockMe = vi.fn(async () => ({ id: "u1", username: "demo", currency_code: "USD" }));
+const mockMe = vi.fn(async () => ({ id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" }));
 const mockLogout = vi.fn(async () => undefined);
 
 vi.mock("@/api/client", () => ({
   createApiClient: vi.fn((bindings: {
-    setSession: (next: { accessToken: string; user: { id: string; username: string; currency_code: string } }) => void;
+    setSession: (next: { accessToken: string; user: { id: string; username: string; email: string; currency_code: string } }) => void;
     clearSession: () => void;
   }) => ({
     login: vi.fn(async (...args: [string, string]) => {
@@ -36,8 +36,8 @@ vi.mock("@/api/client", () => ({
       bindings.setSession({ accessToken: response.access_token, user: response.user });
       return response;
     }),
-    register: vi.fn(async (payload: { username: string; password: string; currency_code: string }) => {
-      const response = await mockRegister(payload.username, payload.password, payload.currency_code);
+    register: vi.fn(async (payload: { username: string; email: string; password: string; currency_code: string }) => {
+      const response = await mockRegister(payload.username, payload.email, payload.password, payload.currency_code);
       bindings.setSession({ accessToken: response.access_token, user: response.user });
       return response;
     }),

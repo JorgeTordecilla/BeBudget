@@ -11,6 +11,8 @@ import { Input } from "@/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
 const CURRENCIES = ["USD", "COP", "EUR", "MXN"] as const;
+const MAX_EMAIL_LENGTH = 254;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function resolveRedirectPath(pathname: string | undefined): string {
   if (pathname && pathname.startsWith("/app/")) {
@@ -24,6 +26,7 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currencyCode, setCurrencyCode] = useState<(typeof CURRENCIES)[number]>("USD");
@@ -53,6 +56,22 @@ export default function Register() {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError("Email is required.");
+      return;
+    }
+
+    if (normalizedEmail.length > MAX_EMAIL_LENGTH) {
+      setError("Email must be 254 characters or fewer.");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -65,7 +84,7 @@ export default function Register() {
 
     setSubmitting(true);
     try {
-      await register(username, password, currencyCode);
+      await register(username, normalizedEmail, password, currencyCode);
       navigate(from, { replace: true });
     } catch (caught) {
       const mapped = resolveProblemUi(caught, "Unexpected error.", { authFlow: "register" });
@@ -122,6 +141,20 @@ export default function Register() {
               autoComplete="username"
               autoFocus
               required
+            />
+            <Input
+              className="w-full rounded-md border px-3 py-2 text-base md:text-sm"
+              name="email"
+              type="text"
+              placeholder="Email"
+              value={email}
+              onChange={(event) => {
+                if (error) {
+                  setError(null);
+                }
+                setEmail(event.target.value);
+              }}
+              autoComplete="email"
             />
             <PasswordInput
               className="w-full rounded-md border px-3 py-2 text-base md:text-sm"
