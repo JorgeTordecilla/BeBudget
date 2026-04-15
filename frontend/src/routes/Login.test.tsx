@@ -20,7 +20,7 @@ function renderLogin({
   login = async () => undefined,
   isAuthenticated = false,
   isBootstrapping = false,
-  user = null as { id: string; username: string; currency_code: string } | null,
+  user = null as { id: string; username: string; email: string; currency_code: string } | null,
   accessToken = null as string | null,
   bootstrapSession = async () => false
 } = {}) {
@@ -70,7 +70,7 @@ describe("Login route", () => {
 
   it("redirects immediately when user is present while bootstrapping", async () => {
     renderLogin({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       isBootstrapping: true,
       bootstrapSession: async () => false
     });
@@ -82,7 +82,7 @@ describe("Login route", () => {
 
   it("redirects immediately with cached user even without access token", async () => {
     renderLogin({
-      user: { id: "u-cache", username: "cached", currency_code: "USD" },
+      user: { id: "u-cache", username: "cached", email: "cached@example.com", currency_code: "USD" },
       accessToken: null,
       isAuthenticated: false
     });

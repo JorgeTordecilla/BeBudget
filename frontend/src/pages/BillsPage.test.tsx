@@ -55,7 +55,7 @@ function renderPage(path = "/app/bills?month=2026-03") {
       <AuthContext.Provider
         value={{
           apiClient: {} as never,
-          user: { id: "u1", username: "demo", currency_code: "USD" },
+          user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
           accessToken: "token",
           isAuthenticated: true,
           isBootstrapping: false,

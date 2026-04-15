@@ -19,12 +19,12 @@ const apiClientStub = {} as ApiClient;
 function renderRegister({
   register = async () => undefined,
   isAuthenticated = false,
-  user = null as { id: string; username: string; currency_code: string } | null,
+  user = null as { id: string; username: string; email: string; currency_code: string } | null,
   accessToken = null as string | null
 }: {
   register?: (username: string, email: string, password: string, currencyCode: string) => Promise<void>;
   isAuthenticated?: boolean;
-  user?: { id: string; username: string; currency_code: string } | null;
+  user?: { id: string; username: string; email: string; currency_code: string } | null;
   accessToken?: string | null;
 } = {}) {
   return render(
@@ -74,7 +74,7 @@ describe("Register route", () => {
 
   it("redirects immediately when user is present", async () => {
     renderRegister({
-      user: { id: "u1", username: "demo", currency_code: "USD" },
+      user: { id: "u1", username: "demo", email: "demo@example.com", currency_code: "USD" },
       isAuthenticated: true
     });
 
@@ -84,7 +84,7 @@ describe("Register route", () => {
 
   it("redirects with cached user even when access token is null", async () => {
     renderRegister({
-      user: { id: "u-cache", username: "cached", currency_code: "USD" },
+      user: { id: "u-cache", username: "cached", email: "cached@example.com", currency_code: "USD" },
       accessToken: null,
       isAuthenticated: false
     });
