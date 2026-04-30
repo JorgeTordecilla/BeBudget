@@ -1,9 +1,7 @@
 ## Purpose
 
 Define the frontend contract and behavior for the authenticated dashboard cockpit, including month-health KPIs, deterministic alerts, contextual bridge navigation, and quality/error handling aligned with BeBudget API contracts.
-
 ## Requirements
-
 ### Requirement: Dashboard cockpit must provide authenticated month-health snapshot
 The frontend SHALL expose an authenticated cockpit view at `/app/dashboard` that summarizes selected-month financial health.
 
@@ -103,3 +101,37 @@ Dashboard KPI sections SHALL adapt density by breakpoint while preserving semant
 #### Scenario: KPI readability across breakpoints
 - **WHEN** the viewport changes between mobile, tablet, and desktop
 - **THEN** KPI blocks reflow to appropriate columns and keep labels, values, and state cues readable
+
+### Requirement: Spending spikes must use robust category-aware anomaly detection
+Cockpit SHALL detect expense spikes using category-aware robust statistics instead of only a global median multiplier.
+
+#### Scenario: Spike decision uses robust z-score with MAD baseline
+- **WHEN** cockpit evaluates an expense transaction with sufficient category sample history
+- **THEN** frontend SHALL compute category baseline using median and MAD from positive `amount_cents`
+- **AND** SHALL classify as spike only when robust z-score is above configured threshold and absolute minimum amount floor is met.
+
+#### Scenario: Insufficient category history falls back deterministically
+- **WHEN** category sample size is below the configured minimum
+- **THEN** frontend SHALL fallback to deterministic global-threshold spike logic
+- **AND** fallback behavior SHALL remain stable for identical inputs.
+
+### Requirement: Spike alerts must expose severity for prioritization
+Cockpit SHALL provide severity tiers for detected spikes to support triage.
+
+#### Scenario: High-severity spikes are distinguishable from lower-severity spikes
+- **WHEN** detected spikes are rendered in dashboard alerts
+- **THEN** each spike SHALL include one severity level (`low`, `medium`, `high`)
+- **AND** frontend SHALL present a visible severity cue in the alert item.
+
+### Requirement: Robust spike detection must remain explainable and testable
+The detector SHALL expose deterministic behavior under boundary conditions and keep month-context links intact.
+
+#### Scenario: Deterministic boundary behavior with zero-MAD and absolute floor
+- **WHEN** category baselines produce zero MAD or near-flat distributions
+- **THEN** detector SHALL apply deterministic guardrails that avoid divide-by-zero and noisy false positives
+- **AND** SHALL only emit spikes that satisfy the absolute minimum amount floor.
+
+#### Scenario: Spike alert action still links to month-scoped expense transactions
+- **WHEN** user selects Review transactions from a spike alert
+- **THEN** cockpit SHALL navigate to `/app/transactions` preserving selected month `from`, `to`, and `type=expense`.
+

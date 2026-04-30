@@ -533,7 +533,12 @@ export default function DashboardPage() {
                   <ul className="space-y-2 text-sm">
                     {spikes.spikes.map((spike) => (
                       <li key={spike.id} className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-2">
-                        <p className="font-medium">{spike.merchant ?? "(no merchant)"}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium">{spike.merchant ?? "(no merchant)"}</p>
+                          <span className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-200">
+                            {spike.severity}
+                          </span>
+                        </div>
                         <p className="text-muted-foreground">{formatCents(currencyCode, spike.amountCents)} on {spike.date}</p>
                         <Link
                           className="inline-flex min-h-9 items-center rounded-md text-xs font-medium text-rose-700 underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60 focus-visible:ring-offset-2 dark:text-rose-300"
