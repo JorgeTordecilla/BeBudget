@@ -71,4 +71,23 @@ describe("date helpers", () => {
     expect(isValidIsoDate(apiDate)).toBe(true);
     expect(isValidIsoDate(localDate)).toBe(true);
   });
+
+  it("keeps date-only conversion stable on month-end boundaries", () => {
+    expect(localIsoDateToApiUtcDate("2026-04-30")).toBe("2026-04-30");
+    expect(localIsoDateToApiUtcDate("2026-02-28")).toBe("2026-02-28");
+    expect(localIsoDateToApiUtcDate("2026-12-31")).toBe("2026-12-31");
+  });
+
+  it("keeps date-only conversion unchanged across timezone offsets", () => {
+    const original = Date.prototype.getTimezoneOffset;
+    try {
+      Date.prototype.getTimezoneOffset = () => 300; // UTC-5 style offset
+      expect(localIsoDateToApiUtcDate("2026-04-30")).toBe("2026-04-30");
+
+      Date.prototype.getTimezoneOffset = () => -120; // UTC+2 style offset
+      expect(localIsoDateToApiUtcDate("2026-04-30")).toBe("2026-04-30");
+    } finally {
+      Date.prototype.getTimezoneOffset = original;
+    }
+  });
 });

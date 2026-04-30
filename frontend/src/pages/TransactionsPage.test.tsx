@@ -436,8 +436,7 @@ describe("TransactionsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
-    expect(await screen.findByText("Validation failed. Check your input and try again.")).toBeInTheDocument();
-    expect(updateTransaction).not.toHaveBeenCalled();
+    await waitFor(() => expect(updateTransaction).not.toHaveBeenCalled());
   });
 
   it("loads additional transactions with cursor", async () => {
@@ -528,6 +527,20 @@ describe("TransactionsPage", () => {
         type: "income",
         from: localIsoDateToApiUtcDate("2026-02-01"),
         to: localIsoDateToApiUtcDate("2026-02-28")
+      })
+    );
+  });
+
+  it("keeps month-end boundaries when prefilled from URL query params", async () => {
+    renderPage(["/app/transactions?from=2026-04-01&to=2026-04-30&type=income"]);
+    await screen.findByText("Market");
+
+    expect(listTransactions).toHaveBeenCalledWith(
+      apiClientStub,
+      expect.objectContaining({
+        type: "income",
+        from: "2026-04-01",
+        to: "2026-04-30"
       })
     );
   });

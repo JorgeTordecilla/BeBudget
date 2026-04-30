@@ -206,6 +206,17 @@ describe("AnalyticsPage", () => {
     );
   });
 
+  it("preserves month-end query boundaries from URL params", async () => {
+    renderPage(["/app/analytics?from=2026-04-01&to=2026-04-30"]);
+
+    await waitFor(() =>
+      expect(getAnalyticsByMonth).toHaveBeenCalledWith(apiClientStub, {
+        from: "2026-04-01",
+        to: "2026-04-30"
+      })
+    );
+  });
+
   it("resyncs analytics range when URL query changes after mount", async () => {
     function Harness() {
       const navigate = useNavigate();

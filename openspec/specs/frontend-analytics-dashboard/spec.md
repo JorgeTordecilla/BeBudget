@@ -1,9 +1,7 @@
 ## Purpose
 
 Define the frontend contract and behavior for authenticated analytics reporting, including date-range filtering, monthly and category views, budget overlays, deterministic ProblemDetails handling, and quality gates aligned with the BeBudget API contract.
-
 ## Requirements
-
 ### Requirement: Authenticated analytics route and date-range queries must be available
 The frontend SHALL expose an authenticated analytics page under the app shell, load analytics data by explicit date range, and keep range state synchronized with URL query parameters.
 
@@ -208,3 +206,28 @@ Impulse summary loading errors SHALL not break the rest of analytics rendering.
 - **WHEN** impulse summary request fails
 - **THEN** impulse section SHALL show non-blocking error state
 - **AND** other analytics sections SHALL continue rendering and updating normally.
+
+### Requirement: Analytics date filters must preserve selected calendar boundaries
+The frontend MUST send `from` and `to` query values to analytics endpoints as the exact selected `YYYY-MM-DD` calendar dates, without timezone-based day rollover.
+
+#### Scenario: Month-end filter does not include next month
+- **WHEN** a user selects `from=2026-04-01` and `to=2026-04-30` on Analytics
+- **THEN** the frontend SHALL request analytics endpoints with `to=2026-04-30` (not `2026-05-01`)
+- **AND** analytics summary cards SHALL only aggregate months within April 2026 for that filter.
+
+### Requirement: Analytics month-end filters must remain month-bounded
+The frontend MUST serialize analytics date filters as exact `YYYY-MM-DD` values so `to` never shifts into the next calendar month due to timezone conversion.
+
+#### Scenario: April month-end remains in April
+- **WHEN** a user applies analytics filters with `from=2026-04-01` and `to=2026-04-30`
+- **THEN** the frontend MUST call analytics endpoints with `to=2026-04-30`
+- **AND** the analytics summary MUST aggregate only April 2026 months returned for that range.
+
+### Requirement: Analytics filter behavior must be timezone-stable
+The frontend MUST preserve valid date-only filter values identically across timezone offsets when building analytics query parameters.
+
+#### Scenario: Negative UTC offset does not roll over end date
+- **WHEN** the runtime timezone offset is behind UTC and a user selects a valid month-end date
+- **THEN** query serialization MUST keep the selected `to` date unchanged
+- **AND** MUST NOT emit the next UTC date in analytics requests.
+
