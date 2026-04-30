@@ -89,9 +89,10 @@ export function localIsoDateToApiUtcDate(value: string): string {
 }
 
 export function apiUtcDateToLocalIsoDate(value: string): string {
-  if (!isValidIsoDate(value)) {
+  const parts = fromIsoDateParts(value);
+  if (!parts || !isValidIsoDate(value)) {
     return value;
   }
-  const utcDate = new Date(`${value}T00:00:00Z`);
-  return toLocalIsoDate(utcDate);
+  // API date fields are date-only values. Keep the calendar day stable.
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
 }
