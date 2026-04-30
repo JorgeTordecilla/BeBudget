@@ -136,6 +136,10 @@ describe("Dashboard", () => {
     expect(screen.getAllByText("Food").length).toBeGreaterThan(0);
     expect(screen.getByText("Spending spikes")).toBeInTheDocument();
     expect(screen.getByText("Mega")).toBeInTheDocument();
+    expect(screen.getByText("high")).toBeInTheDocument();
+    const reviewLinks = screen.getAllByRole("link", { name: "Review transactions" });
+    expect(reviewLinks[0]).toHaveAttribute("href", expect.stringContaining("/app/transactions?"));
+    expect(reviewLinks[0]).toHaveAttribute("href", expect.stringContaining("type=expense"));
     expect(screen.getByText("Executive health score")).toBeInTheDocument();
   });
 
