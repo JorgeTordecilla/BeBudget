@@ -83,10 +83,9 @@ export function localIsoDateToApiUtcDate(value: string): string {
   if (!parts || !isValidIsoDate(value)) {
     return value;
   }
-  // Use local end-of-day so conversion is reversible with apiUtcDateToLocalIsoDate
-  // when API dates represent UTC-day buckets.
-  const localDate = new Date(parts.year, parts.month - 1, parts.day, 23, 59, 59, 999);
-  return `${localDate.getUTCFullYear()}-${pad2(localDate.getUTCMonth() + 1)}-${pad2(localDate.getUTCDate())}`;
+  // Date-only API filters are calendar tokens, not instants.
+  // Preserve the selected YYYY-MM-DD exactly to avoid timezone rollover.
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
 }
 
 export function apiUtcDateToLocalIsoDate(value: string): string {

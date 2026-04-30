@@ -1,8 +1,6 @@
 ## Purpose
 Define frontend behavior for transactions management, including list workflows, mutation flows, import/export operations, URL-synced filters, and contract-safe error handling.
-
 ## Requirements
-
 ### Requirement: Authenticated transactions route and list must be available
 The frontend SHALL expose a protected transactions experience under the private app shell, including import and export entry points, and SHALL keep transaction filters synchronized with URL state.
 
@@ -347,3 +345,12 @@ The transactions list SHALL render behavior context badges without affecting exi
 - **WHEN** a listed transaction has `is_impulse=true` or `is_impulse=false`
 - **THEN** UI SHALL display `Impulsive` or `Intentional` badge respectively
 - **AND** rows with `is_impulse=null` SHALL render no impulse badge.
+
+### Requirement: Transactions date-range filters must preserve selected boundaries
+Transactions list filtering MUST serialize `from` and `to` query params as the exact selected date-only values.
+
+#### Scenario: Transactions month-end does not shift
+- **WHEN** a user filters transactions from `2026-04-01` to `2026-04-30`
+- **THEN** the frontend MUST request `/transactions` with `from=2026-04-01` and `to=2026-04-30`
+- **AND** MUST NOT shift either boundary due to timezone conversion.
+
