@@ -632,6 +632,19 @@ def test_openapi_archived_policy_contract_wording_is_explicit():
         assert "archived transactions are excluded" in description
 
 
+def test_income_frequency_contract_includes_weekly_and_biweekly_and_runtime_accepts_them():
+    enum_values = SPEC["components"]["schemas"]["IncomeFrequency"]["enum"]
+    assert "monthly" in enum_values
+    assert "weekly" in enum_values
+    assert "biweekly" in enum_values
+    income_source_create = SPEC["components"]["schemas"]["IncomeSourceCreate"]
+    create_frequency_ref = income_source_create["properties"]["frequency"]["$ref"]
+    assert create_frequency_ref.endswith("/IncomeFrequency")
+    income_source_update = SPEC["components"]["schemas"]["IncomeSourceUpdate"]
+    update_frequency_ref = income_source_update["properties"]["frequency"]["$ref"]
+    assert update_frequency_ref.endswith("/IncomeFrequency")
+
+
 def test_openapi_e2e_contract_flow():
     with TestClient(app) as client:
         username = f"u_{uuid.uuid4().hex[:8]}"

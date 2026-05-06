@@ -390,13 +390,14 @@ export type ImpulseSummary = {
   top_impulse_categories: ImpulseSummaryCategory[];
 };
 
-export type IncomeFrequency = "monthly";
+export type IncomeFrequency = "monthly" | "weekly" | "biweekly";
 
 export type IncomeSource = {
   id: string;
   name: string;
   expected_amount_cents: number;
   frequency: IncomeFrequency;
+  recurrence_anchor_date?: string | null;
   is_active: boolean;
   note?: string | null;
   archived_at: string | null;
@@ -412,6 +413,7 @@ export type IncomeSourceCreate = {
   name: string;
   expected_amount_cents: number;
   frequency: IncomeFrequency;
+  recurrence_anchor_date?: string | null;
   is_active: boolean;
   note?: string;
 };
@@ -420,6 +422,7 @@ export type IncomeSourceUpdate = {
   name?: string;
   expected_amount_cents?: number;
   frequency?: IncomeFrequency;
+  recurrence_anchor_date?: string | null;
   is_active?: boolean;
   note?: string | null;
   archived_at?: string | null;

@@ -40,6 +40,29 @@ Income sources MUST preserve deterministic naming and money invariants.
 - **WHEN** source payload is validated
 - **THEN** `expected_amount_cents` SHALL be validated as integer cents under existing money safety bounds
 
-#### Scenario: Frequency enum is monthly-only in phase one
+#### Scenario: Frequency enum supports monthly weekly biweekly
 - **WHEN** a client submits source frequency
-- **THEN** accepted value set SHALL be restricted to `monthly` for this change
+- **THEN** accepted value set SHALL be `monthly`, `weekly`, or `biweekly`
+
+### Requirement: Biweekly expected amount must follow calendar quincena split
+For `frequency=biweekly`, expected monthly amount SHALL represent a monthly total split across day 15 and month-end.
+
+#### Scenario: Even-cent monthly expected splits equally
+- **WHEN** biweekly source expected amount is an even cent total (example: 400000 cents)
+- **THEN** first-half expected SHALL be 200000 cents and second-half expected SHALL be 200000 cents.
+
+#### Scenario: Odd-cent monthly expected preserves total deterministically
+- **WHEN** biweekly source expected amount is an odd cent total (example: 400001 cents)
+- **THEN** first-half expected SHALL be `floor(total/2)` and second-half expected SHALL be `total-first_half`
+- **AND** halves SHALL sum exactly to original monthly total.
+
+### Requirement: Biweekly calendar policy must be month-length invariant
+Biweekly expected modeling SHALL remain correct across February and 30/31-day months.
+
+#### Scenario: February uses correct month-end day
+- **WHEN** expected biweekly income is computed for February in leap and non-leap years
+- **THEN** second-half occurrence SHALL align to February 29 (leap) or February 28 (non-leap).
+
+#### Scenario: 30-day and 31-day months use correct month-end day
+- **WHEN** expected biweekly income is computed for April and May
+- **THEN** second-half occurrence SHALL align to day 30 for April and day 31 for May.

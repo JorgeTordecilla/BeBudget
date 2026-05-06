@@ -5203,6 +5203,8 @@ components:
       type: string
       enum:
       - monthly
+      - weekly
+      - biweekly
     IncomeSourceCreate:
       type: object
       required:
@@ -5220,6 +5222,11 @@ components:
           maximum: 999999999999
         frequency:
           $ref: '#/components/schemas/IncomeFrequency'
+        recurrence_anchor_date:
+          type:
+          - string
+          - 'null'
+          format: date
         is_active:
           type: boolean
           default: true
@@ -5239,6 +5246,11 @@ components:
           maximum: 999999999999
         frequency:
           $ref: '#/components/schemas/IncomeFrequency'
+        recurrence_anchor_date:
+          type:
+          - string
+          - 'null'
+          format: date
         is_active:
           type: boolean
         note:
@@ -5257,6 +5269,7 @@ components:
       - name
       - expected_amount_cents
       - frequency
+      - recurrence_anchor_date
       - is_active
       - archived_at
       - created_at
@@ -5271,6 +5284,11 @@ components:
           type: integer
         frequency:
           $ref: '#/components/schemas/IncomeFrequency'
+        recurrence_anchor_date:
+          type:
+          - string
+          - 'null'
+          format: date
         is_active:
           type: boolean
         note:
@@ -5293,6 +5311,7 @@ components:
         name: Paycheck 1
         expected_amount_cents: 250000
         frequency: monthly
+        recurrence_anchor_date: '2026-02-01'
         is_active: true
         note: Primary salary
         archived_at: null
@@ -5313,6 +5332,7 @@ components:
           name: Paycheck 1
           expected_amount_cents: 250000
           frequency: monthly
+          recurrence_anchor_date: '2026-02-01'
           is_active: true
           note: Primary salary
           archived_at: null

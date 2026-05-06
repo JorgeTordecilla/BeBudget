@@ -39,3 +39,5 @@ class TransactionMood(_DomainEnum):
 
 class IncomeFrequency(_DomainEnum):
     MONTHLY = "monthly"
+    WEEKLY = "weekly"
+    BIWEEKLY = "biweekly"

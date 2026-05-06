@@ -61,6 +61,8 @@ def create_income_source(
     data = payload.model_dump()
     validate_user_currency_for_money(current_user.currency_code)
     data["expected_amount_cents"] = validate_limit_cents(data["expected_amount_cents"])
+    if data.get("recurrence_anchor_date") is None:
+        data["recurrence_anchor_date"] = utcnow().date()
 
     repo = SQLAlchemyIncomeSourceRepository(db)
     row = IncomeSource(user_id=current_user.id, **data)

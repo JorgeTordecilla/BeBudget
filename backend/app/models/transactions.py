@@ -121,6 +121,7 @@ class IncomeSource(Base):
         nullable=False,
         default=IncomeFrequency.MONTHLY,
     )
+    recurrence_anchor_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
