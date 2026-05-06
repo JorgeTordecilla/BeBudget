@@ -178,6 +178,7 @@ export type Budget = {
   month: string;
   category_id: string;
   limit_cents: number;
+  source: string;
   archived_at: string | null;
   created_at: string;
   updated_at: string;
@@ -198,6 +199,38 @@ export type BudgetUpdate = {
   category_id?: string;
   limit_cents?: number;
   archived_at?: string | null;
+};
+
+export type BudgetTemplateItem = {
+  id: string;
+  category_id: string;
+  limit_cents: number;
+  is_active: boolean;
+};
+
+export type BudgetTemplateItemInput = {
+  category_id: string;
+  limit_cents: number;
+  is_active: boolean;
+};
+
+export type BudgetTemplate = {
+  id: string;
+  version: number;
+  items: BudgetTemplateItem[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type BudgetTemplateUpdate = {
+  items: BudgetTemplateItemInput[];
+};
+
+export type BudgetMonth = {
+  month: string;
+  items: Budget[];
+  generated_at?: string | null;
+  generated_from_template_version?: number | null;
 };
 
 export type Bill = {

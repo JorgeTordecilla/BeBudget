@@ -2,7 +2,13 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { archiveBudget, createBudget, updateBudget } from "@/api/budgets";
+import {
+  archiveBudget,
+  createBudget,
+  generateBudgetMonth,
+  updateBudget,
+  updateBudgetTemplate
+} from "@/api/budgets";
 import { listCategories } from "@/api/categories";
 import { ApiProblemError } from "@/api/errors";
 import type { Budget, BudgetCreate, BudgetUpdate, Category, ProblemDetails } from "@/api/types";
@@ -129,6 +135,35 @@ export default function BudgetsPage() {
     onError: (error) => {
       setPageProblem(error);
     }
+  });
+
+  const generateMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
+    mutationFn: (month: string) => generateBudgetMonth(apiClient, month),
+    onSuccess: async () => {
+      publishSuccessToast("Month generated from template.");
+      await invalidateBudgetCaches(queryClient);
+    },
+    onError: (error) => setPageProblem(error)
+  });
+
+  const templateMutation = useMutation({
+    meta: { skipGlobalErrorToast: true },
+    mutationFn: (month: string) =>
+      updateBudgetTemplate(apiClient, {
+        items: (budgetsQuery.data?.items ?? [])
+          .filter((item) => item.month === month && !item.archived_at)
+          .map((item) => ({
+            category_id: item.category_id,
+            limit_cents: item.limit_cents,
+            is_active: true
+          }))
+      }),
+    onSuccess: async () => {
+      publishSuccessToast("Template updated from selected month.");
+      await invalidateBudgetCaches(queryClient);
+    },
+    onError: (error) => setPageProblem(error)
   });
 
   useEffect(() => {
@@ -337,6 +372,7 @@ export default function BudgetsPage() {
 
   const currencyCode = user?.currency_code ?? "USD";
   const items = budgetsQuery.data?.items ?? [];
+  const selectedMonth = appliedRange.from;
 
   return (
     <section className="space-y-4">
@@ -367,6 +403,24 @@ export default function BudgetsPage() {
           </label>
           <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={applyRange}>
             Apply
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => void generateMutation.mutateAsync(selectedMonth)}
+            disabled={!rangeIsValid || generateMutation.isPending}
+          >
+            Generate from template
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={() => void templateMutation.mutateAsync(selectedMonth)}
+            disabled={!rangeIsValid || templateMutation.isPending}
+          >
+            Use month as template
           </Button>
         </div>
       </PageHeader>

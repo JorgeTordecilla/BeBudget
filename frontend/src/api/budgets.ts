@@ -1,6 +1,14 @@
 import type { ApiClient } from "@/api/client";
 import { throwApiError } from "@/api/errors";
-import type { Budget, BudgetCreate, BudgetListResponse, BudgetUpdate } from "@/api/types";
+import type {
+  Budget,
+  BudgetCreate,
+  BudgetListResponse,
+  BudgetMonth,
+  BudgetTemplate,
+  BudgetTemplateUpdate,
+  BudgetUpdate
+} from "@/api/types";
 
 export type ListBudgetsParams = {
   from: string;
@@ -58,4 +66,50 @@ export async function archiveBudget(client: ApiClient, budgetId: string): Promis
   if (!response.ok) {
     await throwApiError(response, "budgets_archive_failed");
   }
+}
+
+export async function getBudgetTemplate(client: ApiClient): Promise<BudgetTemplate> {
+  const response = await client.request("/budgets/template", { method: "GET" });
+  if (!response.ok) {
+    await throwApiError(response, "budgets_template_get_failed");
+  }
+  return (await response.json()) as BudgetTemplate;
+}
+
+export async function updateBudgetTemplate(client: ApiClient, payload: BudgetTemplateUpdate): Promise<BudgetTemplate> {
+  const response = await client.request("/budgets/template", {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    await throwApiError(response, "budgets_template_update_failed");
+  }
+  return (await response.json()) as BudgetTemplate;
+}
+
+export async function generateBudgetMonth(client: ApiClient, month: string): Promise<BudgetMonth> {
+  const response = await client.request(`/budgets/${encodeURIComponent(month)}/generate-from-template`, { method: "POST" });
+  if (!response.ok) {
+    await throwApiError(response, "budgets_generate_month_failed");
+  }
+  return (await response.json()) as BudgetMonth;
+}
+
+export async function getBudgetMonth(client: ApiClient, month: string): Promise<BudgetMonth> {
+  const response = await client.request(`/budgets/month/${encodeURIComponent(month)}`, { method: "GET" });
+  if (!response.ok) {
+    await throwApiError(response, "budgets_month_get_failed");
+  }
+  return (await response.json()) as BudgetMonth;
+}
+
+export async function updateBudgetMonth(client: ApiClient, month: string, payload: BudgetTemplateUpdate): Promise<BudgetMonth> {
+  const response = await client.request(`/budgets/month/${encodeURIComponent(month)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    await throwApiError(response, "budgets_month_update_failed");
+  }
+  return (await response.json()) as BudgetMonth;
 }

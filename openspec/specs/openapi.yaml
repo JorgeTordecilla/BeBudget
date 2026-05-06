@@ -3228,6 +3228,182 @@ paths:
               examples:
                 canonical:
                   $ref: '#/components/examples/Problem406'
+  /budgets/template:
+    get:
+      summary: Get budget template
+      responses:
+        '200':
+          description: OK
+          content:
+            application/vnd.bebudget.v1+json:
+              schema:
+                $ref: '#/components/schemas/BudgetTemplate'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                canonical:
+                  $ref: '#/components/examples/Problem401'
+        '406':
+          description: Not Acceptable
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                canonical:
+                  $ref: '#/components/examples/Problem406'
+    put:
+      summary: Replace budget template
+      requestBody:
+        required: true
+        content:
+          application/vnd.bebudget.v1+json:
+            schema:
+              $ref: '#/components/schemas/BudgetTemplateUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/vnd.bebudget.v1+json:
+              schema:
+                $ref: '#/components/schemas/BudgetTemplate'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                canonical:
+                  $ref: '#/components/examples/Problem401'
+        '409':
+          description: Business rule conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '406':
+          description: Not Acceptable
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                canonical:
+                  $ref: '#/components/examples/Problem406'
+  /budgets/{month}/generate-from-template:
+    parameters:
+    - name: month
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^\d{4}-(0[1-9]|1[0-2])$
+    post:
+      summary: Generate monthly budgets from template
+      responses:
+        '200':
+          description: OK
+          content:
+            application/vnd.bebudget.v1+json:
+              schema:
+                $ref: '#/components/schemas/BudgetMonth'
+        '400':
+          description: Invalid month
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '406':
+          description: Not Acceptable
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /budgets/month/{month}:
+    parameters:
+    - name: month
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^\d{4}-(0[1-9]|1[0-2])$
+    get:
+      summary: Get monthly budget snapshot
+      responses:
+        '200':
+          description: OK
+          content:
+            application/vnd.bebudget.v1+json:
+              schema:
+                $ref: '#/components/schemas/BudgetMonth'
+        '400':
+          description: Invalid month
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '406':
+          description: Not Acceptable
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    put:
+      summary: Override monthly budget items
+      requestBody:
+        required: true
+        content:
+          application/vnd.bebudget.v1+json:
+            schema:
+              $ref: '#/components/schemas/BudgetTemplateUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/vnd.bebudget.v1+json:
+              schema:
+                $ref: '#/components/schemas/BudgetMonth'
+        '400':
+          description: Invalid request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Business rule conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '406':
+          description: Not Acceptable
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
   /audit:
     get:
       summary: List audit events for current user
@@ -4939,6 +5115,7 @@ components:
       - month
       - category_id
       - limit_cents
+      - source
       - archived_at
       - created_at
       - updated_at
@@ -4956,6 +5133,12 @@ components:
           type: integer
           minimum: 1
           maximum: 999999999999
+        source:
+          type: string
+          enum:
+          - manual
+          - template
+          - override
         archived_at:
           type:
           - string
@@ -4972,6 +5155,7 @@ components:
         month: 2026-02
         category_id: 0dab8db1-dcb8-44a2-bccd-d2efce11c7c9
         limit_cents: 250000
+        source: manual
         archived_at: null
         created_at: '2026-02-01T00:00:00Z'
         updated_at: '2026-02-01T00:00:00Z'
@@ -5025,9 +5209,124 @@ components:
           month: 2026-02
           category_id: 0dab8db1-dcb8-44a2-bccd-d2efce11c7c9
           limit_cents: 250000
+          source: manual
           archived_at: null
           created_at: '2026-02-01T00:00:00Z'
           updated_at: '2026-02-01T00:00:00Z'
+    BudgetTemplateItem:
+      type: object
+      required:
+      - id
+      - category_id
+      - limit_cents
+      - is_active
+      properties:
+        id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        limit_cents:
+          type: integer
+          minimum: 1
+          maximum: 999999999999
+        is_active:
+          type: boolean
+    BudgetTemplateItemInput:
+      type: object
+      required:
+      - category_id
+      - limit_cents
+      - is_active
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        limit_cents:
+          type: integer
+          minimum: 1
+          maximum: 999999999999
+        is_active:
+          type: boolean
+    BudgetTemplateUpdate:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetTemplateItemInput'
+    BudgetTemplate:
+      type: object
+      required:
+      - id
+      - version
+      - items
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetTemplateItem'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      example:
+        id: c2e3d9b5-3b8e-4a81-b1c1-f9a315d9f001
+        version: 2
+        items:
+        - id: 2da16931-bf13-4ec9-b793-653f75c2d001
+          category_id: 032174e9-492b-4834-80a1-230fcf81fbd7
+          limit_cents: 1700000
+          is_active: true
+        created_at: '2026-05-01T00:00:00Z'
+        updated_at: '2026-05-06T12:00:00Z'
+    BudgetMonth:
+      type: object
+      required:
+      - month
+      - items
+      properties:
+        month:
+          type: string
+          pattern: ^\d{4}-(0[1-9]|1[0-2])$
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Budget'
+        generated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        generated_from_template_version:
+          type:
+          - integer
+          - 'null'
+      example:
+        month: 2026-06
+        items:
+        - id: 5a71639c-31df-4221-b7ca-87e27b347307
+          month: 2026-06
+          category_id: 032174e9-492b-4834-80a1-230fcf81fbd7
+          limit_cents: 1700000
+          source: template
+          archived_at: null
+          created_at: '2026-06-01T00:00:00Z'
+          updated_at: '2026-06-01T00:00:00Z'
+        generated_at: '2026-06-01T00:00:00Z'
+        generated_from_template_version: 2
     AuditEvent:
       type: object
       required:

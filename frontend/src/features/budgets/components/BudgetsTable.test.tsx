@@ -13,6 +13,7 @@ describe("BudgetsTable", () => {
             month: "2026-02",
             category_id: "c2",
             limit_cents: 1000,
+            source: "override",
             archived_at: null,
             created_at: "2026-02-01T00:00:00Z",
             updated_at: "2026-02-01T00:00:00Z"
@@ -22,6 +23,7 @@ describe("BudgetsTable", () => {
             month: "2026-03",
             category_id: "c2",
             limit_cents: 2000,
+            source: "template",
             archived_at: null,
             created_at: "2026-03-01T00:00:00Z",
             updated_at: "2026-03-01T00:00:00Z"
@@ -31,6 +33,7 @@ describe("BudgetsTable", () => {
             month: "2026-03",
             category_id: "c1",
             limit_cents: 3000,
+            source: "manual",
             archived_at: null,
             created_at: "2026-03-01T00:00:00Z",
             updated_at: "2026-03-01T00:00:00Z"
@@ -51,8 +54,11 @@ describe("BudgetsTable", () => {
     const rows = screen.getAllByRole("row");
     expect(within(rows[1]).getByText("2026-03")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Alpha (expense)")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Manual")).toBeInTheDocument();
     expect(within(rows[2]).getByText("2026-03")).toBeInTheDocument();
     expect(within(rows[2]).getByText("Beta (income)")).toBeInTheDocument();
+    expect(within(rows[2]).getByText("Template")).toBeInTheDocument();
     expect(within(rows[3]).getByText("2026-02")).toBeInTheDocument();
+    expect(within(rows[3]).getByText("Override")).toBeInTheDocument();
   });
 });

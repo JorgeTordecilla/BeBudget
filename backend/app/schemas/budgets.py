@@ -24,6 +24,7 @@ class BudgetOut(BudgetBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    source: str
     archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -31,3 +32,32 @@ class BudgetOut(BudgetBase):
 
 class BudgetListResponse(BaseModel):
     items: list[BudgetOut]
+
+
+class BudgetTemplateItemIn(BaseModel):
+    category_id: str
+    limit_cents: StrictInt
+    is_active: bool = True
+
+
+class BudgetTemplateUpdate(BaseModel):
+    items: list[BudgetTemplateItemIn]
+
+
+class BudgetTemplateItemOut(BudgetTemplateItemIn):
+    id: str
+
+
+class BudgetTemplateOut(BaseModel):
+    id: str
+    version: int
+    items: list[BudgetTemplateItemOut]
+    created_at: datetime
+    updated_at: datetime
+
+
+class BudgetMonthOut(BaseModel):
+    month: str
+    items: list[BudgetOut]
+    generated_at: datetime | None = None
+    generated_from_template_version: int | None = None

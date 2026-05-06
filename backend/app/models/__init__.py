@@ -1,6 +1,6 @@
 from .audit import AuditEvent
 from .bills import Bill, BillPayment
-from .budgets import Budget
+from .budgets import Budget, BudgetMonthGeneration, BudgetTemplate, BudgetTemplateItem
 from .enums import AccountType, CategoryType, IncomeFrequency, SavingsGoalStatus, TransactionMood, TransactionType
 from .savings import SavingsContribution, SavingsGoal
 from .transactions import Account, Category, IncomeSource, MonthlyRollover, Transaction
@@ -13,6 +13,9 @@ __all__ = [
     "Bill",
     "BillPayment",
     "Budget",
+    "BudgetMonthGeneration",
+    "BudgetTemplate",
+    "BudgetTemplateItem",
     "Category",
     "CategoryType",
     "IncomeSource",

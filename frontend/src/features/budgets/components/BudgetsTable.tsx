@@ -18,6 +18,16 @@ function getCategoryLabel(category: Category): string {
   return `${category.name} (${category.type})`;
 }
 
+function getSourceLabel(source: string): string {
+  if (source === "override") {
+    return "Override";
+  }
+  if (source === "template") {
+    return "Template";
+  }
+  return "Manual";
+}
+
 export default function BudgetsTable({ items, categoriesById, formatMoney, onEdit, onArchive }: Props) {
   const isDesktop = useIsDesktop();
   const orderedItems = useMemo(
@@ -50,9 +60,14 @@ export default function BudgetsTable({ items, categoriesById, formatMoney, onEdi
                       <p className="text-sm font-semibold">{budget.month}</p>
                       <p className="text-xs text-muted-foreground">{category ? getCategoryLabel(category) : budget.category_id}</p>
                     </div>
-                    <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-1 text-[11px] font-semibold">
-                      {budget.archived_at ? "Archived" : "Active"}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-1 text-[11px] font-semibold">
+                        {budget.archived_at ? "Archived" : "Active"}
+                      </span>
+                      <span className="rounded-full border border-border/70 bg-background px-2 py-1 text-[11px]">
+                        {getSourceLabel(budget.source)}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-sm font-semibold tabular-nums">{formatMoney(budget.limit_cents)}</p>
                   <div className="flex justify-end gap-2">
@@ -79,6 +94,7 @@ export default function BudgetsTable({ items, categoriesById, formatMoney, onEdi
               <TableHead className="px-3 py-2">Month</TableHead>
               <TableHead className="px-3 py-2">Category</TableHead>
               <TableHead className="px-3 py-2 text-right">Limit</TableHead>
+              <TableHead className="px-3 py-2">Source</TableHead>
               <TableHead className="px-3 py-2">State</TableHead>
               <TableHead className="px-3 py-2 text-right">Actions</TableHead>
             </TableRow>
@@ -91,6 +107,7 @@ export default function BudgetsTable({ items, categoriesById, formatMoney, onEdi
                   <TableCell className="px-3 py-2">{budget.month}</TableCell>
                   <TableCell className="px-3 py-2">{category ? getCategoryLabel(category) : budget.category_id}</TableCell>
                   <TableCell className="px-3 py-2 text-right">{formatMoney(budget.limit_cents)}</TableCell>
+                  <TableCell className="px-3 py-2">{getSourceLabel(budget.source)}</TableCell>
                   <TableCell className="px-3 py-2">{budget.archived_at ? "Archived" : "Active"}</TableCell>
                   <TableCell className="px-3 py-2 text-right">
                     <div className="flex flex-wrap justify-end gap-2">

@@ -4,17 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 
 import type { ApiClient } from "@/api/client";
-import { archiveBudget, createBudget, listBudgets, updateBudget } from "@/api/budgets";
+import { archiveBudget, createBudget, generateBudgetMonth, listBudgets, updateBudget, updateBudgetTemplate } from "@/api/budgets";
 import { listCategories } from "@/api/categories";
 import { ApiProblemError } from "@/api/problem";
 import { AuthContext } from "@/auth/AuthContext";
 import BudgetsPage from "@/features/budgets/BudgetsPage";
+import { currentIsoMonth } from "@/utils/dates";
 
 vi.mock("@/api/budgets", () => ({
   listBudgets: vi.fn(),
   createBudget: vi.fn(),
   updateBudget: vi.fn(),
-  archiveBudget: vi.fn()
+  archiveBudget: vi.fn(),
+  generateBudgetMonth: vi.fn(),
+  updateBudgetTemplate: vi.fn()
 }));
 
 vi.mock("@/api/categories", () => ({
@@ -60,6 +63,7 @@ describe("BudgetsPage", () => {
           month: "2026-02",
           category_id: "c1",
           limit_cents: 120000,
+          source: "manual",
           archived_at: null,
           created_at: "2026-02-01T00:00:00Z",
           updated_at: "2026-02-01T00:00:00Z"
@@ -69,6 +73,7 @@ describe("BudgetsPage", () => {
           month: "2026-03",
           category_id: "c2",
           limit_cents: 10000,
+          source: "manual",
           archived_at: null,
           created_at: "2026-03-01T00:00:00Z",
           updated_at: "2026-03-01T00:00:00Z"
@@ -87,6 +92,7 @@ describe("BudgetsPage", () => {
       month: "2026-04",
       category_id: "c2",
       limit_cents: 10000,
+      source: "manual",
       archived_at: null,
       created_at: "2026-04-01T00:00:00Z",
       updated_at: "2026-04-01T00:00:00Z"
@@ -96,11 +102,25 @@ describe("BudgetsPage", () => {
       month: "2026-02",
       category_id: "c1",
       limit_cents: 120000,
+      source: "manual",
       archived_at: null,
       created_at: "2026-02-01T00:00:00Z",
       updated_at: "2026-02-02T00:00:00Z"
     });
     vi.mocked(archiveBudget).mockResolvedValue();
+    vi.mocked(generateBudgetMonth).mockResolvedValue({
+      month: "2026-02",
+      items: [],
+      generated_at: "2026-02-01T00:00:00Z",
+      generated_from_template_version: 1
+    });
+    vi.mocked(updateBudgetTemplate).mockResolvedValue({
+      id: "t1",
+      version: 2,
+      items: [],
+      created_at: "2026-02-01T00:00:00Z",
+      updated_at: "2026-02-02T00:00:00Z"
+    });
   });
 
   it("shows income and expense categories and converts limit to cents on create", async () => {
@@ -211,6 +231,27 @@ describe("BudgetsPage", () => {
     const rows = screen.getAllByRole("row");
     const firstBodyRow = rows[1];
     expect(within(firstBodyRow).getByText("2026-03")).toBeInTheDocument();
+    expect(within(firstBodyRow).getByText("Manual")).toBeInTheDocument();
+  });
+
+  it("triggers month generation from template", async () => {
+    renderPage();
+    await screen.findByText("2026-03");
+    fireEvent.click(screen.getByRole("button", { name: "Generate from template" }));
+    await waitFor(() => expect(generateBudgetMonth).toHaveBeenCalledWith(apiClientStub, currentIsoMonth()));
+  });
+
+  it("uses selected month as template", async () => {
+    renderPage(["/app/budgets?month=2026-03"]);
+    await screen.findByText("2026-03");
+
+    fireEvent.click(screen.getByRole("button", { name: "Use month as template" }));
+
+    await waitFor(() =>
+      expect(updateBudgetTemplate).toHaveBeenCalledWith(apiClientStub, {
+        items: [{ category_id: "c2", limit_cents: 10000, is_active: true }]
+      })
+    );
   });
 
   it("shows validation feedback for invalid month range", async () => {

@@ -20,7 +20,15 @@ from app.schemas.bills import (
     BillPaymentOut,
     BillUpdate,
 )
-from app.schemas.budgets import BudgetCreate, BudgetListResponse, BudgetOut, BudgetUpdate
+from app.schemas.budgets import (
+    BudgetCreate,
+    BudgetListResponse,
+    BudgetMonthOut,
+    BudgetOut,
+    BudgetTemplateOut,
+    BudgetTemplateUpdate,
+    BudgetUpdate,
+)
 from app.schemas.categories import CategoryCreate, CategoryOut, CategoryUpdate
 from app.schemas.common import PASSWORD_POLICY_MESSAGE, PASSWORD_POLICY_PATTERN, PasswordPolicyStr, ProblemDetails
 from app.schemas.income_sources import (
@@ -79,7 +87,10 @@ __all__ = [
     "BillUpdate",
     "BudgetCreate",
     "BudgetListResponse",
+    "BudgetMonthOut",
     "BudgetOut",
+    "BudgetTemplateOut",
+    "BudgetTemplateUpdate",
     "BudgetUpdate",
     "CategoryCreate",
     "CategoryOut",
