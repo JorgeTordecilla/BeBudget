@@ -1,4 +1,5 @@
 from datetime import date
+import calendar
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import case, func, select
@@ -11,6 +12,7 @@ from app.db import get_db
 from app.dependencies import get_current_user
 from app.errors import invalid_date_range_error
 from app.models import Budget, Category, IncomeSource, Transaction, User
+from app.models.enums import IncomeFrequency
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -196,8 +198,45 @@ def _active_income_sources_for_user(db: Session, user_id: str) -> list[IncomeSou
 
 
 def _expected_income_totals_by_month(months: list[str], active_sources: list[IncomeSource]) -> dict[str, int]:
-    expected_total = sum(int(source.expected_amount_cents) for source in active_sources)
-    return {month: expected_total for month in months}
+    totals: dict[str, int] = {}
+    for month in months:
+        totals[month] = sum(_expected_income_for_source_month(source, month) for source in active_sources)
+    return totals
+
+
+def _parse_month(month: str) -> tuple[int, int]:
+    year_text, month_text = month.split("-")
+    return int(year_text), int(month_text)
+
+
+def _count_weekday_occurrences_in_month(month: str, weekday: int) -> int:
+    year, month_num = _parse_month(month)
+    month_days = calendar.monthrange(year, month_num)[1]
+    count = 0
+    for day in range(1, month_days + 1):
+        if date(year, month_num, day).weekday() == weekday:
+            count += 1
+    return count
+
+
+def _expected_income_for_source_month(source: IncomeSource, month: str) -> int:
+    amount = int(source.expected_amount_cents)
+    frequency = getattr(source, "frequency", IncomeFrequency.MONTHLY)
+    if frequency == IncomeFrequency.MONTHLY:
+        return amount
+    if frequency == IncomeFrequency.WEEKLY:
+        recurrence_anchor_date = getattr(source, "recurrence_anchor_date", None)
+        if recurrence_anchor_date is None:
+            created_at = getattr(source, "created_at", None)
+            recurrence_anchor_date = created_at.date() if created_at is not None else date(1970, 1, 5)
+        anchor_weekday = recurrence_anchor_date.weekday()
+        occurrences = _count_weekday_occurrences_in_month(month, anchor_weekday)
+        return amount * occurrences
+    if frequency == IncomeFrequency.BIWEEKLY:
+        first_half = amount // 2
+        second_half = amount - first_half
+        return first_half + second_half
+    return amount
 
 
 @router.get("/income")
@@ -242,7 +281,7 @@ def analytics_income(
         actual_total = 0
 
         for source in active_sources:
-            expected = int(source.expected_amount_cents)
+            expected = _expected_income_for_source_month(source, month)
             actual = actual_by_month_source.get((month, source.id), 0)
             actual_total += actual
             rows.append(

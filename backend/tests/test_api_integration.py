@@ -3428,6 +3428,87 @@ def test_income_analytics_returns_deterministic_month_rows_without_active_source
             assert item["rows"] == []
 
 
+def test_income_analytics_weekly_frequency_counts_month_occurrences_and_aligns_by_month():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "weekly-alignment-account")
+        income_category_id = _create_category(client, headers, "weekly-alignment-income", "income")
+
+        weekly_status, weekly_source = _create_income_source(
+            client,
+            headers,
+            name="Weekly Salary",
+            expected_amount_cents=10000,
+            frequency="weekly",
+        )
+        assert weekly_status == 201
+
+        # Force deterministic anchor weekday (Monday) for weekly occurrence counting.
+        patched_source = client.patch(
+            f"/api/income-sources/{weekly_source['id']}",
+            json={"recurrence_anchor_date": "2026-01-05"},
+            headers=headers,
+        )
+        assert patched_source.status_code == 200
+
+        income = client.get("/api/analytics/income?from=2026-02-01&to=2026-05-31", headers=headers)
+        assert income.status_code == 200
+        income_rows = {item["month"]: item for item in income.json()["items"]}
+        assert income_rows["2026-02"]["expected_income_cents"] == 40000
+        assert income_rows["2026-03"]["expected_income_cents"] == 50000
+        assert income_rows["2026-04"]["expected_income_cents"] == 40000
+        assert income_rows["2026-05"]["expected_income_cents"] == 40000
+
+        for month_date in ("2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01"):
+            tx_response = client.post(
+                "/api/transactions",
+                json={
+                    "type": "income",
+                    "account_id": account_id,
+                    "category_id": income_category_id,
+                    "amount_cents": 1,
+                    "date": month_date,
+                },
+                headers=headers,
+            )
+            assert tx_response.status_code == 201
+        by_month = client.get("/api/analytics/by-month?from=2026-02-01&to=2026-05-31", headers=headers)
+        assert by_month.status_code == 200
+        month_rows = {item["month"]: item for item in by_month.json()["items"]}
+        for month in ("2026-02", "2026-03", "2026-04", "2026-05"):
+            assert month_rows[month]["expected_income_cents"] == income_rows[month]["expected_income_cents"]
+
+
+def test_income_analytics_biweekly_monthly_total_and_odd_cent_conservation():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+
+        biweekly_status, biweekly_source = _create_income_source(
+            client,
+            headers,
+            name="Quincena",
+            expected_amount_cents=400001,
+            frequency="biweekly",
+        )
+        assert biweekly_status == 201
+
+        income = client.get("/api/analytics/income?from=2026-02-01&to=2026-05-31", headers=headers)
+        assert income.status_code == 200
+        items = income.json()["items"]
+        assert [item["month"] for item in items] == ["2026-02", "2026-03", "2026-04", "2026-05"]
+        for item in items:
+            assert item["expected_income_cents"] == 400001
+            row = next(source_row for source_row in item["rows"] if source_row["income_source_id"] == biweekly_source["id"])
+            assert row["expected_income_cents"] == 400001
+
+        by_month = client.get("/api/analytics/by-month?from=2026-02-01&to=2026-05-31", headers=headers)
+        assert by_month.status_code == 200
+        for item in by_month.json()["items"]:
+            assert item["expected_income_cents"] == 400001
+
+
 def test_income_analytics_currency_mismatch_returns_canonical_problem():
     with TestClient(app) as client:
         user = _register_user(client)

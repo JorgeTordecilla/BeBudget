@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
@@ -9,6 +9,7 @@ class IncomeSourceBase(BaseModel):
     name: str = Field(min_length=1)
     expected_amount_cents: StrictInt
     frequency: IncomeFrequency = IncomeFrequency.MONTHLY
+    recurrence_anchor_date: date | None = None
     is_active: bool = True
     note: str | None = None
 
@@ -21,6 +22,7 @@ class IncomeSourceUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     expected_amount_cents: StrictInt | None = None
     frequency: IncomeFrequency | None = None
+    recurrence_anchor_date: date | None = None
     is_active: bool | None = None
     note: str | None = None
     archived_at: datetime | None = None
