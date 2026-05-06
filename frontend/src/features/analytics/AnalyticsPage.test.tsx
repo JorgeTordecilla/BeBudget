@@ -117,6 +117,7 @@ describe("AnalyticsPage", () => {
     });
     vi.mocked(getRolloverPreview).mockResolvedValue({
       month: "2026-02",
+      current_month: "2026-03",
       surplus_cents: 9000,
       already_applied: false,
       applied_transaction_id: null,
@@ -412,27 +413,31 @@ describe("AnalyticsPage", () => {
     renderPage(["/app/analytics"], "COP");
     expect((await screen.findAllByText(/400,000,000/)).length).toBeGreaterThan(0);
   });
-
   it("shows rollover KPI and allows apply action from monthly rollover section", async () => {
     vi.mocked(getRolloverPreview)
       .mockResolvedValueOnce({
         month: "2026-02",
+        current_month: "2026-03",
         surplus_cents: 9000,
         already_applied: false,
         applied_transaction_id: null,
       })
       .mockResolvedValue({
         month: "2026-02",
+        current_month: "2026-03",
         surplus_cents: 9000,
         already_applied: true,
         applied_transaction_id: "tx-rollover",
       });
 
     renderPage();
-    expect(await screen.findByRole("button", { name: "Apply rollover →" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Apply rollover from 2026-02" })).toBeInTheDocument();
     expect(screen.getAllByText("$90.00").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Apply rollover →" }));
-    expect(await screen.findByText("Apply rollover")).toBeInTheDocument();
+    expect(screen.getByText("Target transaction date: 2026-03-01")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Apply rollover from 2026-02" }));
+    expect(await screen.findByRole("heading", { name: "Apply rollover" })).toBeInTheDocument();
+    expect(screen.getByText("Source month:")).toBeInTheDocument();
+    expect(screen.getAllByText("Target transaction date: 2026-03-01").length).toBeGreaterThan(0);
     await screen.findByRole("option", { name: "Cash" });
     await screen.findByRole("option", { name: "Salary" });
     await waitFor(() => expect(screen.getByRole("button", { name: "Confirm apply" })).toBeEnabled());
@@ -445,6 +450,28 @@ describe("AnalyticsPage", () => {
       })
     );
     expect(await screen.findByText("Applied")).toBeInTheDocument();
+  });
+
+  it("does not allow apply for current month rows", async () => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    vi.mocked(getAnalyticsByMonth).mockResolvedValueOnce({
+      items: [
+        {
+          month: currentMonth,
+          income_total_cents: 1000,
+          expense_total_cents: 500,
+          expected_income_cents: 1000,
+          actual_income_cents: 1000,
+          rollover_in_cents: 500,
+          budget_spent_cents: 0,
+          budget_limit_cents: 0,
+        }
+      ]
+    });
+
+    renderPage();
+    expect(await screen.findByText("Month not closed yet")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Apply rollover from/ })).not.toBeInTheDocument();
   });
 
   it("renders impulse KPI cards and top categories", async () => {
@@ -489,4 +516,6 @@ describe("AnalyticsPage", () => {
     expect(screen.getByText("Monthly trend")).toBeInTheDocument();
   });
 });
+
+
 

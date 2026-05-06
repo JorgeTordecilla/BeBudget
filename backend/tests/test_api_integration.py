@@ -4816,6 +4816,36 @@ def test_rollover_invalid_month_values_return_canonical_400():
             _assert_invalid_date_range_problem(apply)
 
 
+def test_rollover_apply_rejects_current_and_future_source_month():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        account_id = _create_account(client, headers, "rollover-closed-month-account")
+        income_category_id = _create_category(client, headers, "rollover-closed-month-income", "income")
+
+        today = utcnow().date()
+        current_month = today.strftime("%Y-%m")
+        future_year = today.year + (1 if today.month == 12 else 0)
+        future_month_num = 1 if today.month == 12 else today.month + 1
+        future_month = f"{future_year:04d}-{future_month_num:02d}"
+
+        for source_month in (current_month, future_month):
+            response = client.post(
+                "/api/rollover/apply",
+                json={
+                    "source_month": source_month,
+                    "account_id": account_id,
+                    "category_id": income_category_id,
+                },
+                headers=headers,
+            )
+            assert response.status_code == 422
+            assert response.headers["content-type"].startswith(PROBLEM)
+            body = response.json()
+            assert body["type"] == "https://api.bebudget.dev/problems/rollover-source-month-open"
+            assert body["title"] == "Rollover source month is not closed"
+
+
 def test_rollover_apply_concurrency_is_single_write_per_source_month():
     with TestClient(app) as client:
         user = _register_user(client)
@@ -4832,7 +4862,7 @@ def test_rollover_apply_concurrency_is_single_write_per_source_month():
                 "account_id": account_id,
                 "category_id": income_category_id,
                 "amount_cents": 25000,
-                "date": "2026-05-10",
+                "date": "2026-04-10",
                 "merchant": "Payroll",
                 "note": "salary",
             },
@@ -4846,7 +4876,7 @@ def test_rollover_apply_concurrency_is_single_write_per_source_month():
                 "account_id": account_id,
                 "category_id": expense_category_id,
                 "amount_cents": 4000,
-                "date": "2026-05-11",
+                "date": "2026-04-11",
                 "merchant": "Store",
                 "note": "expense",
             },
@@ -4865,7 +4895,7 @@ def test_rollover_apply_concurrency_is_single_write_per_source_month():
                     pass
                 responses[index] = local_client.post(
                     "/api/rollover/apply",
-                    json={"source_month": "2026-05", "account_id": account_id, "category_id": income_category_id},
+                    json={"source_month": "2026-04", "account_id": account_id, "category_id": income_category_id},
                     headers=headers,
                 )
 
@@ -4884,7 +4914,7 @@ def test_rollover_apply_concurrency_is_single_write_per_source_month():
             applied_rows = (
                 db.query(MonthlyRollover)
                 .filter(MonthlyRollover.user_id == user_id)
-                .filter(MonthlyRollover.source_month == "2026-05")
+                .filter(MonthlyRollover.source_month == "2026-04")
                 .all()
             )
             assert len(applied_rows) == 1
@@ -4892,7 +4922,7 @@ def test_rollover_apply_concurrency_is_single_write_per_source_month():
             created_transactions = (
                 db.query(Transaction)
                 .filter(Transaction.user_id == user_id)
-                .filter(Transaction.note == "Rollover from 2026-05")
+                .filter(Transaction.note == "Rollover from 2026-04")
                 .all()
             )
             assert len(created_transactions) == 1

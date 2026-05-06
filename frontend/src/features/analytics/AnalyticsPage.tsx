@@ -21,6 +21,16 @@ import { normalizeIsoDateParam } from "@/lib/queryState";
 type MetricType = "expense" | "income";
 type RolloverSelection = { sourceMonth: string; preview: RolloverPreview };
 
+function monthToTargetDate(month: string): string {
+  const [yearPart, monthPart] = month.split("-");
+  const year = Number(yearPart);
+  const monthNum = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(monthNum) || monthNum < 1 || monthNum > 12) return "-";
+  const nextMonth = monthNum === 12 ? 1 : monthNum + 1;
+  const nextYear = monthNum === 12 ? year + 1 : year;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+}
+
 function summarize(monthItems: AnalyticsByMonthItem[], categoryItems: AnalyticsByCategoryItem[]) {
   const incomeTotal = monthItems.reduce((sum, row) => sum + row.income_total_cents, 0);
   const expenseTotal = monthItems.reduce((sum, row) => sum + row.expense_total_cents, 0);
@@ -40,6 +50,11 @@ type RolloverMonthStatusProps = {
 
 function RolloverMonthStatus({ apiClient, month, fallbackSurplusCents, onApply }: RolloverMonthStatusProps) {
   const previewQuery = useRolloverPreview(apiClient, month, true);
+  const preview = previewQuery.data;
+  const isClosedMonth = preview ? month < preview.current_month : true;
+  if (!isClosedMonth) {
+    return <span className="text-xs text-muted-foreground">Month not closed yet</span>;
+  }
 
   if (previewQuery.isLoading) {
     return <span className="text-xs text-muted-foreground">Checking...</span>;
@@ -48,7 +63,6 @@ function RolloverMonthStatus({ apiClient, month, fallbackSurplusCents, onApply }
     return <span className="text-xs text-rose-600">Preview error</span>;
   }
 
-  const preview = previewQuery.data;
   if (!preview) {
     return <span className="text-xs text-muted-foreground">No data</span>;
   }
@@ -66,7 +80,7 @@ function RolloverMonthStatus({ apiClient, month, fallbackSurplusCents, onApply }
       variant="outline"
       onClick={() => onApply({ sourceMonth: month, preview })}
     >
-      Apply rollover →
+      {`Apply rollover from ${month}`}
     </Button>
   );
 }
@@ -368,6 +382,7 @@ export default function AnalyticsPage() {
                     <p className="text-xs text-muted-foreground">
                       Surplus preview: {formatCents(currencyCode, item.rollover_in_cents ?? 0)}
                     </p>
+                    <p className="text-xs text-muted-foreground">Target transaction date: {monthToTargetDate(item.month)}</p>
                   </div>
                   <RolloverMonthStatus
                     apiClient={apiClient}
@@ -411,4 +426,6 @@ export default function AnalyticsPage() {
     </section>
   );
 }
+
+
 

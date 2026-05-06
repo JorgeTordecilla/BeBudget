@@ -21,6 +21,17 @@ type Props = {
   onSubmit: (payload: { source_month: string; account_id: string; category_id: string }) => void;
 };
 
+function monthToTargetDate(month: string | null): string {
+  if (!month) return "-";
+  const [yearPart, monthPart] = month.split("-");
+  const year = Number(yearPart);
+  const monthNum = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(monthNum) || monthNum < 1 || monthNum > 12) return "-";
+  const nextMonth = monthNum === 12 ? 1 : monthNum + 1;
+  const nextYear = monthNum === 12 ? year + 1 : year;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+}
+
 export default function RolloverApplyModal({
   apiClient,
   open,
@@ -82,6 +93,9 @@ export default function RolloverApplyModal({
         <div className="space-y-3 text-sm">
           <p>
             Source month: <span className="font-medium">{sourceMonth ?? "-"}</span>
+          </p>
+          <p>
+            Target transaction date: <span className="font-medium">{monthToTargetDate(sourceMonth)}</span>
           </p>
           <p>
             Computed amount: <span className="font-medium">{formatCents(currencyCode, preview?.surplus_cents ?? 0)}</span>

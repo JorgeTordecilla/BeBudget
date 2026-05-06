@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class RolloverPreviewOut(BaseModel):
     month: str
+    current_month: str
     surplus_cents: int
     already_applied: bool
     applied_transaction_id: str | None
