@@ -17,6 +17,7 @@ from app.errors import (
     invalid_date_range_error,
     rollover_already_applied_error,
     rollover_no_surplus_error,
+    rollover_source_month_open_error,
 )
 from app.models import Account, Category, IncomeSource, MonthlyRollover, Transaction, User
 from app.schemas import RolloverApplyOut, RolloverApplyRequest, RolloverPreviewOut
@@ -65,6 +66,10 @@ def _next_month_start(month: str) -> date:
         month_num = 1
         year += 1
     return date(year, month_num, 1)
+
+
+def _current_month_value() -> str:
+    return utcnow().date().strftime("%Y-%m")
 
 
 def _compute_surplus_cents(db: Session, user_id: str, source_month: str) -> int:
@@ -159,6 +164,7 @@ def rollover_preview(
     )
     payload = RolloverPreviewOut(
         month=month,
+        current_month=_current_month_value(),
         surplus_cents=surplus,
         already_applied=applied is not None,
         applied_transaction_id=applied.transaction_id if applied else None,
@@ -176,6 +182,8 @@ def rollover_apply(
     _owned_active_income_category_or_conflict(db, current_user.id, payload.category_id)
 
     source_month = _normalize_month_value(payload.source_month, field_name="source_month")
+    if source_month >= _current_month_value():
+        raise rollover_source_month_open_error("source_month must be a closed month before current month")
     surplus = _compute_surplus_cents(db, current_user.id, source_month)
     if surplus <= 0:
         raise rollover_no_surplus_error("No positive surplus is available for source month")

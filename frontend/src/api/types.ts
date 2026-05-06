@@ -448,6 +448,7 @@ export type IncomeAnalyticsResponse = {
 
 export type RolloverPreview = {
   month: string;
+  current_month: string;
   surplus_cents: number;
   already_applied: boolean;
   applied_transaction_id: string | null;

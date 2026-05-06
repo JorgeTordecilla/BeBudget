@@ -3525,6 +3525,7 @@ paths:
                 $ref: '#/components/schemas/RolloverPreviewOut'
               example:
                 month: 2026-02
+                current_month: 2026-03
                 surplus_cents: 9000
                 already_applied: false
                 applied_transaction_id: null
@@ -3619,6 +3620,8 @@ paths:
               examples:
                 rollover_no_surplus:
                   $ref: '#/components/examples/Problem422RolloverNoSurplus'
+                rollover_source_month_open:
+                  $ref: '#/components/examples/Problem422RolloverSourceMonthOpen'
       description: 'Retention policy: archived transactions are excluded from surplus computation.'
   /analytics/by-category:
     get:
@@ -5136,11 +5139,15 @@ components:
       type: object
       required:
       - month
+      - current_month
       - surplus_cents
       - already_applied
       - applied_transaction_id
       properties:
         month:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+        current_month:
           type: string
           pattern: ^\d{4}-\d{2}$
         surplus_cents:
@@ -5155,6 +5162,7 @@ components:
           format: uuid
       example:
         month: 2026-02
+        current_month: 2026-03
         surplus_cents: 9000
         already_applied: false
         applied_transaction_id: null
@@ -5659,6 +5667,13 @@ components:
         title: Rollover has no surplus
         status: 422
         detail: No positive surplus is available for source month.
+    Problem422RolloverSourceMonthOpen:
+      summary: Canonical 422 rollover source month is not closed
+      value:
+        type: https://api.bebudget.dev/problems/rollover-source-month-open
+        title: Rollover source month is not closed
+        status: 422
+        detail: source_month must be a closed month before current month
     Problem422SavingsGoalInvalidTarget:
       summary: Canonical 422 savings goal invalid target
       value:

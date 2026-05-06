@@ -19,6 +19,9 @@ ROLLOVER_ALREADY_APPLIED_STATUS = 409
 ROLLOVER_NO_SURPLUS_TYPE = "https://api.bebudget.dev/problems/rollover-no-surplus"
 ROLLOVER_NO_SURPLUS_TITLE = "Rollover has no surplus"
 ROLLOVER_NO_SURPLUS_STATUS = 422
+ROLLOVER_SOURCE_MONTH_OPEN_TYPE = "https://api.bebudget.dev/problems/rollover-source-month-open"
+ROLLOVER_SOURCE_MONTH_OPEN_TITLE = "Rollover source month is not closed"
+ROLLOVER_SOURCE_MONTH_OPEN_STATUS = 422
 
 
 def budget_duplicate_error(detail: str | None = None) -> "APIError":
@@ -63,5 +66,14 @@ def rollover_no_surplus_error(detail: str | None = None) -> "APIError":
         title=ROLLOVER_NO_SURPLUS_TITLE,
         detail=detail,
         type_=ROLLOVER_NO_SURPLUS_TYPE,
+    )
+
+
+def rollover_source_month_open_error(detail: str | None = None) -> "APIError":
+    return make_api_error(
+        status=ROLLOVER_SOURCE_MONTH_OPEN_STATUS,
+        title=ROLLOVER_SOURCE_MONTH_OPEN_TITLE,
+        detail=detail,
+        type_=ROLLOVER_SOURCE_MONTH_OPEN_TYPE,
     )
 

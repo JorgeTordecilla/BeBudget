@@ -18,7 +18,7 @@ describe("rollover api wrappers", () => {
   it("fetches rollover preview with vendor headers", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
-        JSON.stringify({ month: "2026-02", surplus_cents: 9000, already_applied: false, applied_transaction_id: null }),
+        JSON.stringify({ month: "2026-02", current_month: "2026-03", surplus_cents: 9000, already_applied: false, applied_transaction_id: null }),
         { status: 200, headers: { "content-type": "application/json" } }
       )
     );
