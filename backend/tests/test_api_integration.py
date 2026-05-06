@@ -4315,6 +4315,201 @@ def test_budgets_conflict_matrix_is_canonical():
         _assert_budget_conflict_problem(archived_conflict, CATEGORY_ARCHIVED_TYPE, CATEGORY_ARCHIVED_TITLE)
 
 
+def test_budget_template_put_get_and_generate_month_is_idempotent():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        rent_category = _create_category(client, headers, "rent-template", "expense")
+        food_category = _create_category(client, headers, "food-template", "expense")
+
+        put_template = client.put(
+            "/api/budgets/template",
+            json={
+                "items": [
+                    {"category_id": rent_category, "limit_cents": 1700000, "is_active": True},
+                    {"category_id": food_category, "limit_cents": 600000, "is_active": True},
+                ]
+            },
+            headers=headers,
+        )
+        assert put_template.status_code == 200
+        assert put_template.headers["content-type"].startswith(VENDOR)
+        assert len(put_template.json()["items"]) == 2
+
+        first_generate = client.post(
+            "/api/budgets/2026-06/generate-from-template",
+            headers=headers,
+        )
+        assert first_generate.status_code == 200
+        assert first_generate.headers["content-type"].startswith(VENDOR)
+        assert first_generate.json()["month"] == "2026-06"
+        assert len(first_generate.json()["items"]) == 2
+
+        second_generate = client.post(
+            "/api/budgets/2026-06/generate-from-template",
+            headers=headers,
+        )
+        assert second_generate.status_code == 200
+        assert second_generate.headers["content-type"].startswith(VENDOR)
+        assert len(second_generate.json()["items"]) == 2
+        assert second_generate.json()["generated_from_template_version"] >= 1
+
+
+def test_budget_month_override_preserved_after_regenerate():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        expense_category = _create_category(client, headers, "override-template", "expense")
+
+        template_response = client.put(
+            "/api/budgets/template",
+            json={"items": [{"category_id": expense_category, "limit_cents": 500000, "is_active": True}]},
+            headers=headers,
+        )
+        assert template_response.status_code == 200
+
+        generated = client.post(
+            "/api/budgets/2026-07/generate-from-template",
+            headers=headers,
+        )
+        assert generated.status_code == 200
+        assert generated.json()["items"][0]["limit_cents"] == 500000
+        assert generated.json()["items"][0]["source"] == "template"
+
+        overridden = client.put(
+            "/api/budgets/month/2026-07",
+            json={"items": [{"category_id": expense_category, "limit_cents": 650000, "is_active": True}]},
+            headers=headers,
+        )
+        assert overridden.status_code == 200
+        assert overridden.json()["items"][0]["limit_cents"] == 650000
+        assert overridden.json()["items"][0]["source"] == "override"
+
+        regenerated = client.post(
+            "/api/budgets/2026-07/generate-from-template",
+            headers=headers,
+        )
+        assert regenerated.status_code == 200
+        assert regenerated.json()["items"][0]["limit_cents"] == 650000
+        assert regenerated.json()["items"][0]["source"] == "override"
+
+
+def test_budget_generate_from_template_is_safe_under_concurrency():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        rent_category = _create_category(client, headers, "rent-concurrency", "expense")
+        food_category = _create_category(client, headers, "food-concurrency", "expense")
+
+        template_response = client.put(
+            "/api/budgets/template",
+            json={
+                "items": [
+                    {"category_id": rent_category, "limit_cents": 1700000, "is_active": True},
+                    {"category_id": food_category, "limit_cents": 700000, "is_active": True},
+                ]
+            },
+            headers=headers,
+        )
+        assert template_response.status_code == 200
+
+        barrier = Barrier(2)
+        done = Event()
+        errors: list[str] = []
+        statuses: list[int] = []
+        lock = Lock()
+
+        def worker():
+            try:
+                barrier.wait(timeout=5)
+                response = client.post("/api/budgets/2026-08/generate-from-template", headers=headers)
+                with lock:
+                    statuses.append(response.status_code)
+            except BrokenBarrierError:
+                with lock:
+                    errors.append("barrier_broken")
+            except Exception as exc:  # pragma: no cover
+                with lock:
+                    errors.append(str(exc))
+            finally:
+                done.set()
+
+        t1 = Thread(target=worker, daemon=True)
+        t2 = Thread(target=worker, daemon=True)
+        t1.start()
+        t2.start()
+        done.wait(timeout=10)
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+        assert not errors
+        assert sorted(statuses) == [200, 200]
+
+        month = client.get("/api/budgets/month/2026-08", headers={"accept": VENDOR, "authorization": f"Bearer {user['access']}"})
+        assert month.status_code == 200
+        items = month.json()["items"]
+        assert len(items) == 2
+        assert {row["category_id"] for row in items} == {rent_category, food_category}
+
+
+def test_budget_generate_excludes_archived_categories_for_future_month():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        active_category = _create_category(client, headers, "template-active", "expense")
+        archived_category = _create_category(client, headers, "template-archived-future", "expense")
+
+        template_response = client.put(
+            "/api/budgets/template",
+            json={
+                "items": [
+                    {"category_id": active_category, "limit_cents": 900000, "is_active": True},
+                    {"category_id": archived_category, "limit_cents": 800000, "is_active": True},
+                ]
+            },
+            headers=headers,
+        )
+        assert template_response.status_code == 200
+
+        _archive_category_and_assert(client, user["access"], archived_category)
+
+        generated = client.post("/api/budgets/2026-09/generate-from-template", headers=headers)
+        assert generated.status_code == 200
+        items = generated.json()["items"]
+        assert len(items) == 1
+        assert items[0]["category_id"] == active_category
+
+
+def test_budget_generate_preserves_historical_lines_for_archived_categories():
+    with TestClient(app) as client:
+        user = _register_user(client)
+        headers = _auth_headers(user["access"])
+        category_id = _create_category(client, headers, "template-archived-historical", "expense")
+
+        template_response = client.put(
+            "/api/budgets/template",
+            json={"items": [{"category_id": category_id, "limit_cents": 500000, "is_active": True}]},
+            headers=headers,
+        )
+        assert template_response.status_code == 200
+
+        generated_historical = client.post("/api/budgets/2026-07/generate-from-template", headers=headers)
+        assert generated_historical.status_code == 200
+        assert len(generated_historical.json()["items"]) == 1
+        assert generated_historical.json()["items"][0]["category_id"] == category_id
+
+        _archive_category_and_assert(client, user["access"], category_id)
+
+        regenerated_historical = client.post("/api/budgets/2026-07/generate-from-template", headers=headers)
+        assert regenerated_historical.status_code == 200
+        assert len(regenerated_historical.json()["items"]) == 1
+        assert regenerated_historical.json()["items"][0]["category_id"] == category_id
+
+        generated_future = client.post("/api/budgets/2026-10/generate-from-template", headers=headers)
+        assert generated_future.status_code == 200
+        assert generated_future.json()["items"] == []
+
+
 def test_budget_validation_failures_return_canonical_400():
     with TestClient(app) as client:
         user = _register_user(client)
